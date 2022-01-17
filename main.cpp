@@ -3,31 +3,54 @@
 #include <mod/config.h>
 
 #include <stdlib.h>
-#include <filesystem>
+#include <sys/stat.h>
 #include <fstream>
 #include <stdint.h>
 #include <dlfcn.h>
 
+// CLEO
 #include "icleo.h"
 #include "cleo.h"
+cleo_ifs_t* cleo = NULL;
 CLEO cleoLocal;
 ICLEO* cleoInterface = &cleoLocal;
 
+// SAUtils
 #include "isautils.h"
-ISAUtils* sautils = nullptr;
-cleo_ifs_t* cleo = nullptr;
+ISAUtils* sautils = NULL;
 
+// Size of array
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
-MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.1, Alexander Blade & RusJJ)
+MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.2, Alexander Blade & RusJJ)
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.0.4)
 END_DEPLIST()
 
-std::string loadFrom;
+inline size_t __strlen(const char *str)
+{
+    const char* s = str;
+    while(*s) ++s;
+    return (s - str);
+}
+
+inline void __pathback(char* a)
+{
+    int len = __strlen(a);
+    char* b = a + len;
+    while(b != a)
+    {
+        --b;
+        if(*b == '/')
+        {
+            a[b-a] = 0;
+            break;
+        }
+    }
+}
+
 void* pCLEO;
 Dl_info pDLInfo;
-uintptr_t pGTASA;
 
 ConfigEntry* pCLEOLocation;
 ConfigEntry* pCLEORedArrow;
@@ -38,6 +61,7 @@ const char* pLocations[] =
     "CLEO 2.0.1",
     "Old CLEO",
     "Old CLEO (+cleo)",
+    "../files/CLEO",
 };
 const char* pYesNo[] = 
 {
@@ -60,30 +84,34 @@ extern "C" void OnModPreLoad()
     logger->SetTag("CLEO Mod");
     pCLEOLocation = cfg->Bind("CLEO_Location", 0);
     pCLEORedArrow = cfg->Bind("CLEO_RedArrow", true);
+    
+    char szLoadFrom[0xFF];
+    snprintf(szLoadFrom, sizeof(szLoadFrom), "%s/libcleo.mod.so", aml->GetDataPath());
 
-    pGTASA = aml->GetLib("libGTASA.so");
-    loadFrom = aml->GetDataPath();
-    loadFrom += "/cleo_mod.so";
-
-    std::ofstream fs(loadFrom.data(), std::ios::out | std::ios::binary);
+    std::ofstream fs(szLoadFrom, std::ios::out | std::ios::binary);
 	fs.write((const char*)cleoData, sizeof(cleoData));
 	fs.close();
-    pCLEO = dlopen(loadFrom.data(), RTLD_NOW);
-    if(pCLEO == nullptr)
+    pCLEO = dlopen(szLoadFrom, RTLD_NOW);
+    if(pCLEO == NULL)
     {
       OOPSIE:
         logger->Error("Failed to load CLEO library!");
         return;
     }
     auto libEntry = (void(*)())dlsym(pCLEO, "JNI_OnLoad");
-    if(libEntry == nullptr) goto OOPSIE;
+    if(libEntry == NULL) goto OOPSIE;
 
     dladdr((void*)libEntry, &pDLInfo);
     cleo = (cleo_ifs_t*)((uintptr_t)pDLInfo.dli_fbase + 0x219AA8);
     if(pCLEOLocation->GetInt() == 1)
     {
-        setenv("EXTERNAL_STORAGE", std::filesystem::path(aml->GetConfigPath()).parent_path().parent_path().c_str(), 1);
-
+        char tmp[0xFF];
+        snprintf(tmp, sizeof(tmp), "%s", aml->GetConfigPath());
+        __pathback(tmp);
+        __pathback(tmp);
+        setenv("EXTERNAL_STORAGE", tmp, 1);
+        
+      SET_LOAD_DIRECTLY:
         aml->Unprot((uintptr_t)pDLInfo.dli_fbase + 0x146A9, 11);
         uintptr_t cleoDir = (uintptr_t)pDLInfo.dli_fbase + 0x146A9;
         *(char*)(cleoDir + 3) = '\0';
@@ -98,19 +126,35 @@ extern "C" void OnModPreLoad()
     }
     else if(pCLEOLocation->GetInt() == 2)
     {
-        auto VAR = std::filesystem::path(aml->GetConfigPath()).parent_path().parent_path();
-        setenv("EXTERNAL_STORAGE", VAR.c_str(), 1);
-        std::filesystem::create_directory(VAR.c_str() + std::string("/cleo"));
+        char tmp[0xFF];
+        snprintf(tmp, sizeof(tmp), "%s", aml->GetConfigPath());
+        __pathback(tmp);
+        __pathback(tmp);
+        setenv("EXTERNAL_STORAGE", tmp, 1);
+        snprintf(tmp, sizeof(tmp), "%s/cleo", tmp);
+        mkdir(tmp, 0777);
         
         aml->Unprot((uintptr_t)pDLInfo.dli_fbase + 0x146A9, 11);
         uintptr_t cleoDir = (uintptr_t)pDLInfo.dli_fbase + 0x146A9;
         *(char*)(cleoDir + 8) = '\0';
     }
+    else if(pCLEOLocation->GetInt() == 3)
+    {
+        char tmp[0xFF];
+        snprintf(tmp, sizeof(tmp), "%s", aml->GetConfigPath());
+        __pathback(tmp);
+        __pathback(tmp);
+        snprintf(tmp, sizeof(tmp), "%s/files/CLEO", tmp);
+        setenv("EXTERNAL_STORAGE", tmp, 1);
+        mkdir(tmp, 0777);
+        
+        goto SET_LOAD_DIRECTLY;
+    }
 
     if(!pCLEORedArrow->GetBool())
         aml->PlaceNOP((uintptr_t)pDLInfo.dli_fbase + 0xBD82, 2);
-    RegisterInterface("CLEO", cleoInterface);
     libEntry();
+    RegisterInterface("CLEO", cleoInterface);
     logger->Info("CLEO initialized!");
 }
 

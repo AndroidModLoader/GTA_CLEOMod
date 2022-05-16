@@ -19,7 +19,7 @@ ISAUtils* sautils = NULL;
 // Size of array
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
-MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.3, Alexander Blade & RusJJ & XMDS)
+MYMODCFG(net.rusjj.cleomod, CLEO Mod, 2.0.1.3, Alexander Blade & RusJJ & XMDS)
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.0.6)
 END_DEPLIST()
@@ -76,7 +76,7 @@ void OnRedArrowChanged(int oldVal, int newVal)
     cfg->Save();
 }
 
-extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void fix_command_0DD2_asm_call()
+extern "C" TARGET_THUMB ASM_NAKED void fix_command_0DD2_asm_call()
 {
     //see https://github.com/XMDS/OP_0DD2FixAsm_call.git (cleo verison)
 
@@ -136,6 +136,12 @@ extern "C" void OnModPreLoad()
     if(libEntry == NULL) goto OOPSIE;
 
     dladdr((void*)libEntry, &pDLInfo);
+    int32_t cleover;
+    aml->Unprot((uintptr_t)pDLInfo.dli_fbase + 0x19218, 4);
+    memcpy(&cleover, (void*)((uintptr_t)pDLInfo.dli_fbase + 0x19218), sizeof(cleover));
+    if (cleover != 0x00014A97) //check cleolib ver
+        return logger->Error("Unknown cleo library version, CLEOMod only supports cleo library version 2.0.1!!!");
+
     cleo = (cleo_ifs_t*)((uintptr_t)pDLInfo.dli_fbase + 0x219AA8);
     aml->Redirect(((uintptr_t)pDLInfo.dli_fbase + 0x4EB8 + 1), (uintptr_t)&fix_command_0DD2_asm_call);//fix 0DD2
 

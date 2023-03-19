@@ -65,12 +65,12 @@ const char* pYesNo[] =
     "FEM_OFF",
     "FEM_ON",
 };
-void OnLocationChanged(int oldVal, int newVal)
+void OnLocationChanged(int oldVal, int newVal, void* userdata)
 {
     pCLEOLocation->SetInt(newVal);
     cfg->Save();
 }
-void OnRedArrowChanged(int oldVal, int newVal)
+void OnRedArrowChanged(int oldVal, int newVal, void* userdata)
 {
     pCLEORedArrow->SetBool(newVal != 0);
     cfg->Save();
@@ -160,7 +160,7 @@ extern "C" void OnModLoad()
     sautils = (ISAUtils*)GetInterface("SAUtils");
     if(sautils)
     {
-        sautils->AddClickableItem(Game, "CLEO Location", pCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged);
-        sautils->AddClickableItem(Game, "CLEO Red Arrow", pCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged);
+        sautils->AddClickableItem(SetType_Game, "CLEO Location", pCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
+        sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
     }
 }

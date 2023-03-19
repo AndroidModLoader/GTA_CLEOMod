@@ -9,22 +9,19 @@
 #include <dlfcn.h>
 
 // CLEO
-#include "icleo.h"
 #include "cleo.h"
-cleo_ifs_t* cleo = NULL;
-CLEO cleoLocal;
-ICLEO* cleoInterface = &cleoLocal;
+cleo_ifs_t* cleo = nullptr;
 
 // SAUtils
 #include "isautils.h"
-ISAUtils* sautils = NULL;
+ISAUtils* sautils = nullptr;
 
 // Size of array
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
-MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.2, Alexander Blade & RusJJ)
+MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.3, Alexander Blade & RusJJ)
 BEGIN_DEPLIST()
-    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.0.4)
+    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.2.2)
 END_DEPLIST()
 
 inline size_t __strlen(const char *str)
@@ -92,14 +89,14 @@ extern "C" void OnModPreLoad()
 	fs.write((const char*)cleoData, sizeof(cleoData));
 	fs.close();
     pCLEO = dlopen(szLoadFrom, RTLD_NOW);
-    if(pCLEO == NULL)
+    if(pCLEO == nullptr)
     {
       OOPSIE:
         logger->Error("Failed to load CLEO library!");
         return;
     }
     auto libEntry = (void(*)())dlsym(pCLEO, "JNI_OnLoad");
-    if(libEntry == NULL) goto OOPSIE;
+    if(libEntry == nullptr) goto OOPSIE;
 
     dladdr((void*)libEntry, &pDLInfo);
     cleo = (cleo_ifs_t*)((uintptr_t)pDLInfo.dli_fbase + 0x219AA8);
@@ -154,7 +151,7 @@ extern "C" void OnModPreLoad()
     if(!pCLEORedArrow->GetBool())
         aml->PlaceNOP((uintptr_t)pDLInfo.dli_fbase + 0xBD82, 2);
     libEntry();
-    RegisterInterface("CLEO", cleoInterface);
+    RegisterInterface("CLEO", cleo);
     logger->Info("CLEO initialized!");
 }
 

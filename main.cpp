@@ -79,24 +79,31 @@ void OnRedArrowChanged(int oldVal, int newVal, void* userdata)
 extern "C" void OnModPreLoad()
 {
     logger->SetTag("CLEO Mod");
-    pCLEOLocation = cfg->Bind("CLEO_Location", 0);
+    pCLEOLocation = cfg->Bind("CLEO_Location", 1);
     pCLEORedArrow = cfg->Bind("CLEO_RedArrow", true);
     
-    char szLoadFrom[0xFF];
-    snprintf(szLoadFrom, sizeof(szLoadFrom), "%s/libcleo.mod.so", aml->GetDataPath());
+    
+    pCLEO = dlopen("libcleo.so", RTLD_LAZY);
+    if(!pCLEO)
+    {
+        char szLoadFrom[0xFF];
+        snprintf(szLoadFrom, sizeof(szLoadFrom), "%s/libcleo.mod.so", aml->GetDataPath());
 
-    std::ofstream fs(szLoadFrom, std::ios::out | std::ios::binary);
-	fs.write((const char*)cleoData, sizeof(cleoData));
-	fs.close();
-    pCLEO = dlopen(szLoadFrom, RTLD_NOW);
-    if(pCLEO == nullptr)
+        std::ofstream fs(szLoadFrom, std::ios::out | std::ios::binary);
+        fs.write((const char*)cleoData, sizeof(cleoData));
+        fs.close();
+        pCLEO = dlopen(szLoadFrom, RTLD_NOW);
+    }
+ 
+    if(!pCLEO)
     {
       OOPSIE:
         logger->Error("Failed to load CLEO library!");
         return;
     }
+    
     auto libEntry = (void(*)())dlsym(pCLEO, "JNI_OnLoad");
-    if(libEntry == nullptr) goto OOPSIE;
+    if(!libEntry) goto OOPSIE; // How?
 
     dladdr((void*)libEntry, &pDLInfo);
     cleo = (cleo_ifs_t*)((uintptr_t)pDLInfo.dli_fbase + 0x219AA8);

@@ -7,6 +7,7 @@
 #include <fstream>
 #include <stdint.h>
 #include <dlfcn.h>
+#include <string.h>
 
 // CLEO
 #include "cleo.h"
@@ -51,6 +52,9 @@ Dl_info pDLInfo;
 
 ConfigEntry* pCLEOLocation;
 ConfigEntry* pCLEORedArrow;
+ConfigEntry* pCLEOMenuColor;
+
+rgba_t* pCLEOMenuBgColor;
 
 extern unsigned char cleoData[100160];
 const char* pLocations[] = 
@@ -107,7 +111,7 @@ extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opc
         "STR R0, [R4]\n" //0DD4 return value 
         "ADD SP, #0xB8\n"
         "POP {R4-R7,PC}\n"
-        );
+    );
 }
         
 
@@ -116,7 +120,7 @@ extern "C" void OnModPreLoad()
     logger->SetTag("CLEO Mod");
     pCLEOLocation = cfg->Bind("CLEO_Location", 1);
     pCLEORedArrow = cfg->Bind("CLEO_RedArrow", true);
-    
+    pCLEOMenuColor = cfg->Bind("CLEO_MenuColor", "55 127 175 150");
     
     pCLEO = dlopen("libcleo.so", RTLD_LAZY);
     if(!pCLEO)
@@ -197,6 +201,11 @@ extern "C" void OnModPreLoad()
     // Fixed OPCODE 0DD2
     aml->Redirect(((uintptr_t)pDLInfo.dli_fbase + 0x4EB8 + 0x1), (uintptr_t)Opcode0DD2_inject);
         
+    // CLEO Menu Color
+    SET_TO(pCLEOMenuBgColor, (uintptr_t)pDLInfo.dli_fbase + 0x1525C);
+    aml->Unprot((uintptr_t)pCLEOMenuBgColor, sizeof(rgba_t));
+    *pCLEOMenuBgColor = pCLEOMenuColor->ParseColor();
+    
     // Start CLEO
     libEntry();
     RegisterInterface("CLEO", cleo);

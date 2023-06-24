@@ -1,6 +1,8 @@
 #pragma once
 
-#define ANDROID
+#ifndef ANDROID
+	#define ANDROID
+#endif // ANDROID
 
 #include <unistd.h>
 #include <stdio.h>

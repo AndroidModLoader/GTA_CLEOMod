@@ -49,6 +49,7 @@ inline void __pathback(char* a)
 
 void* pCLEO;
 Dl_info pDLInfo;
+eGameIdent* nGameIdent;
 
 ConfigEntry* pCLEOLocation;
 ConfigEntry* pCLEORedArrow;
@@ -78,6 +79,18 @@ void OnRedArrowChanged(int oldVal, int newVal, void* userdata)
 {
     pCLEORedArrow->SetBool(newVal != 0);
     cfg->Save();
+}
+int ValueForGame(int for3, int forvc, int forsa, int forlcs, int forvcs = 0)
+{
+    switch(*nGameIdent)
+    {
+        case GTA3:   return for3;
+        case GTAVC:  return forvc;
+        case GTASA:  return forsa;
+        case GTALCS: return forlcs;
+        case GTAVCS: return forvcs;
+    }
+    return 0;
 }
 
 extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opcode0DD2_inject()
@@ -114,6 +127,70 @@ extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opc
     );
 }
         
+/*DECL_HOOK(bool, ReadStringLong, uintptr_t scriptHandle, std::string& buf)
+{
+    int PCOffset = ValueForGame(16, 16, 20, 24, 16);
+    uint8_t* pScriptPC = *(uint8_t**)(scriptHandle + PCOffset);
+    uint8_t paramType = *pScriptPC;
+    
+    logger->Info("ReadStringLong type 0x%02X", (int)paramType);
+    
+    if(ReadStringLong(scriptHandle, buf))
+    {
+        //logger->Info("ReadStringLong just a SCM string: %s", buf.c_str()-1);
+        return true;
+    }
+    
+    switch(paramType)
+    {
+        case SCRIPTPARAM_STATIC_INT_32BITS:
+        case SCRIPTPARAM_GLOBAL_NUMBER_VARIABLE:
+        case SCRIPTPARAM_LOCAL_NUMBER_VARIABLE:
+        case SCRIPTPARAM_STATIC_INT_8BITS:
+        case SCRIPTPARAM_STATIC_INT_16BITS:
+        case SCRIPTPARAM_STATIC_FLOAT:
+        case SCRIPTPARAM_GLOBAL_NUMBER_ARRAY:
+	    case SCRIPTPARAM_LOCAL_NUMBER_ARRAY:
+        {
+            buf = (const char*)cleo->ReadParam((void*)scriptHandle)->i;
+            logger->Info("longstr %s", buf.c_str());
+
+            return true;
+        }
+        
+        case SCRIPTPARAM_GLOBAL_SHORT_STRING_VARIABLE:
+        case SCRIPTPARAM_LOCAL_SHORT_STRING_VARIABLE:
+        case SCRIPTPARAM_GLOBAL_SHORT_STRING_ARRAY:
+        case SCRIPTPARAM_LOCAL_SHORT_STRING_ARRAY:
+        case SCRIPTPARAM_STATIC_LONG_STRING:
+        case SCRIPTPARAM_GLOBAL_LONG_STRING_VARIABLE:
+        case SCRIPTPARAM_LOCAL_LONG_STRING_VARIABLE:
+        case SCRIPTPARAM_GLOBAL_LONG_STRING_ARRAY:
+	    case SCRIPTPARAM_LOCAL_LONG_STRING_ARRAY:
+        {
+            
+
+            *(uint32_t**)(scriptHandle + PCOffset) += pScriptPC[1] + 2;
+            return true;
+        }
+        
+        default: return false;
+    }
+    // commented 
+    if(paramType == ValueForGame(0x56, 0x56, 0x56, 0x56, 0x56))
+    {
+        logger->Info("ReadStringLong success");
+        
+        buf = "Nothing Here!";
+        
+        *(int*)(scriptHandle + PCOffset) += *(uint8_t*)((uintptr_t)pScriptPC + 1) + 2;
+        
+        return true;
+    }
+    
+    return false;
+}*/
+        
 
 extern "C" void OnModPreLoad()
 {
@@ -145,7 +222,8 @@ extern "C" void OnModPreLoad()
     if(!libEntry) goto OOPSIE; // How?
 
     dladdr((void*)libEntry, &pDLInfo);
-    cleo = (cleo_ifs_t*)((uintptr_t)pDLInfo.dli_fbase + 0x219AA8);
+    cleo = (cleo_ifs_t*)((uintptr_t)pDLInfo.dli_fbase + 0x219AA8); // VTable = 0xC382
+    nGameIdent = (eGameIdent*)((uintptr_t)pDLInfo.dli_fbase + 0x19298);
     if(pCLEOLocation->GetInt() == 1)
     {
         char tmp[0xFF];
@@ -200,6 +278,9 @@ extern "C" void OnModPreLoad()
     // XMDS Part 1
     // Fixed OPCODE 0DD2
     aml->Redirect(((uintptr_t)pDLInfo.dli_fbase + 0x4EB8 + 0x1), (uintptr_t)Opcode0DD2_inject);
+
+    // ReadStringLong patching (not ready)
+    //HOOK(ReadStringLong, (uintptr_t)pDLInfo.dli_fbase + 0x67FC + 0x1);
         
     // CLEO Menu Color
     SET_TO(pCLEOMenuBgColor, (uintptr_t)pDLInfo.dli_fbase + 0x1525C);
@@ -212,12 +293,33 @@ extern "C" void OnModPreLoad()
     logger->Info("CLEO initialized!");
 }
 
+
+void AML_HAS_MOD_LOADED(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char modname[128];
+    cleo->ReadStringLong(handle, modname, sizeof(modname)); modname[sizeof(modname)-1] = 0;
+    cleo->GetPointerToScriptVar(handle)->i = aml->HasMod(modname);
+}
+void AML_HAS_MODVER_LOADED(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char modname[128], modver[24];
+    cleo->ReadStringLong(handle, modname, sizeof(modname)); modname[sizeof(modname)-1] = 0;
+    cleo->ReadStringLong(handle, modver, sizeof(modver)); modver[sizeof(modver)-1] = 0;
+    cleo->GetPointerToScriptVar(handle)->i = aml->HasModOfVersion(modname, modver);
+}
+
+
+#define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
 extern "C" void OnModLoad()
 {
+    if(!cleo) return;
+
     sautils = (ISAUtils*)GetInterface("SAUtils");
     if(sautils)
     {
         sautils->AddClickableItem(SetType_Game, "CLEO Location", pCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
         sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
     }
+    CLEO_RegisterOpcode(0xBA00, AML_HAS_MOD_LOADED); // BA00=1,aml_has_mod_loaded %1s%
+    CLEO_RegisterOpcode(0xBA01, AML_HAS_MODVER_LOADED); // BA01=1,aml_has_mod_loaded %1s% version %2s%
 }

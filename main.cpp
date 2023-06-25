@@ -20,7 +20,7 @@ ISAUtils* sautils = nullptr;
 // Size of array
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
-MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.3, Alexander Blade & RusJJ & XMDS)
+MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.4, Alexander Blade & RusJJ & XMDS)
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.2.2)
 END_DEPLIST()
@@ -310,6 +310,7 @@ void AML_HAS_MODVER_LOADED(void *handle, uint32_t *ip, uint16_t opcode, const ch
 
 
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
+void Init4Opcodes();
 extern "C" void OnModLoad()
 {
     if(!cleo) return;
@@ -322,4 +323,7 @@ extern "C" void OnModLoad()
     }
     CLEO_RegisterOpcode(0xBA00, AML_HAS_MOD_LOADED); // BA00=1,aml_has_mod_loaded %1s%
     CLEO_RegisterOpcode(0xBA01, AML_HAS_MODVER_LOADED); // BA01=1,aml_has_mod_loaded %1s% version %2s%
+
+    // CLEO4 Opcodes
+    Init4Opcodes();
 }

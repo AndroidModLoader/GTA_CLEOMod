@@ -15,6 +15,8 @@ uint8_t* ScriptSpace;
 struct GTAVector3D
 {
     float x, y, z;
+    float SqrMagnitude() { return x*x + y*y + z*z; }
+    inline GTAVector3D operator-(const GTAVector3D& v) { return { x - v.x, y - v.y, z - v.z }; }
 };
 struct GTAMatrix
 {
@@ -95,39 +97,162 @@ CLEO_Fn(IS_CAR_ENGINE_ON)
     UpdateCompareFlag(handle, (*(uint8_t *)(vehiclePtr + 1068) >> 4) & 1);
 }
 
+struct tByteFlag
+{
+    uint8_t nId : 7;
+    bool    bEmpty : 1;
+};
+struct GTAEntity
+{
+    inline int AsInt() { return (int)this; }
+    inline int& IntAt(int off) { return *(int*)(AsInt() + off); }
+    inline uint32_t& UIntAt(int off) { return *(uint32_t*)(AsInt() + off); }
+    inline uint8_t& UInt8At(int off) { return *(uint8_t*)(AsInt() + off); }
+    inline GTAVector3D& GetPos()
+    {
+        if(*(void**)(AsInt() + 24) == NULL)
+            return (*(GTAMatrix**)(AsInt() + 24))->pos;
+        else
+            return *(GTAVector3D*)(AsInt() + 4);
+    }
+};
+
+struct GTAPedSA : GTAEntity
+{
+    char structure[1996];
+    bool Player() { return UIntAt(1436) < 2; }
+};
 uintptr_t* pedPool;
+int (*GetPedRef)(int);
 CLEO_Fn(GET_RANDOM_CHAR_IN_SPHERE_NO_SAVE_RECURSIVE)
 {
-    
+    GTAVector3D center;
+    center.x = cleo->ReadParam(handle)->f;
+    center.y = cleo->ReadParam(handle)->f;
+    center.z = cleo->ReadParam(handle)->f;
+    float radius = cleo->ReadParam(handle)->f, sqrradius = radius*radius;
+    int next = cleo->ReadParam(handle)->i, passDeads = cleo->ReadParam(handle)->i;
+
+    static int lastFound = 0;
+    if(!next) lastFound = 0;
+
+    auto objects = *(GTAPedSA**)(*pedPool + 0);
+    tByteFlag* flags = *(tByteFlag**)(*pedPool + 4);
+    int size = *(int*)(*pedPool + 8);
+
+    for(int i = lastFound; i < size; ++i)
+    {
+        if(flags[i].bEmpty) continue;
+        auto& ent = objects[i];
+        if(passDeads != -1 && (ent.Player() || (passDeads && !((ent.IntAt(1100) & 0xFFFFFFFE) != 54)) || (ent.IntAt(1160) >> 3) & 1)) continue;
+        if(radius >= 1000.0f || (ent.GetPos() - center).SqrMagnitude() <= sqrradius)
+        {
+            lastFound = i + 1;
+            cleo->GetPointerToScriptVar(handle)->i = GetPedRef(ent.AsInt());
+            UpdateCompareFlag(handle, true);
+            return;
+        }
+    }
+
+    cleo->GetPointerToScriptVar(handle)->i = -1;
+    UpdateCompareFlag(handle, false);
+    lastFound = 0;
 }
 
+struct GTAVehicleSA : GTAEntity
+{
+    char structure[2604];
+};
 uintptr_t* vehiclePool;
+int (*GetVehicleRef)(int);
 CLEO_Fn(GET_RANDOM_CAR_IN_SPHERE_NO_SAVE_RECURSIVE)
 {
-    
+    GTAVector3D center;
+    center.x = cleo->ReadParam(handle)->f;
+    center.y = cleo->ReadParam(handle)->f;
+    center.z = cleo->ReadParam(handle)->f;
+    float radius = cleo->ReadParam(handle)->f, sqrradius = radius*radius;
+    int next = cleo->ReadParam(handle)->i, passWrecked = cleo->ReadParam(handle)->i;
+
+    static int lastFound = 0;
+    if(!next) lastFound = 0;
+
+    auto objects = *(GTAVehicleSA**)(*pedPool + 0);
+    tByteFlag* flags = *(tByteFlag**)(*pedPool + 4);
+    int size = *(int*)(*pedPool + 8);
+
+    for(int i = lastFound; i < size; ++i)
+    {
+        if(flags[i].bEmpty) continue;
+        auto& ent = objects[i];
+        if((passWrecked && ((ent.UInt8At(58) & 0xF8) == 40 || (ent.UInt8At(1071) >> 6) & 1)) || ((ent.UInt8At(1070) >> 2) & 1)) continue;
+        if(radius >= 1000.0f || (ent.GetPos() - center).SqrMagnitude() <= sqrradius)
+        {
+            lastFound = i + 1;
+            cleo->GetPointerToScriptVar(handle)->i = GetVehicleRef(ent.AsInt());
+            UpdateCompareFlag(handle, true);
+            return;
+        }
+    }
+
+    cleo->GetPointerToScriptVar(handle)->i = -1;
+    UpdateCompareFlag(handle, false);
+    lastFound = 0;
 }
 
 uintptr_t* objectPool;
+int (*GetObjectRef)(int);
+struct GTAObjectSA : GTAEntity
+{
+    char structure[420];
+};
 CLEO_Fn(GET_RANDOM_OBJECT_IN_SPHERE_NO_SAVE_RECURSIVE)
 {
+    GTAVector3D center;
+    center.x = cleo->ReadParam(handle)->f;
+    center.y = cleo->ReadParam(handle)->f;
+    center.z = cleo->ReadParam(handle)->f;
+    float radius = cleo->ReadParam(handle)->f, sqrradius = radius*radius;
+    int next = cleo->ReadParam(handle)->i;
 
+    static int lastFound = 0;
+    if(!next) lastFound = 0;
+
+    auto objects = *(GTAObjectSA**)(*pedPool + 0);
+    tByteFlag* flags = *(tByteFlag**)(*pedPool + 4);
+    int size = *(int*)(*pedPool + 8);
+
+    for(int i = lastFound; i < size; ++i)
+    {
+        if(flags[i].bEmpty) continue;
+        auto& ent = objects[i];
+        if((ent.UInt8At(326) >> 6) & 1) continue;
+        if(radius >= 1000.0f || (ent.GetPos() - center).SqrMagnitude() <= sqrradius)
+        {
+            lastFound = i + 1;
+            cleo->GetPointerToScriptVar(handle)->i = GetObjectRef(ent.AsInt());
+            UpdateCompareFlag(handle, true);
+            return;
+        }
+    }
+
+    cleo->GetPointerToScriptVar(handle)->i = -1;
+    UpdateCompareFlag(handle, false);
+    lastFound = 0;
 }
 
-int (*GetPedRef)(int);
 CLEO_Fn(GET_PED_REF)
 {
     int ref = cleo->ReadParam(handle)->i;
     cleo->GetPointerToScriptVar(handle)->i = GetPedRef(ref);
 }
 
-int (*GetVehicleRef)(int);
 CLEO_Fn(GET_VEHICLE_REF)
 {
     int ref = cleo->ReadParam(handle)->i;
     cleo->GetPointerToScriptVar(handle)->i = GetVehicleRef(ref);
 }
 
-int (*GetObjectRef)(int);
 CLEO_Fn(GET_OBJECT_REF)
 {
     int ref = cleo->ReadParam(handle)->i;

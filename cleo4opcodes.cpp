@@ -3,11 +3,33 @@
 
 // CLEO
 #include "cleo.h"
+extern eGameIdent* nGameIdent;
 extern cleo_ifs_t* cleo;
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
 #define CLEO_Fn(h) void h (void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+
+void (*UpdateCompareFlag)(void*, uint8_t);
 int ValueForGame(int for3, int forvc, int forsa, int forlcs, int forvcs = 0);
 uint8_t* ScriptSpace;
+
+struct GTAVector3D
+{
+    float x, y, z;
+};
+struct GTAMatrix
+{
+    GTAVector3D  right;
+    unsigned int flags;
+    GTAVector3D  up;
+    unsigned int pad1;
+    GTAVector3D  at;
+    unsigned int pad2;
+    GTAVector3D  pos;
+    unsigned int pad3;
+
+    void* ptr;
+    bool bln;
+};
 
 int (*GetPedFromRef)(int);
 CLEO_Fn(GET_PED_POINTER)
@@ -59,9 +81,77 @@ CLEO_Fn(GOSUB_IF_FALSE)
     }
 }
 
+CLEO_Fn(IS_CAR_SIREN_ON)
+{
+    int ref = cleo->ReadParam(handle)->i;
+    int vehiclePtr = GetVehicleFromRef(ref);
+    UpdateCompareFlag(handle, *(uint8_t*)(vehiclePtr + 1073) >> 7);
+}
+
+CLEO_Fn(IS_CAR_ENGINE_ON)
+{
+    int ref = cleo->ReadParam(handle)->i;
+    int vehiclePtr = GetVehicleFromRef(ref);
+    UpdateCompareFlag(handle, (*(uint8_t *)(vehiclePtr + 1068) >> 4) & 1);
+}
+
+uintptr_t* pedPool;
+CLEO_Fn(GET_RANDOM_CHAR_IN_SPHERE_NO_SAVE_RECURSIVE)
+{
+    
+}
+
+uintptr_t* vehiclePool;
+CLEO_Fn(GET_RANDOM_CAR_IN_SPHERE_NO_SAVE_RECURSIVE)
+{
+    
+}
+
+uintptr_t* objectPool;
+CLEO_Fn(GET_RANDOM_OBJECT_IN_SPHERE_NO_SAVE_RECURSIVE)
+{
+
+}
+
+int (*GetPedRef)(int);
+CLEO_Fn(GET_PED_REF)
+{
+    int ref = cleo->ReadParam(handle)->i;
+    cleo->GetPointerToScriptVar(handle)->i = GetPedRef(ref);
+}
+
+int (*GetVehicleRef)(int);
+CLEO_Fn(GET_VEHICLE_REF)
+{
+    int ref = cleo->ReadParam(handle)->i;
+    cleo->GetPointerToScriptVar(handle)->i = GetVehicleRef(ref);
+}
+
+int (*GetObjectRef)(int);
+CLEO_Fn(GET_OBJECT_REF)
+{
+    int ref = cleo->ReadParam(handle)->i;
+    cleo->GetPointerToScriptVar(handle)->i = GetObjectRef(ref);
+}
+
+CLEO_Fn(POW)
+{
+    float base = cleo->ReadParam(handle)->f;
+    float arg = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = powf(base, arg);
+}
+
+CLEO_Fn(LOG)
+{
+    float arg = cleo->ReadParam(handle)->f;
+    float base = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = (float)(logf(arg) / logf(base));
+}
+
 void Init4Opcodes()
 {
     SET_TO(ScriptSpace, cleo->GetMainLibrarySymbol("_ZN11CTheScripts11ScriptSpaceE"));
+    SET_TO(UpdateCompareFlag, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17UpdateCompareFlagEh"));
 
     SET_TO(GetPedFromRef, cleo->GetMainLibrarySymbol("_ZN6CPools6GetPedEi"));
     CLEO_RegisterOpcode(0x0A96, GET_PED_POINTER); // 0A96=2,%2d% = actor %1d% struct
@@ -75,4 +165,29 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0A9F, GET_THIS_SCRIPT_STRUCT); // 0A9F=1,%1d% = current_thread_pointer
 
     CLEO_RegisterOpcode(0x0AA0, GOSUB_IF_FALSE); // 0AA0=1,gosub_if_false %1p%
+
+    if(*nGameIdent == GTASA)
+    {
+        CLEO_RegisterOpcode(0x0ABD, IS_CAR_SIREN_ON); // 0ABD=1,  vehicle %1d% siren_on
+        CLEO_RegisterOpcode(0x0ABE, IS_CAR_ENGINE_ON); // 0ABE=1,  vehicle %1d% engine_on
+
+        SET_TO(pedPool, cleo->GetMainLibrarySymbol("_ZN6CPools11ms_pPedPoolE"));
+        CLEO_RegisterOpcode(0x0AE1, GET_RANDOM_CHAR_IN_SPHERE_NO_SAVE_RECURSIVE); // 0AE1=7,%7d% = find_actor_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_deads %6h% //IF and SET
+        SET_TO(vehiclePool, cleo->GetMainLibrarySymbol("_ZN6CPools15ms_pVehiclePoolE"));
+        CLEO_RegisterOpcode(0x0AE2, GET_RANDOM_CAR_IN_SPHERE_NO_SAVE_RECURSIVE); // 0AE2=7,%7d% = find_vehicle_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_wrecked %6h% //IF and SET
+        SET_TO(objectPool, cleo->GetMainLibrarySymbol("_ZN6CPools14ms_pObjectPoolE"));
+        CLEO_RegisterOpcode(0x0AE3, GET_RANDOM_OBJECT_IN_SPHERE_NO_SAVE_RECURSIVE); // 0AE3=6,%6d% = find_object_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% //IF and SET
+    }
+
+    SET_TO(GetPedRef, cleo->GetMainLibrarySymbol("_ZN6CPools9GetPedRefEP4CPed"));
+    CLEO_RegisterOpcode(0x0AEA, GET_PED_REF); // 0AEA=2,%2d% = actor_struct %1d% handle
+
+    SET_TO(GetVehicleRef, cleo->GetMainLibrarySymbol("_ZN6CPools13GetVehicleRefEP8CVehicle"));
+    CLEO_RegisterOpcode(0x0AEB, GET_VEHICLE_REF); // 0AEB=2,%2d% = car_struct %1d% handle
+
+    SET_TO(GetObjectRef, cleo->GetMainLibrarySymbol("_ZN6CPools12GetObjectRefEP7CObject"));
+    CLEO_RegisterOpcode(0x0AEC, GET_OBJECT_REF); // 0AEC=2,%2d% = object_struct %1d% handle
+
+    CLEO_RegisterOpcode(0x0AEE, POW); // 0AEE=3,%3d% = %1d% exp %2d% //all floats
+    CLEO_RegisterOpcode(0x0AEF, LOG); // 0AEF=3,%3d% = log %1d% base %2d% //all floats
 }

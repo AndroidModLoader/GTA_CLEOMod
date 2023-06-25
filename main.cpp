@@ -126,71 +126,6 @@ extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opc
         "POP {R4-R7,PC}\n"
     );
 }
-        
-/*DECL_HOOK(bool, ReadStringLong, uintptr_t scriptHandle, std::string& buf)
-{
-    int PCOffset = ValueForGame(16, 16, 20, 24, 16);
-    uint8_t* pScriptPC = *(uint8_t**)(scriptHandle + PCOffset);
-    uint8_t paramType = *pScriptPC;
-    
-    logger->Info("ReadStringLong type 0x%02X", (int)paramType);
-    
-    if(ReadStringLong(scriptHandle, buf))
-    {
-        //logger->Info("ReadStringLong just a SCM string: %s", buf.c_str()-1);
-        return true;
-    }
-    
-    switch(paramType)
-    {
-        case SCRIPTPARAM_STATIC_INT_32BITS:
-        case SCRIPTPARAM_GLOBAL_NUMBER_VARIABLE:
-        case SCRIPTPARAM_LOCAL_NUMBER_VARIABLE:
-        case SCRIPTPARAM_STATIC_INT_8BITS:
-        case SCRIPTPARAM_STATIC_INT_16BITS:
-        case SCRIPTPARAM_STATIC_FLOAT:
-        case SCRIPTPARAM_GLOBAL_NUMBER_ARRAY:
-	    case SCRIPTPARAM_LOCAL_NUMBER_ARRAY:
-        {
-            buf = (const char*)cleo->ReadParam((void*)scriptHandle)->i;
-            logger->Info("longstr %s", buf.c_str());
-
-            return true;
-        }
-        
-        case SCRIPTPARAM_GLOBAL_SHORT_STRING_VARIABLE:
-        case SCRIPTPARAM_LOCAL_SHORT_STRING_VARIABLE:
-        case SCRIPTPARAM_GLOBAL_SHORT_STRING_ARRAY:
-        case SCRIPTPARAM_LOCAL_SHORT_STRING_ARRAY:
-        case SCRIPTPARAM_STATIC_LONG_STRING:
-        case SCRIPTPARAM_GLOBAL_LONG_STRING_VARIABLE:
-        case SCRIPTPARAM_LOCAL_LONG_STRING_VARIABLE:
-        case SCRIPTPARAM_GLOBAL_LONG_STRING_ARRAY:
-	    case SCRIPTPARAM_LOCAL_LONG_STRING_ARRAY:
-        {
-            
-
-            *(uint32_t**)(scriptHandle + PCOffset) += pScriptPC[1] + 2;
-            return true;
-        }
-        
-        default: return false;
-    }
-    // commented 
-    if(paramType == ValueForGame(0x56, 0x56, 0x56, 0x56, 0x56))
-    {
-        logger->Info("ReadStringLong success");
-        
-        buf = "Nothing Here!";
-        
-        *(int*)(scriptHandle + PCOffset) += *(uint8_t*)((uintptr_t)pScriptPC + 1) + 2;
-        
-        return true;
-    }
-    
-    return false;
-}*/
-        
 
 extern "C" void OnModPreLoad()
 {
@@ -278,9 +213,6 @@ extern "C" void OnModPreLoad()
     // XMDS Part 1
     // Fixed OPCODE 0DD2
     aml->Redirect(((uintptr_t)pDLInfo.dli_fbase + 0x4EB8 + 0x1), (uintptr_t)Opcode0DD2_inject);
-
-    // ReadStringLong patching (not ready)
-    //HOOK(ReadStringLong, (uintptr_t)pDLInfo.dli_fbase + 0x67FC + 0x1);
         
     // CLEO Menu Color
     SET_TO(pCLEOMenuBgColor, (uintptr_t)pDLInfo.dli_fbase + 0x1525C);

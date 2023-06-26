@@ -150,7 +150,7 @@ CLEO_Fn(GET_SCRIPT_STRUCT_NAMED)
     CLEO_ReadStringEx(handle, threadName, sizeof(threadName)); threadName[sizeof(threadName)-1] = 0;
     for (GTAScript* script = *pActiveScripts; script != NULL; script = script->next)
     {
-        if (strcmp(threadName, script->name) == 0)
+        if (strcasecmp(threadName, script->name) == 0)
         {
             cleo->GetPointerToScriptVar(handle)->i = (int)script;
             UpdateCompareFlag(handle, true);

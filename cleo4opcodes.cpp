@@ -10,6 +10,57 @@ extern cleo_ifs_t* cleo;
 
 void (*UpdateCompareFlag)(void*, uint8_t);
 int ValueForGame(int for3, int forvc, int forsa, int forlcs, int forvcs = 0);
+inline int GetPCOffset()
+{
+    switch(*nGameIdent)
+    {
+        case GTASA: return 20;
+        case GTALCS: return 24;
+
+        default: return 16;
+    }
+}
+inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
+{
+    uint8_t byte = **(uint8_t**)((int)handle + GetPCOffset());
+    if(byte <= 8) return NULL; // Not a string
+
+    static char newBuf[128];
+    if(!buf || size < 1) buf = (char*)newBuf;
+
+    switch(byte)
+    {
+        case 0xA:
+        case 0xB:
+        case 0x10:
+        case 0x11:
+        {
+            size = (size > 16) ? 16 : size;
+            memcpy(buf, (char*)cleo->GetPointerToScriptVar(handle), size);
+            buf[size-1] = 0;
+            return buf;
+        }
+
+        default:
+        {
+            return cleo->ReadStringLong(handle, buf, size) ? buf : NULL;
+        }
+    }
+    return buf;
+}
+inline void CLEO_WriteStringEx(void* handle, const char* buf)
+{
+    if(**(uint8_t**)((int)handle + GetPCOffset()) > 8)
+    {
+        char* dst = (char*)cleo->GetPointerToScriptVar(handle);
+        memcpy(dst, buf, 15); dst[15] = 0;
+    }
+    else
+    {
+        char* dst = (char*)cleo->ReadParam(handle)->i;
+        strcpy(dst, buf);
+    }
+}
 uint8_t* ScriptSpace;
 
 struct GTAVector3D
@@ -81,6 +132,31 @@ CLEO_Fn(GOSUB_IF_FALSE)
             bytePtr = (uint8_t*)((offset < 0) ? (basePtr - offset) : (ScriptSpace + offset));
         }
     }
+}
+
+struct GTAScript
+{
+    GTAScript* next;
+    GTAScript* prev;
+    char name[8];
+    // Incomplete so dont try it ;)
+};
+GTAScript **pActiveScripts;
+CLEO_Fn(GET_SCRIPT_STRUCT_NAMED)
+{
+    char threadName[8];
+    CLEO_ReadStringEx(handle, threadName, sizeof(threadName)); threadName[sizeof(threadName)-1] = 0;
+    for (auto script = *pActiveScripts; script != NULL; script = script->next)
+    {
+        if (strcmp(threadName, script->name) == 0)
+        {
+            cleo->GetPointerToScriptVar(handle)->i = (int)script;
+            UpdateCompareFlag(handle, true);
+            return;
+        }
+    }
+    cleo->GetPointerToScriptVar(handle)->i = 0;
+    UpdateCompareFlag(handle, false);
 }
 
 CLEO_Fn(GET_CAR_NUMBER_OF_GEARS)
@@ -301,6 +377,9 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0A9F, GET_THIS_SCRIPT_STRUCT); // 0A9F=1,%1d% = current_thread_pointer
 
     CLEO_RegisterOpcode(0x0AA0, GOSUB_IF_FALSE); // 0AA0=1,gosub_if_false %1p%
+
+    SET_TO(pActiveScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
+    CLEO_RegisterOpcode(0x0AAA, GET_SCRIPT_STRUCT_NAMED); // 0AAA=2,  %2d% = thread %1d% pointer  // IF and SET
 
     if(*nGameIdent == GTASA)
     {

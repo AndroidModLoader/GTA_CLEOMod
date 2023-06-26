@@ -116,7 +116,7 @@ CLEO_Fn(GOSUB_IF_FALSE)
     bool condition = *(bool*)((uintptr_t)handle + ValueForGame(120, 121, 229, 525, 521));
     if(!condition)
     {
-        uint8_t** stack = *(uint8_t***)((uintptr_t)handle + ValueForGame(20, 20, 24, 28, 20));
+        uint8_t** stack = (uint8_t**)((uintptr_t)handle + ValueForGame(20, 20, 24, 28, 20));
         uint8_t*& bytePtr = *(uint8_t**)((uintptr_t)handle + ValueForGame(16, 16, 20, 24, 16));
         uint16_t& stackDepth = *(uint16_t*)((uintptr_t)handle + ValueForGame(44, 44, 56, 92, 516));
 

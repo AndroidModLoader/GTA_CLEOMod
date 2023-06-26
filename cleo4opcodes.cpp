@@ -30,6 +30,10 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
 
     switch(byte)
     {
+        case 0x9:
+            cleo->ReadParam(handle); // Need to collect results before that
+            return cleo->ReadString8byte(handle, buf, size) ? buf : NULL;
+
         case 0xA:
         case 0xB:
         case 0x10:
@@ -42,9 +46,7 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
         }
 
         default:
-        {
             return cleo->ReadStringLong(handle, buf, size) ? buf : NULL;
-        }
     }
     return buf;
 }
@@ -146,7 +148,7 @@ CLEO_Fn(GET_SCRIPT_STRUCT_NAMED)
 {
     char threadName[8];
     CLEO_ReadStringEx(handle, threadName, sizeof(threadName)); threadName[sizeof(threadName)-1] = 0;
-    for (auto script = *pActiveScripts; script != NULL; script = script->next)
+    for (GTAScript* script = *pActiveScripts; script != NULL; script = script->next)
     {
         if (strcmp(threadName, script->name) == 0)
         {
@@ -376,7 +378,8 @@ void Init4Opcodes()
 
     CLEO_RegisterOpcode(0x0A9F, GET_THIS_SCRIPT_STRUCT); // 0A9F=1,%1d% = current_thread_pointer
 
-    CLEO_RegisterOpcode(0x0AA0, GOSUB_IF_FALSE); // 0AA0=1,gosub_if_false %1p%
+    // Not working. Maybe, yet.
+    //CLEO_RegisterOpcode(0x0AA0, GOSUB_IF_FALSE); // 0AA0=1,gosub_if_false %1p%
 
     SET_TO(pActiveScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
     CLEO_RegisterOpcode(0x0AAA, GET_SCRIPT_STRUCT_NAMED); // 0AAA=2,  %2d% = thread %1d% pointer  // IF and SET

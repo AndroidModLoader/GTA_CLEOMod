@@ -83,6 +83,20 @@ CLEO_Fn(GOSUB_IF_FALSE)
     }
 }
 
+CLEO_Fn(GET_CAR_NUMBER_OF_GEARS)
+{
+    int ref = cleo->ReadParam(handle)->i;
+    int vehiclePtr = GetVehicleFromRef(ref);
+    cleo->GetPointerToScriptVar(handle)->i = *(uint8_t*)(*(int*)(vehiclePtr + 904) + 118);
+}
+
+CLEO_Fn(GET_CAR_CURRENT_GEAR)
+{
+    int ref = cleo->ReadParam(handle)->i;
+    int vehiclePtr = GetVehicleFromRef(ref);
+    cleo->GetPointerToScriptVar(handle)->i = *(uint8_t*)(vehiclePtr + 1216);
+}
+
 CLEO_Fn(IS_CAR_SIREN_ON)
 {
     int ref = cleo->ReadParam(handle)->i;
@@ -293,6 +307,9 @@ void Init4Opcodes()
 
     if(*nGameIdent == GTASA)
     {
+        CLEO_RegisterOpcode(0x0AB7, GET_CAR_NUMBER_OF_GEARS); // 0AB7=2,get_vehicle %1d% number_of_gears_to %2d%
+        CLEO_RegisterOpcode(0x0AB8, GET_CAR_CURRENT_GEAR); // 0AB8=2,get_vehicle %1d% current_gear_to %2d%
+
         CLEO_RegisterOpcode(0x0ABD, IS_CAR_SIREN_ON); // 0ABD=1,  vehicle %1d% siren_on
         CLEO_RegisterOpcode(0x0ABE, IS_CAR_ENGINE_ON); // 0ABE=1,  vehicle %1d% engine_on
 

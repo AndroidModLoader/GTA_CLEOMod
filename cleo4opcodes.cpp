@@ -124,10 +124,8 @@ struct GTAEntity
     inline uint8_t& UInt8At(int off) { return *(uint8_t*)(AsInt() + off); }
     inline GTAVector3D& GetPos()
     {
-        if(*(void**)(AsInt() + 24) == NULL)
-            return (*(GTAMatrix**)(AsInt() + 24))->pos;
-        else
-            return *(GTAVector3D*)(AsInt() + 4);
+        GTAMatrix* matrix = *(GTAMatrix**)(AsInt() + 20);
+        return matrix ? matrix->pos : *(GTAVector3D*)(AsInt() + 4);
     }
 };
 
@@ -167,7 +165,6 @@ CLEO_Fn(GET_RANDOM_CHAR_IN_SPHERE_NO_SAVE_RECURSIVE)
             return;
         }
     }
-
     cleo->GetPointerToScriptVar(handle)->i = -1;
     UpdateCompareFlag(handle, false);
     lastFound = 0;

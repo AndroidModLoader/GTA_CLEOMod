@@ -162,14 +162,15 @@ CLEO_Fn(GET_SCRIPT_STRUCT_NAMED)
 }
 
 uintptr_t gMobileMenu;
+uintptr_t ms_RadarTrace;
 float (*FindGroundZForCoord)(float, float);
 CLEO_Fn(GET_TARGET_BLIP_COORDS)
 {
     int blipHndl = *(int*)(gMobileMenu + 72);
     if(blipHndl)
     {
-        float x = *(float*)(gMobileMenu + 100);
-        float y = *(float*)(gMobileMenu + 104);
+        float x = *(float*)(ms_RadarTrace + *(uint16_t*)&blipHndl * 0x28 + 0x8);
+        float y = *(float*)(ms_RadarTrace + *(uint16_t*)&blipHndl * 0x28 + 0xC);
         cleo->GetPointerToScriptVar(handle)->f = x;
         cleo->GetPointerToScriptVar(handle)->f = y;
         cleo->GetPointerToScriptVar(handle)->f = FindGroundZForCoord(x, y);
@@ -461,6 +462,7 @@ void Init4Opcodes()
     if(*nGameIdent == GTASA)
     {
         SET_TO(gMobileMenu, cleo->GetMainLibrarySymbol("gMobileMenu"));
+        SET_TO(ms_RadarTrace, *(uintptr_t*)((uintptr_t)cleo->GetMainLibraryLoadAddress() + 0x6773CC));
         SET_TO(FindGroundZForCoord, cleo->GetMainLibrarySymbol("_ZN6CWorld19FindGroundZForCoordEff"));
         CLEO_RegisterOpcode(0x0AB6, GET_TARGET_BLIP_COORDS); // 0AB6=3,store_target_marker_coords_to %1d% %2d% %3d% // IF and SET
 

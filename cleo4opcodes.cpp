@@ -283,9 +283,9 @@ CLEO_Fn(GET_RANDOM_CAR_IN_SPHERE_NO_SAVE_RECURSIVE)
     static int lastFound = 0;
     if(!next) lastFound = 0;
 
-    auto objects = *(GTAVehicleSA**)(*pedPool + 0);
-    tByteFlag* flags = *(tByteFlag**)(*pedPool + 4);
-    int size = *(int*)(*pedPool + 8);
+    auto objects = *(GTAVehicleSA**)(*vehiclePool + 0);
+    tByteFlag* flags = *(tByteFlag**)(*vehiclePool + 4);
+    int size = *(int*)(*vehiclePool + 8);
 
     if(radius >= 1000.0f)
     {
@@ -341,9 +341,9 @@ CLEO_Fn(GET_RANDOM_OBJECT_IN_SPHERE_NO_SAVE_RECURSIVE)
     static int lastFound = 0;
     if(!next) lastFound = 0;
 
-    auto objects = *(GTAObjectSA**)(*pedPool + 0);
-    tByteFlag* flags = *(tByteFlag**)(*pedPool + 4);
-    int size = *(int*)(*pedPool + 8);
+    auto objects = *(GTAObjectSA**)(*objectPool + 0);
+    tByteFlag* flags = *(tByteFlag**)(*objectPool + 4);
+    int size = *(int*)(*objectPool + 8);
 
     if(radius >= 1000.0f)
     {

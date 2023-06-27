@@ -28,6 +28,7 @@ Here is how to do this:
 
 There is additional opcodes for GTA:SA Android:
 ```
+0AB6=3,store_target_marker_coords_to %1d% %2d% %3d% // IF and SET
 0AB7=2,get_vehicle %1d% number_of_gears_to %2d%
 0AB8=2,get_vehicle %1d% current_gear_to %2d%
 0ABD=1,vehicle %1d% siren_on

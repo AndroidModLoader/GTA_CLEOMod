@@ -161,6 +161,29 @@ CLEO_Fn(GET_SCRIPT_STRUCT_NAMED)
     UpdateCompareFlag(handle, false);
 }
 
+uintptr_t gMobileMenu;
+float (*FindGroundZForCoord)(float, float);
+CLEO_Fn(GET_TARGET_BLIP_COORDS)
+{
+    int blipHndl = *(int*)(gMobileMenu + 72);
+    if(blipHndl)
+    {
+        float x = *(float*)(gMobileMenu + 100);
+        float y = *(float*)(gMobileMenu + 104);
+        cleo->GetPointerToScriptVar(handle)->f = x;
+        cleo->GetPointerToScriptVar(handle)->f = y;
+        cleo->GetPointerToScriptVar(handle)->f = FindGroundZForCoord(x, y);
+        UpdateCompareFlag(handle, true);
+    }
+    else
+    {
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        UpdateCompareFlag(handle, false);
+    }
+}
+
 CLEO_Fn(GET_CAR_NUMBER_OF_GEARS)
 {
     int ref = cleo->ReadParam(handle)->i;
@@ -437,6 +460,10 @@ void Init4Opcodes()
 
     if(*nGameIdent == GTASA)
     {
+        SET_TO(gMobileMenu, cleo->GetMainLibrarySymbol("gMobileMenu"));
+        SET_TO(FindGroundZForCoord, cleo->GetMainLibrarySymbol("_ZN6CWorld19FindGroundZForCoordEff"));
+        CLEO_RegisterOpcode(0x0AB6, GET_TARGET_BLIP_COORDS); // 0AB6=3,store_target_marker_coords_to %1d% %2d% %3d% // IF and SET
+
         CLEO_RegisterOpcode(0x0AB7, GET_CAR_NUMBER_OF_GEARS); // 0AB7=2,get_vehicle %1d% number_of_gears_to %2d%
         CLEO_RegisterOpcode(0x0AB8, GET_CAR_CURRENT_GEAR); // 0AB8=2,get_vehicle %1d% current_gear_to %2d%
 

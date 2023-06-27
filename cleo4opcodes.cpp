@@ -1,6 +1,8 @@
 #include <mod/amlmod.h>
 #include <mod/logger.h>
 
+#include <set>
+
 // CLEO
 #include "cleo.h"
 extern eGameIdent* nGameIdent;
@@ -211,6 +213,39 @@ CLEO_Fn(IS_CAR_ENGINE_ON)
     int ref = cleo->ReadParam(handle)->i;
     int vehiclePtr = GetVehicleFromRef(ref);
     UpdateCompareFlag(handle, (*(uint8_t *)(vehiclePtr + 1068) >> 4) & 1);
+}
+
+CLEO_Fn(GET_VAR_POINTER)
+{
+    int varPtr = (int)cleo->GetPointerToScriptVar(handle);
+    cleo->GetPointerToScriptVar(handle)->i = varPtr;
+}
+
+std::set<void*> gAllocationsMap;
+CLEO_Fn(ALLOCATE_MEMORY)
+{
+    int size = cleo->ReadParam(handle)->i;
+    void* mem = malloc(size);
+    if(mem) gAllocationsMap.insert(mem);
+    cleo->GetPointerToScriptVar(handle)->i = (int)mem;
+    UpdateCompareFlag(handle, mem != NULL);
+}
+
+CLEO_Fn(FREE_MEMORY)
+{
+    void* mem = (void*)cleo->ReadParam(handle)->i;
+    if (gAllocationsMap.find(mem) != gAllocationsMap.end())
+    {
+        free(mem);
+        gAllocationsMap.erase(mem);
+    }
+}
+
+uintptr_t ms_modelInfoPtrs;
+CLEO_Fn(GET_NAME_OF_VEHICLE_MODEL)
+{
+    int model = cleo->ReadParam(handle)->i;
+    CLEO_WriteStringEx(handle, (char*)(*(uintptr_t*)(ms_modelInfoPtrs + model * 0x4) + 74));
 }
 
 struct tByteFlag
@@ -471,7 +506,17 @@ void Init4Opcodes()
 
         CLEO_RegisterOpcode(0x0ABD, IS_CAR_SIREN_ON); // 0ABD=1,  vehicle %1d% siren_on
         CLEO_RegisterOpcode(0x0ABE, IS_CAR_ENGINE_ON); // 0ABE=1,  vehicle %1d% engine_on
+    }
 
+    //CLEO_RegisterOpcode(0x0AC6, GET_LABEL_POINTER); // Does exists, 0DD0
+    CLEO_RegisterOpcode(0x0AC7, GET_VAR_POINTER); // 0AC7=2,%2d% = var %1d% offset
+    CLEO_RegisterOpcode(0x0AC8, ALLOCATE_MEMORY); // 0AC8=2,%2d% = allocate_memory_size %1d%
+    CLEO_RegisterOpcode(0x0AC9, FREE_MEMORY); // 0AC9=1,free_allocated_memory %1d%
+
+    if(*nGameIdent == GTASA)
+    {
+        SET_TO(ms_modelInfoPtrs, *(uintptr_t*)((uintptr_t)cleo->GetMainLibraryLoadAddress() + 0x6796D4));
+        CLEO_RegisterOpcode(0x0ADB, GET_NAME_OF_VEHICLE_MODEL); // 0ADB=2,%2d% = car_model %1o% name
         SET_TO(pedPool, cleo->GetMainLibrarySymbol("_ZN6CPools11ms_pPedPoolE"));
         CLEO_RegisterOpcode(0x0AE1, GET_RANDOM_CHAR_IN_SPHERE_NO_SAVE_RECURSIVE); // 0AE1=7,%7d% = find_actor_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_deads %6h% //IF and SET
         SET_TO(vehiclePool, cleo->GetMainLibrarySymbol("_ZN6CPools15ms_pVehiclePoolE"));

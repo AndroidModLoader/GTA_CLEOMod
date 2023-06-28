@@ -51,11 +51,15 @@ void* pCLEO;
 Dl_info pDLInfo;
 eGameIdent* nGameIdent;
 
-ConfigEntry* pCLEOLocation;
-ConfigEntry* pCLEORedArrow;
-ConfigEntry* pCLEOMenuColor;
+ConfigEntry* pCfgCLEOLocation;
+ConfigEntry* pCfgCLEORedArrow;
+ConfigEntry* pCfgCLEOMenuColor;
+ConfigEntry* pCfgCLEOMenuArrowColor;
+ConfigEntry* pCfgCLEOMenuArrowPressedAlpha;
 
-rgba_t* pCLEOMenuBgColor;
+rgba_t* pCLEOMenuColor; // 1525C
+rgba_t* pCLEOMenuArrowColor; // 15250
+uint8_t* pCLEOArrowLastAlpha; // 2194FC
 
 extern unsigned char cleoData[100160];
 const char* pLocations[] = 
@@ -72,12 +76,12 @@ const char* pYesNo[] =
 };
 void OnLocationChanged(int oldVal, int newVal, void* userdata)
 {
-    pCLEOLocation->SetInt(newVal);
+    pCfgCLEOLocation->SetInt(newVal);
     cfg->Save();
 }
 void OnRedArrowChanged(int oldVal, int newVal, void* userdata)
 {
-    pCLEORedArrow->SetBool(newVal != 0);
+    pCfgCLEORedArrow->SetBool(newVal != 0);
     cfg->Save();
 }
 int ValueForGame(int for3, int forvc, int forsa, int forlcs, int forvcs = 0)
@@ -130,9 +134,11 @@ extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opc
 extern "C" void OnModPreLoad()
 {
     logger->SetTag("CLEO Mod");
-    pCLEOLocation = cfg->Bind("CLEO_Location", 1);
-    pCLEORedArrow = cfg->Bind("CLEO_RedArrow", true);
-    pCLEOMenuColor = cfg->Bind("CLEO_MenuColor", "55 127 175 150");
+    pCfgCLEOLocation = cfg->Bind("CLEO_Location", 1);
+    pCfgCLEORedArrow = cfg->Bind("CLEO_RedArrow", true);
+    pCfgCLEOMenuColor = cfg->Bind("CLEO_MenuColor", "55 127 175 150");
+    pCfgCLEOMenuArrowColor = cfg->Bind("CLEO_MenuArrowColor", "55 127 175 100");
+    pCfgCLEOMenuArrowPressedAlpha = cfg->Bind("CLEO_MenuArrowPressedAlpha", "180");
     
     pCLEO = dlopen("libcleo.so", RTLD_LAZY);
     if(!pCLEO)
@@ -159,7 +165,7 @@ extern "C" void OnModPreLoad()
     dladdr((void*)libEntry, &pDLInfo);
     cleo = (cleo_ifs_t*)((uintptr_t)pDLInfo.dli_fbase + 0x219AA8); // VTable = 0xC382
     nGameIdent = (eGameIdent*)((uintptr_t)pDLInfo.dli_fbase + 0x19298);
-    if(pCLEOLocation->GetInt() == 1)
+    if(pCfgCLEOLocation->GetInt() == 1)
     {
         char tmp[0xFF];
         snprintf(tmp, sizeof(tmp), "%s", aml->GetConfigPath());
@@ -180,7 +186,7 @@ extern "C" void OnModPreLoad()
         *(char*)(cleoLog + 10) = 'g';
         *(char*)(cleoLog + 11) = '\0';
     }
-    else if(pCLEOLocation->GetInt() == 2)
+    else if(pCfgCLEOLocation->GetInt() == 2)
     {
         char tmp[0xFF];
         snprintf(tmp, sizeof(tmp), "%s", aml->GetConfigPath());
@@ -194,7 +200,7 @@ extern "C" void OnModPreLoad()
         uintptr_t cleoDir = (uintptr_t)pDLInfo.dli_fbase + 0x146A9;
         *(char*)(cleoDir + 8) = '\0';
     }
-    else if(pCLEOLocation->GetInt() == 3)
+    else if(pCfgCLEOLocation->GetInt() == 3)
     {
         char tmp[0xFF];
         snprintf(tmp, sizeof(tmp), "%s", aml->GetConfigPath());
@@ -207,7 +213,7 @@ extern "C" void OnModPreLoad()
         goto SET_LOAD_DIRECTLY;
     }
 
-    if(!pCLEORedArrow->GetBool())
+    if(!pCfgCLEORedArrow->GetBool())
         aml->PlaceNOP((uintptr_t)pDLInfo.dli_fbase + 0xBD82, 2);
         
     // XMDS Part 1
@@ -215,14 +221,22 @@ extern "C" void OnModPreLoad()
     aml->Redirect(((uintptr_t)pDLInfo.dli_fbase + 0x4EB8 + 0x1), (uintptr_t)Opcode0DD2_inject);
         
     // CLEO Menu Color
-    SET_TO(pCLEOMenuBgColor, (uintptr_t)pDLInfo.dli_fbase + 0x1525C);
-    aml->Unprot((uintptr_t)pCLEOMenuBgColor, sizeof(rgba_t));
-    *pCLEOMenuBgColor = pCLEOMenuColor->ParseColor();
+    SET_TO(pCLEOMenuColor, (uintptr_t)pDLInfo.dli_fbase + 0x1525C);
+    aml->Unprot((uintptr_t)pCLEOMenuColor, sizeof(rgba_t));
+    *pCLEOMenuColor = pCfgCLEOMenuColor->ParseColor();
+    
+    SET_TO(pCLEOMenuArrowColor, (uintptr_t)pDLInfo.dli_fbase + 0x15250);
+    aml->Unprot((uintptr_t)pCLEOMenuArrowColor, sizeof(rgba_t));
+    *pCLEOMenuArrowColor = pCfgCLEOMenuColor->ParseColor();
+
+    SET_TO(pCLEOArrowLastAlpha, (uintptr_t)pDLInfo.dli_fbase + 0x2194FC);
+    aml->Unprot((uintptr_t)pCLEOArrowLastAlpha, sizeof(uint8_t));
+    *pCLEOArrowLastAlpha = pCfgCLEOMenuArrowPressedAlpha->GetInt();
     
     // Start CLEO
     libEntry();
     RegisterInterface("CLEO", cleo);
-    logger->Info("CLEO initialized!");
+    logger->Info("CLEO Initialized!");
 }
 
 
@@ -250,8 +264,8 @@ extern "C" void OnModLoad()
     sautils = (ISAUtils*)GetInterface("SAUtils");
     if(sautils)
     {
-        sautils->AddClickableItem(SetType_Game, "CLEO Location", pCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
-        sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
+        sautils->AddClickableItem(SetType_Game, "CLEO Location", pCfgCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
+        sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCfgCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
     }
     CLEO_RegisterOpcode(0xBA00, AML_HAS_MOD_LOADED); // BA00=1,aml_has_mod_loaded %1s%
     CLEO_RegisterOpcode(0xBA01, AML_HAS_MODVER_LOADED); // BA01=1,aml_has_mod_loaded %1s% version %2s%

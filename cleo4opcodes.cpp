@@ -525,7 +525,7 @@ void Init4Opcodes()
     //CLEO_RegisterOpcode(0x0AA0, GOSUB_IF_FALSE); // 0AA0=1,gosub_if_false %1p%
 
     // This one is IS_GAME_VERSION_ORIGINAL on PC. We have our own GET_GAME_VERSION at 0DD6 so lets do this:
-    //CLEO_RegisterOpcode(0x0AA9, GET_SCRIPT_STRUCT_NAMED);
+    //CLEO_RegisterOpcode(0x0AA9, IS_GAME_VERSION_ORIGINAL);
 
     SET_TO(pActiveScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
     CLEO_RegisterOpcode(0x0AAA, GET_SCRIPT_STRUCT_NAMED); // 0AAA=2,%2d% = thread %1d% pointer  // IF and SET

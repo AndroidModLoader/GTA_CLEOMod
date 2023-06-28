@@ -215,6 +215,20 @@ CLEO_Fn(IS_CAR_ENGINE_ON)
     UpdateCompareFlag(handle, (*(uint8_t *)(vehiclePtr + 1068) >> 4) & 1);
 }
 
+CLEO_Fn(CLEO_SET_CAR_ENGINE_ON)
+{
+    int vehiclePtr = GetVehicleFromRef(cleo->ReadParam(handle)->i);
+    bool state = cleo->ReadParam(handle)->i != 0;
+    *(int*)(vehiclePtr + 1068) = *(int*)(vehiclePtr + 1068) & 0xFFFFFFEF | (16 * (state & 1));
+}
+
+CLEO_Fn(PUSH_STRING_TO_VAR)
+{
+    char buf[128];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    CLEO_WriteStringEx(handle, buf);
+}
+
 CLEO_Fn(GET_VAR_POINTER)
 {
     int varPtr = (int)cleo->GetPointerToScriptVar(handle);
@@ -239,6 +253,26 @@ CLEO_Fn(FREE_MEMORY)
         free(mem);
         gAllocationsMap.erase(mem);
     }
+}
+
+uintptr_t (*FindPlayerPed)(int);
+int (*GetPedRef)(int);
+CLEO_Fn(GET_CHAR_PLAYER_IS_TARGETING)
+{
+    uintptr_t playerPed = FindPlayerPed(cleo->ReadParam(handle)->i);
+    if(!playerPed)
+    {
+      not_ok:
+        cleo->GetPointerToScriptVar(handle)->i = 0;
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    int target = *(int*)(playerPed + 1824);
+    if(target == 0 || (*(uint8_t*)(target + 58) & 7) != 3) goto not_ok;
+
+    cleo->GetPointerToScriptVar(handle)->i = GetPedRef(target);
+    UpdateCompareFlag(handle, true);
 }
 
 uintptr_t ms_modelInfoPtrs;
@@ -272,7 +306,6 @@ struct GTAPedSA : GTAEntity
     bool Player() { return UIntAt(1436) < 2; }
 };
 uintptr_t* pedPool;
-int (*GetPedRef)(int);
 CLEO_Fn(GET_RANDOM_CHAR_IN_SPHERE_NO_SAVE_RECURSIVE)
 {
     GTAVector3D center;
@@ -491,8 +524,15 @@ void Init4Opcodes()
     // Not working. Maybe, yet.
     //CLEO_RegisterOpcode(0x0AA0, GOSUB_IF_FALSE); // 0AA0=1,gosub_if_false %1p%
 
+    // This one is IS_GAME_VERSION_ORIGINAL on PC. We have our own GET_GAME_VERSION at 0DD6 so lets do this:
+    //CLEO_RegisterOpcode(0x0AA9, GET_SCRIPT_STRUCT_NAMED);
+
     SET_TO(pActiveScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
-    CLEO_RegisterOpcode(0x0AAA, GET_SCRIPT_STRUCT_NAMED); // 0AAA=2,  %2d% = thread %1d% pointer  // IF and SET
+    CLEO_RegisterOpcode(0x0AAA, GET_SCRIPT_STRUCT_NAMED); // 0AAA=2,%2d% = thread %1d% pointer  // IF and SET
+
+    // Those are 0DDC and 0DDD on Mobile
+    //CLEO_RegisterOpcode(0x0AB3, SET_CLEO_SHARED_VAR); // 0AB3=2,var %1d% = %2d%
+    //CLEO_RegisterOpcode(0x0AB4, GET_CLEO_SHARED_VAR); // 0AB4=2,%2d% = var %1d%
 
     if(*nGameIdent == GTASA)
     {
@@ -503,24 +543,30 @@ void Init4Opcodes()
 
         CLEO_RegisterOpcode(0x0AB7, GET_CAR_NUMBER_OF_GEARS); // 0AB7=2,get_vehicle %1d% number_of_gears_to %2d%
         CLEO_RegisterOpcode(0x0AB8, GET_CAR_CURRENT_GEAR); // 0AB8=2,get_vehicle %1d% current_gear_to %2d%
-
-        CLEO_RegisterOpcode(0x0ABD, IS_CAR_SIREN_ON); // 0ABD=1,  vehicle %1d% siren_on
-        CLEO_RegisterOpcode(0x0ABE, IS_CAR_ENGINE_ON); // 0ABE=1,  vehicle %1d% engine_on
+        CLEO_RegisterOpcode(0x0ABD, IS_CAR_SIREN_ON); // 0ABD=1,vehicle %1d% siren_on
+        CLEO_RegisterOpcode(0x0ABE, IS_CAR_ENGINE_ON); // 0ABE=1,vehicle %1d% engine_on
+        CLEO_RegisterOpcode(0x0ABF, CLEO_SET_CAR_ENGINE_ON); // 0ABF=2,set_vehicle %1d% engine_state_to %2d%
     }
 
-    //CLEO_RegisterOpcode(0x0AC6, GET_LABEL_POINTER); // Does exists, 0DD0
+    CLEO_RegisterOpcode(0x0AC6, PUSH_STRING_TO_VAR); // 0DD0, so this one is CUSTOM: 0AC6=2,push_string %1d% var %1d%
     CLEO_RegisterOpcode(0x0AC7, GET_VAR_POINTER); // 0AC7=2,%2d% = var %1d% offset
     CLEO_RegisterOpcode(0x0AC8, ALLOCATE_MEMORY); // 0AC8=2,%2d% = allocate_memory_size %1d%
     CLEO_RegisterOpcode(0x0AC9, FREE_MEMORY); // 0AC9=1,free_allocated_memory %1d%
 
     if(*nGameIdent == GTASA)
     {
+        SET_TO(FindPlayerPed, cleo->GetMainLibrarySymbol("_Z13FindPlayerPedi"));
+        CLEO_RegisterOpcode(0x0AD2, GET_CHAR_PLAYER_IS_TARGETING); // 0AD2=2,%2d% = player %1d% targeted_actor //IF and SET
+
         SET_TO(ms_modelInfoPtrs, *(uintptr_t*)((uintptr_t)cleo->GetMainLibraryLoadAddress() + 0x6796D4));
         CLEO_RegisterOpcode(0x0ADB, GET_NAME_OF_VEHICLE_MODEL); // 0ADB=2,%2d% = car_model %1o% name
+
         SET_TO(pedPool, cleo->GetMainLibrarySymbol("_ZN6CPools11ms_pPedPoolE"));
         CLEO_RegisterOpcode(0x0AE1, GET_RANDOM_CHAR_IN_SPHERE_NO_SAVE_RECURSIVE); // 0AE1=7,%7d% = find_actor_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_deads %6h% //IF and SET
+
         SET_TO(vehiclePool, cleo->GetMainLibrarySymbol("_ZN6CPools15ms_pVehiclePoolE"));
         CLEO_RegisterOpcode(0x0AE2, GET_RANDOM_CAR_IN_SPHERE_NO_SAVE_RECURSIVE); // 0AE2=7,%7d% = find_vehicle_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_wrecked %6h% //IF and SET
+
         SET_TO(objectPool, cleo->GetMainLibrarySymbol("_ZN6CPools14ms_pObjectPoolE"));
         CLEO_RegisterOpcode(0x0AE3, GET_RANDOM_OBJECT_IN_SPHERE_NO_SAVE_RECURSIVE); // 0AE3=6,%6d% = find_object_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% //IF and SET
     }

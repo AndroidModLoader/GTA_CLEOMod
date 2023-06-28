@@ -19,6 +19,7 @@ Here is how to do this:
 0A98=2,%2d% = object %1d% struct
 0A9F=1,%1d% = current_thread_pointer
 0AAA=2,%2d% = thread %1d% pointer // IF and SET
+0AC6=2,push_string %1d% var %1d% // This one is custom to be used with 0AC8
 0AC7=2,%2d% = var %1d% offset
 0AC8=2,%2d% = allocate_memory_size %1d%
 0AC9=1,free_allocated_memory %1d%
@@ -36,6 +37,8 @@ There is additional opcodes for GTA:SA Android:
 0AB8=2,get_vehicle %1d% current_gear_to %2d%
 0ABD=1,vehicle %1d% siren_on
 0ABE=1,vehicle %1d% engine_on
+0ABF=2,set_vehicle %1d% engine_state_to %2d%
+0AD2=2,%2d% = player %1d% targeted_actor //IF and SET
 0ADB=2,%2d% = car_model %1o% name
 0AE1=7,%7d% = find_actor_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_deads %6h% //IF and SET
 0AE2=7,%7d% = find_vehicle_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_wrecked %6h% //IF and SET

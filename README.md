@@ -19,7 +19,7 @@ Here is how to do this:
 0A98=2,%2d% = object %1d% struct
 0A9F=1,%1d% = current_thread_pointer
 0AAA=2,%2d% = thread %1d% pointer // IF and SET
-0AC6=2,push_string %1d% var %1d% // This one is custom to be used with 0AC8
+0AC6=2,push_string %1d% var %2d% // This one is custom to be used with 0AC8
 0AC7=2,%2d% = var %1d% offset
 0AC8=2,%2d% = allocate_memory_size %1d%
 0AC9=1,free_allocated_memory %1d%

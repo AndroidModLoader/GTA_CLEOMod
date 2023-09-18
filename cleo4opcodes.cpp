@@ -1,7 +1,10 @@
 #include <mod/amlmod.h>
 #include <mod/logger.h>
 
+#include <dirent.h>
 #include <set>
+#include <list>
+#include <string>
 
 // CLEO
 #include "cleo.h"
@@ -11,7 +14,8 @@ extern cleo_ifs_t* cleo;
 #define CLEO_Fn(h) void h (void *handle, uint32_t *ip, uint16_t opcode, const char *name)
 
 void (*UpdateCompareFlag)(void*, uint8_t);
-int ValueForGame(int for3, int forvc, int forsa, int forlcs, int forvcs = 0);
+int ValueForGame(int for3, int forvc, int forsa, int forlcs = 0, int forvcs = 0);
+int ValueForSA(int forsa, int forothers);
 inline int GetPCOffset()
 {
     switch(*nGameIdent)
@@ -22,9 +26,25 @@ inline int GetPCOffset()
         default: return 16;
     }
 }
+inline uint8_t*& GetPC(void* handle)
+{
+    return *(uint8_t**)((uintptr_t)handle + GetPCOffset());
+}
+inline uint8_t** GetStack(void* handle)
+{
+    return (uint8_t**)((uintptr_t)handle + ValueForGame(20, 20, 24, 28, 20));
+}
+inline uint16_t& GetStackDepth(void* handle)
+{
+    return *(uint16_t*)((uintptr_t)handle + ValueForGame(44, 44, 56, 92, 516));
+}
+inline bool& IsMissionScript(void* handle)
+{
+    return *(bool*)((uintptr_t)handle + ValueForGame(133, 133, 252));
+}
 inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
 {
-    uint8_t byte = **(uint8_t**)((int)handle + GetPCOffset());
+    uint8_t byte = *GetPC(handle);
     if(byte <= 8) return NULL; // Not a string
 
     static char newBuf[128];
@@ -33,7 +53,8 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
     switch(byte)
     {
         case 0x9:
-            cleo->ReadParam(handle); // Need to collect results before that
+            //cleo->ReadParam(handle); // Need to collect results before that
+            GetPC(handle) += 1;
             return cleo->ReadString8byte(handle, buf, size) ? buf : NULL;
 
         case 0xA:
@@ -54,7 +75,7 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
 }
 inline void CLEO_WriteStringEx(void* handle, const char* buf)
 {
-    if(**(uint8_t**)((int)handle + GetPCOffset()) > 8)
+    if(*GetPC(handle) > 8)
     {
         char* dst = (char*)cleo->GetPointerToScriptVar(handle);
         memcpy(dst, buf, 15); dst[15] = 0;
@@ -120,9 +141,9 @@ CLEO_Fn(GOSUB_IF_FALSE)
     bool condition = *(bool*)((uintptr_t)handle + ValueForGame(120, 121, 229, 525, 521));
     if(!condition)
     {
-        uint8_t** stack = (uint8_t**)((uintptr_t)handle + ValueForGame(20, 20, 24, 28, 20));
-        uint8_t*& bytePtr = *(uint8_t**)((uintptr_t)handle + ValueForGame(16, 16, 20, 24, 16));
-        uint16_t& stackDepth = *(uint16_t*)((uintptr_t)handle + ValueForGame(44, 44, 56, 92, 516));
+        uint8_t** stack = GetStack(handle);
+        uint8_t*& bytePtr = GetPC(handle);
+        uint16_t& stackDepth = GetStackDepth(handle);
 
         stack[stackDepth++] = bytePtr;
         int baseOffset = ValueForGame(0, 0, 16, 20, 0);
@@ -161,6 +182,75 @@ CLEO_Fn(GET_SCRIPT_STRUCT_NAMED)
     }
     cleo->GetPointerToScriptVar(handle)->i = 0;
     UpdateCompareFlag(handle, false);
+}
+
+CLEO_Fn(DOES_FILE_EXIST)
+{
+    char filepath[128];
+    CLEO_ReadStringEx(handle, filepath, sizeof(filepath)); filepath[sizeof(filepath)-1] = 0;
+    
+    char path[256];
+    sprintf(path, "%s/%s", aml->GetAndroidDataPath(), filepath);
+
+    FILE *file = fopen(path, "r");
+    UpdateCompareFlag(handle, file != NULL);
+    if(file) fclose(file);
+}
+
+inline uint16_t GetScmFunc(void* handle)
+{
+    return *(uint16_t*)((uintptr_t)handle + ValueForGame(0, 0x2E, 0x3A, 0, 0));
+}
+inline void SetScmFunc(void* handle, uint16_t idx)
+{
+    *(uint16_t*)((uintptr_t)handle + ValueForGame(0, 0x2E, 0x3A, 0, 0)) = idx;
+}
+inline void SkipUnusedParameters(void *thread)
+{
+    while (*GetPC(thread)) cleo->ReadParam(thread);
+    GetPC(thread) += 1;
+}
+uint8_t* LocalVariablesForCurrentMission;
+#include "cleo4scmfunc.h"
+void (*CollectParameters_SA)(void*, int16_t);
+void (*StoreParameters_SA)(void*, int16_t);
+void (*CollectParameters_VC)(void*, void*, uint16_t);
+void (*StoreParameters_VC)(void*, void*, uint16_t);
+CLEO_Fn(CLEO_CALL)
+{
+    int label = cleo->ReadParam(handle)->i;
+    int nParams = 0;
+    if(*GetPC(handle))
+    {
+        nParams = cleo->ReadParam(handle)->i;
+    }
+    ScmFunction* scmFunc = new ScmFunction(handle);
+
+    
+}
+CLEO_Fn(CLEO_RETURN)
+{
+    ScmFunction *scmFunc = ScmFunction::Store[GetScmFunc(handle)];
+    int nRetParams = 0;
+    if(*GetPC(handle))
+    {
+        nRetParams = cleo->ReadParam(handle)->i;
+    }
+
+    if(*nGameIdent == GTASA)
+    {
+        if(nRetParams) CollectParameters_SA(handle, nRetParams);
+        scmFunc->Return(handle);
+        if(nRetParams) StoreParameters_SA(handle, nRetParams);
+    }
+    else
+    {
+        if(nRetParams) CollectParameters_VC(handle, &GetPC(handle), nRetParams);
+        scmFunc->Return(handle);
+        if(nRetParams) CollectParameters_VC(handle, &GetPC(handle), nRetParams);
+    }
+    SkipUnusedParameters(handle);
+    delete scmFunc;
 }
 
 uintptr_t gMobileMenu;
@@ -252,6 +342,41 @@ CLEO_Fn(FREE_MEMORY)
     {
         free(mem);
         gAllocationsMap.erase(mem);
+    }
+}
+
+void (*SetHelpMessage_SA)(const char*, uint16_t*, bool, bool, bool, uint32_t);
+void (*SetHelpMessage_VC)(uint16_t*, int, bool, bool);
+union GXTChar
+{
+    struct { char s1, s2; };
+    uint16_t s;
+};
+inline void AsciiToGXTChar(const char* src, GXTChar* dst)
+{
+    int i = 0;
+    while(src[i])
+    {
+        dst[i].s = src[i];
+        ++i;
+    }
+    dst[i].s = 0;
+}
+inline void AsciiToGXTChar(const char* src, uint16_t* dst) { AsciiToGXTChar(src, (GXTChar*)dst); }
+CLEO_Fn(PRINT_HELP_STRING)
+{
+    static uint16_t helpGxt[384];
+    char buf[384];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    AsciiToGXTChar(buf, helpGxt);
+
+    if(*nGameIdent == GTASA)
+    {
+        SetHelpMessage_SA(buf, helpGxt, true, false, false, 0);
+    }
+    else if(*nGameIdent == GTAVC)
+    {
+        SetHelpMessage_VC(helpGxt, 0, true, false);
     }
 }
 
@@ -479,6 +604,19 @@ CLEO_Fn(GET_PED_REF)
     cleo->GetPointerToScriptVar(handle)->i = GetPedRef(ref);
 }
 
+CLEO_Fn(DOES_DIRECTORY_EXIST)
+{
+    char filepath[128];
+    CLEO_ReadStringEx(handle, filepath, sizeof(filepath)); filepath[sizeof(filepath)-1] = 0;
+    
+    char path[256];
+    sprintf(path, "%s/%s", aml->GetAndroidDataPath(), filepath);
+
+    DIR* dir = opendir(filepath);
+    UpdateCompareFlag(handle, dir != NULL);
+    if(dir) closedir(dir);
+}
+
 CLEO_Fn(GET_VEHICLE_REF)
 {
     int ref = cleo->ReadParam(handle)->i;
@@ -530,6 +668,22 @@ void Init4Opcodes()
     SET_TO(pActiveScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
     CLEO_RegisterOpcode(0x0AAA, GET_SCRIPT_STRUCT_NAMED); // 0AAA=2,%2d% = thread %1d% pointer  // IF and SET
 
+    CLEO_RegisterOpcode(0x0AAB, DOES_FILE_EXIST); // 0AAB=1,file_exists %1d%
+
+    CLEO_RegisterOpcode(0x0AB1, CLEO_CALL); // 0AB1=-1,call_scm_func %1p%
+    CLEO_RegisterOpcode(0x0AB2, CLEO_RETURN); // 0AB2=-1,ret
+    if(*nGameIdent == GTASA)
+    {
+        SET_TO(LocalVariablesForCurrentMission, cleo->GetMainLibrarySymbol("_ZN11CTheScripts31LocalVariablesForCurrentMissionE"));
+        SET_TO(CollectParameters_SA, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17CollectParametersEs"));
+        SET_TO(StoreParameters_SA, cleo->GetMainLibrarySymbol("_ZN14CRunningScript15StoreParametersEs"));
+    }
+    else
+    {
+        SET_TO(CollectParameters_VC, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17CollectParametersEPjs"));
+        SET_TO(StoreParameters_VC, cleo->GetMainLibrarySymbol("_ZN14CRunningScript15StoreParametersEPjs"));
+    }
+
     // Those are 0DDC and 0DDD on Mobile
     //CLEO_RegisterOpcode(0x0AB3, SET_CLEO_SHARED_VAR); // 0AB3=2,var %1d% = %2d%
     //CLEO_RegisterOpcode(0x0AB4, GET_CLEO_SHARED_VAR); // 0AB4=2,%2d% = var %1d%
@@ -553,8 +707,12 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AC8, ALLOCATE_MEMORY); // 0AC8=2,%2d% = allocate_memory_size %1d%
     CLEO_RegisterOpcode(0x0AC9, FREE_MEMORY); // 0AC9=1,free_allocated_memory %1d%
 
+    CLEO_RegisterOpcode(0x0ACA, PRINT_HELP_STRING); // 0ACA=1,show_text_box %1d%
+
     if(*nGameIdent == GTASA)
     {
+        SET_TO(SetHelpMessage_SA, cleo->GetMainLibrarySymbol("_ZN4CHud14SetHelpMessageEPKcPtbbbj"));
+
         SET_TO(FindPlayerPed, cleo->GetMainLibrarySymbol("_Z13FindPlayerPedi"));
         CLEO_RegisterOpcode(0x0AD2, GET_CHAR_PLAYER_IS_TARGETING); // 0AD2=2,%2d% = player %1d% targeted_actor //IF and SET
 
@@ -570,6 +728,12 @@ void Init4Opcodes()
         SET_TO(objectPool, cleo->GetMainLibrarySymbol("_ZN6CPools14ms_pObjectPoolE"));
         CLEO_RegisterOpcode(0x0AE3, GET_RANDOM_OBJECT_IN_SPHERE_NO_SAVE_RECURSIVE); // 0AE3=6,%6d% = find_object_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% //IF and SET
     }
+    else
+    {
+        SET_TO(SetHelpMessage_VC, cleo->GetMainLibrarySymbol("_ZN4CHud14SetHelpMessageEPtbbb"));
+    }
+
+    CLEO_RegisterOpcode(0x0AE4, DOES_DIRECTORY_EXIST); // 0AE4=1,directory_exist %1d%
 
     SET_TO(GetPedRef, cleo->GetMainLibrarySymbol("_ZN6CPools9GetPedRefEP4CPed"));
     CLEO_RegisterOpcode(0x0AEA, GET_PED_REF); // 0AEA=2,%2d% = actor_struct %1d% handle

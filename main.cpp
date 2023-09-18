@@ -20,7 +20,7 @@ ISAUtils* sautils = nullptr;
 // Size of array
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
-MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.4, Alexander Blade & RusJJ & XMDS)
+MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.5, Alexander Blade & RusJJ & XMDS)
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.2.2)
 END_DEPLIST()
@@ -95,6 +95,10 @@ int ValueForGame(int for3, int forvc, int forsa, int forlcs, int forvcs = 0)
         case GTAVCS: return forvcs;
     }
     return 0;
+}
+int ValueForSA(int forsa, int forothers)
+{
+    return *nGameIdent == GTASA ? forsa : forothers;
 }
 
 extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opcode0DD2_inject()

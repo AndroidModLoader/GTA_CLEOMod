@@ -152,14 +152,14 @@ inline void AsciiToGXTChar(const char* src, uint16_t* dst) { AsciiToGXTChar(src,
 const char* GXTCharToAscii(const GXTChar* src, uint8_t start)
 {
     static char buf[256] = { 0 };
+    if(!src) return buf;
 
     const char* str = (char*)src;
 
     int i = 0;
-    while (i < (sizeof(buf) - 1) && (str && str[i]))
+    char symbol;
+    while (i < (sizeof(buf) - 1) && (symbol = str[2 * i]))
     {
-        char symbol = str[i];
-
         if (symbol >= 0x80 && symbol <= 0x83)
             symbol += 0x40;
         else if (symbol >= 0x84 && symbol <= 0x8D)
@@ -187,9 +187,9 @@ const char* GXTCharToAscii(const GXTChar* src, uint8_t start)
 
         buf[i] = symbol;
 
-        ++i;
+        ++i; // uint16_t
     }
-    buf[i] = '\0';
+    buf[i] = 0;
 
     return buf;
 }

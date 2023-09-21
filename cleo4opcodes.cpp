@@ -1337,7 +1337,7 @@ void Init4Opcodes()
     SET_TO(CLEO_STD_DeallocStorage, nCLEOAddr + 0x5F34 + 0x1);
     SET_TO(TheText, cleo->GetMainLibrarySymbol("TheText"));
     SET_TO(TextGet, cleo->GetMainLibrarySymbol("_ZN5CText3GetEPKc"));
-    SET_TO(ms_modelInfoPtrs, *(uintptr_t*)((uintptr_t)cleo->GetMainLibraryLoadAddress() + *nGameIdent == GTASA ? 0x6796D4 : 0x394D94));
+    SET_TO(ms_modelInfoPtrs, *(uintptr_t*)((uintptr_t)cleo->GetMainLibraryLoadAddress() + (*nGameIdent == GTASA ? 0x6796D4 : 0x394D94)));
     if(*nGameIdent == GTASA)
     {
         SET_TO(gMobileMenu, cleo->GetMainLibrarySymbol("gMobileMenu"));

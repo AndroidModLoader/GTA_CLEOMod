@@ -19,18 +19,29 @@
         OR_END,
     };
 
-    inline bool& GetCond(void* handle)
+    enum eDataType
     {
-        return *(bool*)((uintptr_t)handle + ValueForGame(121, 121, 229));
-    }
-    inline bool& GetNotFlag(void* handle)
-    {
-        return *(bool*)((uintptr_t)handle + ValueForGame(130, 130, 242));
-    }
-    inline uint16_t& GetLogicalOp(void* handle)
-    {
-        return *(uint16_t*)((uintptr_t)handle + ValueForGame(128, 128, 240));
-    }
+        DT_END,
+        DT_DWORD,
+        DT_VAR,
+        DT_LVAR,
+        DT_BYTE,
+        DT_WORD,
+        DT_FLOAT,
+        DT_VAR_ARRAY,
+        DT_LVAR_ARRAY,
+        DT_TEXTLABEL,
+        DT_VAR_TEXTLABEL,
+        DT_LVAR_TEXTLABEL,
+        DT_VAR_TEXTLABEL_ARRAY,
+        DT_LVAR_TEXTLABEL_ARRAY,
+        DT_VARLEN_STRING,
+        DT_STRING,
+        DT_VAR_STRING,
+        DT_LVAR_STRING,
+        DT_VAR_STRING_ARRAY,
+        DT_LVAR_STRING_ARRAY
+    };
 
     struct ScmFunction
     {
@@ -38,10 +49,11 @@
         uint8_t *retnAddress;
         uint8_t *savedStack[8]; // gosub stack
         uint16_t savedSP;
-        int savedTls[32];
+        eLogicalOperation savedLogicalOp;
+        int savedTls[40];
+        int* savedRets[40]; // EXPERIMENTAL
         std::list<std::string> stringParams; // texts with this scope lifetime
         bool savedCondResult;
-        eLogicalOperation savedLogicalOp;
         bool savedNotFlag;
         static const size_t store_size = 0x400;
         static ScmFunction *Store[store_size];
@@ -55,14 +67,14 @@
                 if (++allocationPlace >= store_size) allocationPlace = 0; // end of store reached
                 if (allocationPlace == start_search) return NULL;         // the store is filled up
             }
-            ScmFunction *obj = reinterpret_cast<ScmFunction *>(::operator new(size));
+            ScmFunction *obj = (ScmFunction*)(::operator new(size));
             Store[allocationPlace] = obj;
             return obj;
         }
 
         void operator delete(void *mem)
         {
-            Store[((ScmFunction*)mem)->thisScmFunctionId] = nullptr;
+            Store[((ScmFunction*)mem)->thisScmFunctionId] = NULL;
             ::operator delete(mem);
         }
 
@@ -75,11 +87,12 @@
             // create snapshot of parent scope's local variables
             void* scope = (void*)((uintptr_t)thread + ValueForGame(48, 48, 60, 96, 520));
             if(*nGameIdent == GTASA && IsMissionScript(thread)) scope = (void*)LocalVariablesForCurrentMission;
-            memcpy(scope, savedTls, 4 * ValueForSA(32, 16));
+            memcpy(savedTls, scope, 4 * ValueForSA(40, 16));
 
             savedCondResult = GetCond(thread);
             savedLogicalOp = (eLogicalOperation)GetLogicalOp(thread);
             savedNotFlag = GetNotFlag(thread);
+            memset(savedRets, 0, sizeof(savedRets)); // EXPERIMENTAL
 
             // init new scope
             memset(GetStack(thread), 0, 4 * ValueForSA(8, 6));
@@ -100,7 +113,7 @@
             // restore parent scope's local variables
             void* scope = (void*)((uintptr_t)thread + ValueForGame(48, 48, 60, 96, 520));
             if(*nGameIdent == GTASA && IsMissionScript(thread)) scope = (void*)LocalVariablesForCurrentMission;
-            memcpy(savedTls, scope, 4 * ValueForSA(32, 16));
+            memcpy(scope, savedTls, 4 * ValueForSA(40, 16));
 
             // process conditional result of just ended function in parent scope
             bool condResult = GetCond(thread);
@@ -128,4 +141,4 @@
     };
 
     size_t ScmFunction::allocationPlace = 0;
-    ScmFunction* ScmFunction::Store[store_size] = { };
+    ScmFunction* ScmFunction::Store[store_size] = { NULL };

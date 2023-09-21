@@ -48,6 +48,7 @@ inline void __pathback(char* a)
 }
 
 void* pCLEO;
+uintptr_t nCLEOAddr;
 Dl_info pDLInfo;
 eGameIdent* nGameIdent;
 
@@ -167,8 +168,9 @@ extern "C" void OnModPreLoad()
     if(!libEntry) goto OOPSIE; // How?
 
     dladdr((void*)libEntry, &pDLInfo);
-    cleo = (cleo_ifs_t*)((uintptr_t)pDLInfo.dli_fbase + 0x219AA8); // VTable = 0xC382
-    nGameIdent = (eGameIdent*)((uintptr_t)pDLInfo.dli_fbase + 0x19298);
+    nCLEOAddr = (uintptr_t)pDLInfo.dli_fbase;
+    cleo = (cleo_ifs_t*)(nCLEOAddr + 0x219AA8); // VTable = 0xC382
+    nGameIdent = (eGameIdent*)(nCLEOAddr + 0x19298);
     if(pCfgCLEOLocation->GetInt() == 1)
     {
         char tmp[0xFF];
@@ -178,12 +180,12 @@ extern "C" void OnModPreLoad()
         setenv("EXTERNAL_STORAGE", tmp, 1);
         
       SET_LOAD_DIRECTLY:
-        aml->Unprot((uintptr_t)pDLInfo.dli_fbase + 0x146A9, 11);
-        uintptr_t cleoDir = (uintptr_t)pDLInfo.dli_fbase + 0x146A9;
+        aml->Unprot(nCLEOAddr + 0x146A9, 11);
+        uintptr_t cleoDir = nCLEOAddr + 0x146A9;
         *(char*)(cleoDir + 3) = '\0';
 
-        aml->Unprot((uintptr_t)pDLInfo.dli_fbase + 0x14C2C, 16);
-        uintptr_t cleoLog = (uintptr_t)pDLInfo.dli_fbase + 0x14C2C;
+        aml->Unprot(nCLEOAddr + 0x14C2C, 16);
+        uintptr_t cleoLog = nCLEOAddr + 0x14C2C;
         *(char*)(cleoLog + 7) = '.';
         *(char*)(cleoLog + 8) = 'l';
         *(char*)(cleoLog + 9) = 'o';
@@ -200,8 +202,8 @@ extern "C" void OnModPreLoad()
         snprintf(tmp, sizeof(tmp), "%s/cleo", tmp);
         mkdir(tmp, 0777);
         
-        aml->Unprot((uintptr_t)pDLInfo.dli_fbase + 0x146A9, 11);
-        uintptr_t cleoDir = (uintptr_t)pDLInfo.dli_fbase + 0x146A9;
+        aml->Unprot(nCLEOAddr + 0x146A9, 11);
+        uintptr_t cleoDir = nCLEOAddr + 0x146A9;
         *(char*)(cleoDir + 8) = '\0';
     }
     else if(pCfgCLEOLocation->GetInt() == 3)
@@ -218,22 +220,22 @@ extern "C" void OnModPreLoad()
     }
 
     if(!pCfgCLEORedArrow->GetBool())
-        aml->PlaceNOP((uintptr_t)pDLInfo.dli_fbase + 0xBD82, 2);
+        aml->PlaceNOP(nCLEOAddr + 0xBD82, 2);
         
     // XMDS Part 1
     // Fixed OPCODE 0DD2
-    aml->Redirect(((uintptr_t)pDLInfo.dli_fbase + 0x4EB8 + 0x1), (uintptr_t)Opcode0DD2_inject);
+    aml->Redirect((nCLEOAddr + 0x4EB8 + 0x1), (uintptr_t)Opcode0DD2_inject);
         
     // CLEO Menu Color
-    SET_TO(pCLEOMenuColor, (uintptr_t)pDLInfo.dli_fbase + 0x1525C);
+    SET_TO(pCLEOMenuColor, nCLEOAddr + 0x1525C);
     aml->Unprot((uintptr_t)pCLEOMenuColor, sizeof(rgba_t));
     *pCLEOMenuColor = pCfgCLEOMenuColor->ParseColor();
     
-    SET_TO(pCLEOMenuArrowColor, (uintptr_t)pDLInfo.dli_fbase + 0x15250);
+    SET_TO(pCLEOMenuArrowColor, nCLEOAddr + 0x15250);
     aml->Unprot((uintptr_t)pCLEOMenuArrowColor, sizeof(rgba_t));
     *pCLEOMenuArrowColor = pCfgCLEOMenuColor->ParseColor();
 
-    SET_TO(pCLEOArrowLastAlpha, (uintptr_t)pDLInfo.dli_fbase + 0x2194FC);
+    SET_TO(pCLEOArrowLastAlpha, nCLEOAddr + 0x2194FC);
     aml->Unprot((uintptr_t)pCLEOArrowLastAlpha, sizeof(uint8_t));
     *pCLEOArrowLastAlpha = pCfgCLEOMenuArrowPressedAlpha->GetInt();
     
@@ -261,7 +263,7 @@ void AML_HAS_MODVER_LOADED(void *handle, uint32_t *ip, uint16_t opcode, const ch
 
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
 void Init4Opcodes();
-extern "C" void OnModLoad()
+extern "C" void OnAllModsLoaded()
 {
     if(!cleo) return;
 
@@ -276,4 +278,11 @@ extern "C" void OnModLoad()
 
     // CLEO4 Opcodes
     Init4Opcodes();
+
+    // DMA Fix
+    if(*nGameIdent == GTASA)
+    {
+        uintptr_t pGTASA = aml->GetLib("libGTASA.so");
+        aml->Write8(pGTASA + 0x32950A + 0x1, 0x68);
+    }
 }

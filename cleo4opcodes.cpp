@@ -7,6 +7,7 @@
 #include <string>
 
 #define MAX_STR_LEN 0xFF
+#define MAX_SCRIPT_VARS_TO_SAVE 32
 
 // CLEO
 #include "cleo.h"
@@ -71,7 +72,12 @@ struct CLEO_STD_String // prob. just std::string..?
 {
     char padding[24];
 };
-
+struct CLEOLocalVarSave
+{
+    int value;
+    char strvalue[MAX_STR_LEN];
+};
+CLEOLocalVarSave localVarsSave[40];
 
 // Game Structs
 struct GTAVector3D
@@ -138,6 +144,24 @@ union GXTChar
 };
 
 // Custom Funcs
+inline void* AllocMem(size_t size)
+{
+    void* mem = malloc(size);
+    if(mem) gAllocationsMap.insert(mem);
+    return mem;
+}
+inline bool IsAlloced(void* mem)
+{
+    return (gAllocationsMap.find(mem) != gAllocationsMap.end());
+}
+inline void FreeMem(void* mem)
+{
+    if (gAllocationsMap.find(mem) != gAllocationsMap.end())
+    {
+        free(mem);
+        gAllocationsMap.erase(mem);
+    }
+}
 inline void AsciiToGXTChar(const char* src, GXTChar* dst)
 {
     int i = 0;
@@ -461,8 +485,8 @@ inline bool IsCLEORelatedGXTKey(char* gxtLabel)
             return true; // nuh-uh
     }
     else if(gxtLabel[0] == 'C' && gxtLabel[1] == 'S' && gxtLabel[2] == 'I' && gxtLabel[3] == '_') return true; // nuh-uh
-    else if(gxtLabel[0] == 'S' && gxtLabel[1] == 'P' && gxtLabel[2] == 'L'
-         && gxtLabel[3] == 'A' && gxtLabel[4] == 'S' && gxtLabel[5] == 'H') return true; // nuh-uh
+    else if(gxtLabel[0] == 'S' && gxtLabel[1] == 'P' && gxtLabel[2] == 'L' &&
+            gxtLabel[3] == 'A' && gxtLabel[4] == 'S' && gxtLabel[5] == 'H') return true; // nuh-uh
 
     return false; // uh-nuh
 }
@@ -476,7 +500,7 @@ inline void SetScmFunc(void* handle, uint16_t idx)
 }
 inline void SkipUnusedParameters(void *thread)
 {
-    while (*GetPC(thread)) CollectParameters_SA(thread, 1); //cleo->ReadParam(thread);
+    while (*GetPC(thread)) cleo->ReadParam(thread);
     GetPC(thread) += 1;
 }
 
@@ -817,8 +841,7 @@ CLEO_Fn(GET_VAR_POINTER)
 CLEO_Fn(ALLOCATE_MEMORY)
 {
     int size = cleo->ReadParam(handle)->i;
-    void* mem = malloc(size);
-    if(mem) gAllocationsMap.insert(mem);
+    void* mem = AllocMem(size);
     cleo->GetPointerToScriptVar(handle)->i = (int)mem;
     UpdateCompareFlag(handle, mem != NULL);
 }
@@ -826,11 +849,7 @@ CLEO_Fn(ALLOCATE_MEMORY)
 CLEO_Fn(FREE_MEMORY)
 {
     void* mem = (void*)cleo->ReadParam(handle)->i;
-    if (gAllocationsMap.find(mem) != gAllocationsMap.end())
-    {
-        free(mem);
-        gAllocationsMap.erase(mem);
-    }
+    FreeMem(mem);
 }
 
 CLEO_Fn(PRINT_HELP_STRING)
@@ -1052,14 +1071,7 @@ CLEO_Fn(SPAWN_VEHICLE_BY_CHEATING)
     if(*nGameIdent == GTASA)
     {
         int mi = *(int*)(ms_modelInfoPtrs + model * 4);
-        if(mi && *(int*)(mi + 84) != -1 && *(int*)(mi + 84) != 5)
-        {
-            UpdateCompareFlag(handle, SpawnCar(model) != NULL);
-        }
-        else
-        {
-            UpdateCompareFlag(handle, false);
-        }
+        UpdateCompareFlag(handle, mi && *(int*)(mi + 84) != -1 && *(int*)(mi + 84) != 5 && SpawnCar(model) != NULL);
     }
     else
     {
@@ -1319,6 +1331,211 @@ CLEO_Fn(CLEO_RETURN_IF_TRUE)
     if(!GetCond(handle)) CLEO_RETURN(handle, ip, opcode, name);
 }
 
+CLEO_Fn(SAVE_LOCAL_VARS)
+{
+    char savename[32], savepath[256];
+    int maxParams = ValueForSA(40, 16);
+    CLEO_ReadStringEx(handle, savename, sizeof(savename));
+    sprintf(savepath, "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
+    logger->Info("SAVE_LOCAL_VARS: %s", savepath);
+
+    FILE* savefile = fopen(savepath, "w+b");
+    if(!savefile)
+    {
+        UpdateCompareFlag(handle, false);
+        logger->Error("SAVE_LOCAL_VARS");
+        return;
+    }
+
+    int* scriptVars = GetLocalVars(handle);
+    for(int i = 0; i < maxParams; ++i)
+    {
+        if(IsAlloced((void*)scriptVars[i]))
+        {
+            localVarsSave[i].value = 0;
+            strcpy(localVarsSave[i].strvalue, (char*)scriptVars[i]);
+        }
+        else
+        {
+            localVarsSave[i].value = scriptVars[i];
+            localVarsSave[i].strvalue[0] = 0;
+        }
+    }
+    fwrite(localVarsSave, 1, sizeof(CLEOLocalVarSave) * maxParams, savefile);
+    fclose(savefile);
+    UpdateCompareFlag(handle, true);
+}
+
+CLEO_Fn(LOAD_LOCAL_VARS)
+{
+    char savename[32], savepath[256];
+    int maxParams = ValueForSA(40, 16);
+    CLEO_ReadStringEx(handle, savename, sizeof(savename));
+    sprintf(savepath, "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
+    FILE* savefile = fopen(savepath, "r+b");
+    if(!savefile)
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    int readBytes = sizeof(CLEOLocalVarSave) * maxParams;
+    if(fread(localVarsSave, 1, readBytes, savefile) != readBytes)
+    {
+        fclose(savefile);
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+    
+    int* scriptVars = GetLocalVars(handle);
+    for(int i = 0; i < maxParams; ++i)
+    {
+        if(IsAlloced((void*)scriptVars[i]))
+        {
+            FreeMem((void*)scriptVars[i]);
+        }
+        if(localVarsSave[i].strvalue[0])
+        {
+            int flag = localVarsSave[i].value;
+            if(flag == 0)
+            {
+                int len = strlen(localVarsSave[i].strvalue) + 1;
+                scriptVars[i] = (int)AllocMem(len);
+                memcpy((void*)(scriptVars[i]), localVarsSave[i].strvalue, len);
+            }
+        }
+        else
+        {
+            scriptVars[i] = localVarsSave[i].value;
+        }
+    }
+    fclose(savefile);
+    UpdateCompareFlag(handle, true);
+}
+
+CLEO_Fn(DELETE_LOCAL_VARS_SAVE)
+{
+    char savename[32], savepath[256];
+    CLEO_ReadStringEx(handle, savename, sizeof(savename));
+    sprintf(savepath, "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
+    UpdateCompareFlag(handle, remove(savepath) == 0);
+}
+
+CLEO_Fn(SAVE_VARS)
+{
+    static int* varsPointers[MAX_SCRIPT_VARS_TO_SAVE];
+    char savename[32], savepath[256];
+    CLEO_ReadStringEx(handle, savename, sizeof(savename));
+    sprintf(savepath, "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
+
+    FILE* savefile = fopen(savepath, "w+b");
+    if(!savefile)
+    {
+        SkipUnusedParameters(handle);
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+    
+    int variables = MAX_SCRIPT_VARS_TO_SAVE;
+    for(int i = 0; i < MAX_SCRIPT_VARS_TO_SAVE; ++i)
+    {
+        if(*GetPC(handle))
+        {
+            int* scriptVar = (int*)cleo->GetPointerToScriptVar(handle);
+            if(IsAlloced((void*)*scriptVar))
+            {
+                localVarsSave[i].value = 0;
+                strcpy(localVarsSave[i].strvalue, (char*)*scriptVar);
+            }
+            else
+            {
+                localVarsSave[i].value = *scriptVar;
+                localVarsSave[i].strvalue[0] = 0;
+            }
+        }
+        else
+        {
+            variables = i;
+            break;
+        }
+    }
+    SkipUnusedParameters(handle);
+    fwrite(localVarsSave, 1, sizeof(CLEOLocalVarSave) * variables, savefile);
+    fclose(savefile);
+    UpdateCompareFlag(handle, true);
+}
+
+CLEO_Fn(LOAD_VARS)
+{
+    static int* varsPointers[MAX_SCRIPT_VARS_TO_SAVE];
+    char savename[32], savepath[256];
+    CLEO_ReadStringEx(handle, savename, sizeof(savename));
+    sprintf(savepath, "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
+    FILE* savefile = fopen(savepath, "r+b");
+    if(!savefile)
+    {
+        SkipUnusedParameters(handle);
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+    
+    int variables = MAX_SCRIPT_VARS_TO_SAVE;
+    for(int i = 0; i < MAX_SCRIPT_VARS_TO_SAVE; ++i)
+    {
+        if(*GetPC(handle))
+        {
+            varsPointers[i] = (int*)cleo->GetPointerToScriptVar(handle);
+        }
+        else
+        {
+            variables = i;
+            break;
+        }
+    }
+    SkipUnusedParameters(handle);
+
+    int readBytes = sizeof(CLEOLocalVarSave) * variables;
+    if(fread(localVarsSave, 1, readBytes, savefile) != readBytes)
+    {
+        fclose(savefile);
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+    
+    for(int i = 0; i < variables; ++i)
+    {
+        if(IsAlloced((void*)*varsPointers[i]))
+        {
+            FreeMem((void*)*varsPointers[i]);
+        }
+        if(localVarsSave[i].strvalue[0])
+        {
+            int flag = localVarsSave[i].value;
+            if(flag == 0)
+            {
+                int len = strlen(localVarsSave[i].strvalue) + 1;
+                *varsPointers[i] = (int)AllocMem(len);
+                memcpy((void*)(*varsPointers[i]), localVarsSave[i].strvalue, len);
+            }
+        }
+        else
+        {
+            *varsPointers[i] = localVarsSave[i].value;
+        }
+    }
+
+    fclose(savefile);
+    UpdateCompareFlag(handle, true);
+}
+
+CLEO_Fn(DELETE_VARS_SAVE)
+{
+    char savename[32], savepath[256];
+    CLEO_ReadStringEx(handle, savename, sizeof(savename));
+    sprintf(savepath, "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
+    UpdateCompareFlag(handle, remove(savepath) == 0);
+}
+
 void Init4Opcodes()
 {
     SET_TO(ScriptSpace, cleo->GetMainLibrarySymbol("_ZN11CTheScripts11ScriptSpaceE"));
@@ -1435,6 +1652,13 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AEE, POW); // 0AEE=3,%3d% = %1d% exp %2d% //all floats
     CLEO_RegisterOpcode(0x0AEF, LOG); // 0AEF=3,%3d% = log %1d% base %2d% //all floats
 
+    // Fully custom opcodes for Android
     CLEO_RegisterOpcode(0x0AF6, CLEO_RETURN_IF_FALSE); // 0AF6=-1,ret_if_false
     CLEO_RegisterOpcode(0x0AF7, CLEO_RETURN_IF_TRUE); // 0AF7=-1,ret_if_true
+    CLEO_RegisterOpcode(0x0AF8, SAVE_LOCAL_VARS); // 0AF8=1,save_local_vars_named %1d% //IF and SET
+    CLEO_RegisterOpcode(0x0AF9, LOAD_LOCAL_VARS); // 0AF9=1,load_local_vars_named %1d% //IF and SET
+    CLEO_RegisterOpcode(0x0AFA, DELETE_LOCAL_VARS_SAVE); // 0AFA=1,delete_local_vars_save %1d% //IF and SET
+    CLEO_RegisterOpcode(0x0AFB, SAVE_VARS); // 0AFB=-1,save_script_vars_named %1d% //IF and SET
+    CLEO_RegisterOpcode(0x0AFC, LOAD_VARS); // 0AFC=-1,load_script_vars_named %1d% //IF and SET
+    CLEO_RegisterOpcode(0x0AFD, DELETE_VARS_SAVE); // 0AFD=1,delete_script_vars_save %1d% //IF and SET
 }

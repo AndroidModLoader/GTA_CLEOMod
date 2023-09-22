@@ -64,8 +64,10 @@
             size_t start_search = allocationPlace;
             while (Store[allocationPlace]) // find first unused position in store
             {
+                static void* zeroReturn = NULL; // gag the warn
+
                 if (++allocationPlace >= store_size) allocationPlace = 0; // end of store reached
-                if (allocationPlace == start_search) return NULL;         // the store is filled up
+                if (allocationPlace == start_search) return zeroReturn;   // the store is filled up
             }
             ScmFunction *obj = (ScmFunction*)(::operator new(size));
             Store[allocationPlace] = obj;

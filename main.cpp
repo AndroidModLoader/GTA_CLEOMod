@@ -245,6 +245,22 @@ extern "C" void OnModPreLoad()
     logger->Info("CLEO Initialized!");
 }
 
+const char* GetCLEODir()
+{
+    static char gotIt[256];
+    bool bGotit = false;
+    if(!bGotit)
+    {
+        char pad[24];
+        char* (*CLEO_GetDir)(char*);
+        SET_TO(CLEO_GetDir, nCLEOAddr + 0x607D);
+        CLEO_GetDir(&pad[0]);
+        strcpy(gotIt, *(char**)(pad + 20));
+        bGotit = true;
+    }
+    return gotIt;
+}
+
 
 void AML_HAS_MOD_LOADED(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
 {
@@ -276,7 +292,14 @@ extern "C" void OnAllModsLoaded()
     CLEO_RegisterOpcode(0xBA00, AML_HAS_MOD_LOADED); // BA00=1,aml_has_mod_loaded %1s%
     CLEO_RegisterOpcode(0xBA01, AML_HAS_MODVER_LOADED); // BA01=1,aml_has_mod_loaded %1s% version %2s%
 
+    // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
+    cleo->GetCleoStorageDir = GetCLEODir;
+    cleo->GetCleoPluginLoadDir = GetCLEODir;
+
     // CLEO4 Opcodes
+    char savpath[256];
+    sprintf(savpath, "%s/sav", cleo->GetCleoStorageDir());
+    mkdir(savpath, 0777);
     Init4Opcodes();
 
     // DMA Fix

@@ -43,7 +43,7 @@ Here is how to do this:
 0AD0=-1,show_formatted_text_lowpriority %1d% time %2d%
 0AD1=-1,show_formatted_text_highpriority %1d% time %2d%
 0AD2=2,%2d% = player %1d% targeted_actor //IF and SET
-0AD3=-1,string %1d% format %2d% ...
+0AD3=-1,string %1d% format %2d%
 0AD4=-1,%3d% = scan_string %1d% format %2d%  //IF and SET
 0ADB=2,%2d% = car_model %1o% name
 0ADD=1,spawn_car_with_model %1o% at_player_location //IF and SET // custom if-set condition
@@ -55,9 +55,15 @@ Here is how to do this:
 0AEF=3,%3d% = log %1d% base %2d% // all floats
 0AF6=-1,ret_if_false // custom 0AB2
 0AF7=-1,ret_if_true // custom 0AB2
+0AF8=1,save_local_vars_named %1d% //IF and SET
+0AF9=1,load_local_vars_named %1d% //IF and SET
+0AFA=1,delete_local_vars_save %1d% //IF and SET
+0AFB=-1,save_script_vars_named %1d% //IF and SET
+0AFC=-1,load_script_vars_named %1d% //IF and SET
+0AFD=1,delete_script_vars_save %1d% //IF and SET
 ```
 
-There is additional opcodes for GTA:SA Android:
+There is an additional opcodes for GTA:SA Android:
 ```
 0AB5=3,store_actor %1d% closest_vehicle_to %2d% closest_ped_to %3d%
 0AB6=3,store_target_marker_coords_to %1d% %2d% %3d% // IF and SET

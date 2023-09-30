@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <cleohelpers.h>
 
 // CLEO
 #include "cleo.h"
@@ -84,22 +85,6 @@ void OnRedArrowChanged(int oldVal, int newVal, void* userdata)
 {
     pCfgCLEORedArrow->SetBool(newVal != 0);
     cfg->Save();
-}
-int ValueForGame(int for3, int forvc, int forsa, int forlcs, int forvcs = 0)
-{
-    switch(*nGameIdent)
-    {
-        case GTA3:   return for3;
-        case GTAVC:  return forvc;
-        case GTASA:  return forsa;
-        case GTALCS: return forlcs;
-        case GTAVCS: return forvcs;
-    }
-    return 0;
-}
-int ValueForSA(int forsa, int forothers)
-{
-    return *nGameIdent == GTASA ? forsa : forothers;
 }
 
 extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opcode0DD2_inject()
@@ -261,21 +246,26 @@ const char* GetCLEODir()
     return gotIt;
 }
 
-
+extern void (*UpdateCompareFlag)(void*, uint8_t);
 void AML_HAS_MOD_LOADED(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
 {
     char modname[128];
-    cleo->ReadStringLong(handle, modname, sizeof(modname)); modname[sizeof(modname)-1] = 0;
-    cleo->GetPointerToScriptVar(handle)->i = aml->HasMod(modname);
+    CLEO_ReadStringEx(handle, modname, sizeof(modname));
+
+    bool hasMod = aml->HasMod(modname);
+    cleo->GetPointerToScriptVar(handle)->i = hasMod;
+    UpdateCompareFlag(handle, hasMod);
 }
 void AML_HAS_MODVER_LOADED(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
 {
     char modname[128], modver[24];
-    cleo->ReadStringLong(handle, modname, sizeof(modname)); modname[sizeof(modname)-1] = 0;
-    cleo->ReadStringLong(handle, modver, sizeof(modver)); modver[sizeof(modver)-1] = 0;
-    cleo->GetPointerToScriptVar(handle)->i = aml->HasModOfVersion(modname, modver);
-}
+    CLEO_ReadStringEx(handle, modname, sizeof(modname));
+    CLEO_ReadStringEx(handle, modver, sizeof(modver));
 
+    bool hasMod = aml->HasModOfVersion(modname, modver);
+    cleo->GetPointerToScriptVar(handle)->i = hasMod;
+    UpdateCompareFlag(handle, hasMod);
+}
 
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
 void Init4Opcodes();
@@ -289,8 +279,8 @@ extern "C" void OnAllModsLoaded()
         sautils->AddClickableItem(SetType_Game, "CLEO Location", pCfgCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
         sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCfgCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
     }
-    CLEO_RegisterOpcode(0xBA00, AML_HAS_MOD_LOADED); // BA00=1,aml_has_mod_loaded %1s%
-    CLEO_RegisterOpcode(0xBA01, AML_HAS_MODVER_LOADED); // BA01=1,aml_has_mod_loaded %1s% version %2s%
+    CLEO_RegisterOpcode(0xBA00, AML_HAS_MOD_LOADED); // BA00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
+    CLEO_RegisterOpcode(0xBA01, AML_HAS_MODVER_LOADED); // BA01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;

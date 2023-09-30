@@ -61,6 +61,8 @@ Here is how to do this:
 0AFB=-1,save_script_vars_named %1d% //IF and SET
 0AFC=-1,load_script_vars_named %1d% //IF and SET
 0AFD=1,delete_script_vars_save %1d% //IF and SET
+BA00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
+BA01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
 ```
 
 There is an additional opcodes for GTA:SA Android:

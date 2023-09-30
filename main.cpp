@@ -266,6 +266,15 @@ void AML_HAS_MODVER_LOADED(void *handle, uint32_t *ip, uint16_t opcode, const ch
     cleo->GetPointerToScriptVar(handle)->i = hasMod;
     UpdateCompareFlag(handle, hasMod);
 }
+void AML_REDIRECT_CODE(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    uintptr_t code1 = cleo->ReadParam(handle)->u;
+    if(cleo->ReadParam(handle)->i != 0) code1 += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+    uintptr_t code2 = cleo->ReadParam(handle)->u;
+    if(cleo->ReadParam(handle)->i != 0) code2 += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+
+    aml->Redirect(code1, code2);
+}
 
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
 void Init4Opcodes();
@@ -281,6 +290,7 @@ extern "C" void OnAllModsLoaded()
     }
     CLEO_RegisterOpcode(0xBA00, AML_HAS_MOD_LOADED); // BA00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
     CLEO_RegisterOpcode(0xBA01, AML_HAS_MODVER_LOADED); // BA01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
+    CLEO_RegisterOpcode(0xBA02, AML_REDIRECT_CODE); // BA02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;

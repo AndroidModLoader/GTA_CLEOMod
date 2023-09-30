@@ -63,6 +63,7 @@ Here is how to do this:
 0AFD=1,delete_script_vars_save %1d% //IF and SET
 BA00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
 BA01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
+BA02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%
 ```
 
 There is an additional opcodes for GTA:SA Android:

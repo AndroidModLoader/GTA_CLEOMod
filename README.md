@@ -47,6 +47,9 @@ Here is how to do this:
 0AD4=-1,%3d% = scan_string %1d% format %2d%  //IF and SET
 0ADB=2,%2d% = car_model %1o% name
 0ADD=1,spawn_car_with_model %1o% at_player_location //IF and SET // custom if-set condition
+0ADE=2,%2d% = text_by_GXT_entry %1d%
+0ADF=2,add_dynamic_GXT_entry %1d% text %2d%
+0AE0=1,remove_dynamic_GXT_entry %1d%
 0AE4=1,directory_exist %1d%
 0AEA=2,%2d% = actor_struct %1d% handle
 0AEB=2,%2d% = car_struct %1d% handle

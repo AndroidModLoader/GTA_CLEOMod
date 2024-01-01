@@ -191,7 +191,7 @@ CLEO_Fn(DOES_FILE_EXIST)
     char filepath[128];
     CLEO_ReadStringEx(handle, filepath, sizeof(filepath)); filepath[sizeof(filepath)-1] = 0;
     
-    char path[256];
+    char path[384];
     sprintf(path, "%s/%s", aml->GetAndroidDataPath(), filepath);
 
     FILE *file = fopen(path, "r");
@@ -203,7 +203,7 @@ CLEO_Fn(DOES_FILE_EXIST)
 CLEO_Fn(CLEO_CALL)
 {
     int label = cleo->ReadParam(handle)->i;
-    int nParams = (*GetPC(handle) != 0) ? cleo->ReadParam(handle)->i : 0;
+    int nParams = (*(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle)) != 0) ? cleo->ReadParam(handle)->i : 0;
     ScmFunction* scmFunc = new ScmFunction(handle);
 
     char buf[MAX_STR_LEN];
@@ -219,7 +219,7 @@ CLEO_Fn(CLEO_CALL)
     for (uint8_t i = 0; i < max_i; ++i)
     {
         int* val = &arguments[i];
-        switch(*GetPC(handle))
+        switch(*(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle)))
         {
             case DT_FLOAT:
             case DT_DWORD:
@@ -255,7 +255,7 @@ CLEO_Fn(CLEO_CALL)
 
     // EXPERIMENTAL
     int i = -1;
-    while(*GetPC(handle) != 0)
+    while(*(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle)) != 0)
     {
         scmFunc->savedRets[++i] = &cleo->GetPointerToScriptVar(handle)->i;
     }
@@ -279,7 +279,7 @@ CLEO_Fn(CLEO_RETURN)
 {
     ScmFunction *scmFunc = ScmFunction::Store[GetScmFunc(handle)];
     int nRetParams = 0;
-    if(*GetPC(handle))
+    if(*(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle)))
     {
         nRetParams = cleo->ReadParam(handle)->i;
     }
@@ -865,6 +865,18 @@ CLEO_Fn(DOES_DIRECTORY_EXIST)
     if(dir) closedir(dir);
 }
 
+CLEO_Fn(CREATE_DIRECTORY)
+{
+    char filepath[128];
+    CLEO_ReadStringEx(handle, filepath, sizeof(filepath)); filepath[sizeof(filepath)-1] = 0;
+    
+    char path[384];
+    sprintf(path, "%s/%s", aml->GetAndroidDataPath(), filepath);
+
+    int result = mkdir(path, 0777);
+    UpdateCompareFlag(handle, result == 0);
+}
+
 CLEO_Fn(GET_VEHICLE_REF)
 {
     int ref = cleo->ReadParam(handle)->i;
@@ -1216,6 +1228,7 @@ void Init4Opcodes()
     }
 
     CLEO_RegisterOpcode(0x0AE4, DOES_DIRECTORY_EXIST); // 0AE4=1,directory_exist %1d%
+    CLEO_RegisterOpcode(0x0AE5, CREATE_DIRECTORY); // 0AE5=1,create_directory %1d% //IF and SET
     CLEO_RegisterOpcode(0x0AEA, GET_PED_REF); // 0AEA=2,%2d% = actor_struct %1d% handle
     CLEO_RegisterOpcode(0x0AEB, GET_VEHICLE_REF); // 0AEB=2,%2d% = car_struct %1d% handle
     CLEO_RegisterOpcode(0x0AEC, GET_OBJECT_REF); // 0AEC=2,%2d% = object_struct %1d% handle

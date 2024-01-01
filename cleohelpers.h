@@ -178,6 +178,10 @@ inline uint8_t*& GetPC(void* handle)
 {
     return *(uint8_t**)((uintptr_t)handle + GetPCOffset());
 }
+inline uint8_t* GetPC_CLEO(void* handle) // weird-ass trash from CLEO for VC *facepalm*
+{
+    return (uint8_t*)cleo->GetRealCodePointer(*(uint32_t*)((uintptr_t)handle + GetPCOffset()));
+}
 inline uint8_t*& GetBasePC(void* handle)
 {
     return *(uint8_t**)((uintptr_t)handle + GetPCOffset() - 4);
@@ -238,7 +242,7 @@ inline void ThreadJump(void* handle, int offset)
 }
 inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
 {
-    uint8_t byte = *GetPC(handle);
+    uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
     if(byte <= 8) return NULL; // Not a string
 
     static char newBuf[128];
@@ -269,7 +273,8 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
 }
 inline void CLEO_WriteStringEx(void* handle, const char* buf)
 {
-    if(*GetPC(handle) > 8)
+    uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
+    if(byte > 8)
     {
         char* dst = (char*)cleo->GetPointerToScriptVar(handle);
         memcpy(dst, buf, 15); dst[15] = 0;
@@ -282,7 +287,8 @@ inline void CLEO_WriteStringEx(void* handle, const char* buf)
 }
 inline char* CLEO_GetStringPtr(void* handle)
 {
-    if(*GetPC(handle) > 8)
+    uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
+    if(byte > 8)
     {
         return (char*)cleo->GetPointerToScriptVar(handle);
     }
@@ -445,6 +451,7 @@ inline void SetScmFunc(void* handle, uint16_t idx)
 }
 inline void SkipUnusedParameters(void *thread)
 {
-    while (*GetPC(thread)) cleo->ReadParam(thread);
+    while(*(cleo->GetGameIdentifier() == GTASA ? GetPC(thread) : GetPC_CLEO(thread)))
+        cleo->ReadParam(thread);
     GetPC(thread) += 1;
 }

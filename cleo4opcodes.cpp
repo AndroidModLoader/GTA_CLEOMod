@@ -857,10 +857,10 @@ CLEO_Fn(DOES_DIRECTORY_EXIST)
     char filepath[128];
     CLEO_ReadStringEx(handle, filepath, sizeof(filepath)); filepath[sizeof(filepath)-1] = 0;
     
-    char path[256];
+    char path[384];
     sprintf(path, "%s/%s", aml->GetAndroidDataPath(), filepath);
 
-    DIR* dir = opendir(filepath);
+    DIR* dir = opendir(path);
     UpdateCompareFlag(handle, dir != NULL);
     if(dir) closedir(dir);
 }

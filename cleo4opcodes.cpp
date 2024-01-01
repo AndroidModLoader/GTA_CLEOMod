@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <list>
 #include <string>
+#include <sys/stat.h>
 
 // CLEO
 #include "cleo.h"

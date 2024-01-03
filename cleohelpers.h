@@ -243,46 +243,73 @@ inline void ThreadJump(void* handle, int offset)
 inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
 {
     uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
-    if(byte <= 8) return NULL; // Not a string
 
     static char newBuf[128];
     if(!buf || size < 1) buf = (char*)newBuf;
 
     switch(byte)
     {
-        case 0x9:
-            //cleo->ReadParam(handle); // Need to collect results before that
+        default:
+            return cleo->ReadStringLong(handle, buf, size) ? buf : NULL;
+
+        case 0x09:
             GetPC(handle) += 1;
             return cleo->ReadString8byte(handle, buf, size) ? buf : NULL;
 
-        case 0xA:
-        case 0xB:
+        case 0x0A:
+        case 0x0B:
+        case 0x0C:
+        case 0x0D:
+        {
+            size = (size > 8) ? 8 : size;
+            memcpy(buf, (char*)cleo->GetPointerToScriptVar(handle), size);
+            buf[size-1] = 0;
+            return buf;
+        }
+
         case 0x10:
         case 0x11:
+        case 0x12:
+        case 0x13:
         {
             size = (size > 16) ? 16 : size;
             memcpy(buf, (char*)cleo->GetPointerToScriptVar(handle), size);
             buf[size-1] = 0;
             return buf;
         }
-
-        default:
-            return cleo->ReadStringLong(handle, buf, size) ? buf : NULL;
     }
     return buf;
 }
 inline void CLEO_WriteStringEx(void* handle, const char* buf)
 {
     uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
-    if(byte > 8)
+    char* dst;
+    switch(byte)
     {
-        char* dst = (char*)cleo->GetPointerToScriptVar(handle);
-        memcpy(dst, buf, 15); dst[15] = 0;
-    }
-    else
-    {
-        char* dst = (char*)cleo->ReadParam(handle)->i;
-        strcpy(dst, buf);
+        default:
+            dst = (char*)cleo->ReadParam(handle)->i;
+            strcpy(dst, buf);
+            break;
+
+        case 0x0A:
+        case 0x0B:
+        case 0x0C:
+        case 0x0D:
+        {
+            dst = (char*)cleo->GetPointerToScriptVar(handle);
+            memcpy(dst, buf, 7); dst[7] = 0;
+            break;
+        }
+
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+        {
+            dst = (char*)cleo->GetPointerToScriptVar(handle);
+            memcpy(dst, buf, 15); dst[15] = 0;
+            break;
+        }
     }
 }
 inline char* CLEO_GetStringPtr(void* handle)
@@ -295,6 +322,27 @@ inline char* CLEO_GetStringPtr(void* handle)
     else
     {
         return (char*)cleo->ReadParam(handle)->i;
+    }
+}
+inline int CLEO_GetStringPtrMaxSize(void* handle)
+{
+    uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
+    switch(byte)
+    {
+        default:
+            return 256;
+
+        case 0x0A:
+        case 0x0B:
+        case 0x0C:
+        case 0x0D:
+            return 8;
+
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+            return 16;
     }
 }
 // https://github.com/cleolibrary/CLEO4/blob/efe00ef49945a85012cc2938c27ff82cccea5866/source/CCustomOpcodeSystem.cpp#L462

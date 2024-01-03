@@ -62,11 +62,26 @@ void (*CLEO_STD_AddToGxtStorage)(CLEO_STD_String*, CLEO_STD_String*);
 void (*CLEO_STD_DeallocStorage)(CLEO_STD_String*);
 GXTChar* (*TextGet)(void*, const char*);
 void* (*SpawnCar)(int);
+inline bool IsEndSlash(const char* str)
+{
+    char *s = (char*)str;
+    while(*s != 0)
+    {
+        if(*s == '/' && *(s + 1) == 0) return true;
+        ++s;
+    }
+    return false;
+}
 
 // CLEO Structs
 struct CLEO_STD_String // prob. just std::string..?
 {
     char padding[24];
+};
+struct CLEO_DirScan
+{
+    DIR *dir;
+    char path[256];
 };
 struct CLEOLocalVarSave
 {
@@ -191,9 +206,14 @@ CLEO_Fn(DOES_FILE_EXIST)
 {
     char filepath[128];
     CLEO_ReadStringEx(handle, filepath, sizeof(filepath)); filepath[sizeof(filepath)-1] = 0;
+    int i = 0; while(filepath[i] != 0) // A little hack (cheeseburger is like WHAAAA)
+    {
+        if(filepath[i] == '\\') filepath[i] = '/';
+        ++i;
+    }
     
-    char path[384];
-    sprintf(path, "%s/%s", aml->GetAndroidDataPath(), filepath);
+    char path[256];
+    snprintf(path, sizeof(path), "%s/%s", aml->GetAndroidDataPath(), filepath);
 
     FILE *file = fopen(path, "r");
     UpdateCompareFlag(handle, file != NULL);
@@ -857,9 +877,14 @@ CLEO_Fn(DOES_DIRECTORY_EXIST)
 {
     char filepath[128];
     CLEO_ReadStringEx(handle, filepath, sizeof(filepath)); filepath[sizeof(filepath)-1] = 0;
+    int i = 0; while(filepath[i] != 0) // A little hack (cheeseburger is like WHAAAA)
+    {
+        if(filepath[i] == '\\') filepath[i] = '/';
+        ++i;
+    }
     
-    char path[384];
-    sprintf(path, "%s/%s", aml->GetAndroidDataPath(), filepath);
+    char path[256];
+    snprintf(path, sizeof(path), "%s/%s", aml->GetAndroidDataPath(), filepath);
 
     DIR* dir = opendir(path);
     UpdateCompareFlag(handle, dir != NULL);
@@ -870,12 +895,95 @@ CLEO_Fn(CREATE_DIRECTORY)
 {
     char filepath[128];
     CLEO_ReadStringEx(handle, filepath, sizeof(filepath)); filepath[sizeof(filepath)-1] = 0;
+    int i = 0; while(filepath[i] != 0) // A little hack (cheeseburger is like WHAAAA)
+    {
+        if(filepath[i] == '\\') filepath[i] = '/';
+        ++i;
+    }
     
-    char path[384];
-    sprintf(path, "%s/%s", aml->GetAndroidDataPath(), filepath);
+    char path[256];
+    snprintf(path, sizeof(path), "%s/%s", aml->GetAndroidDataPath(), filepath);
 
     int result = mkdir(path, 0777);
     UpdateCompareFlag(handle, result == 0);
+}
+
+CLEO_Fn(FIND_FIRST_FILE)
+{
+    char filepath[128];
+    CLEO_ReadStringEx(handle, filepath, sizeof(filepath)); filepath[sizeof(filepath)-1] = 0;
+    int i = 0; while(filepath[i] != 0) // A little hack (cheeseburger is like WHAAAA)
+    {
+        if(filepath[i] == '\\') filepath[i] = '/';
+        ++i;
+    }
+    
+    char path[256];
+    snprintf(path, sizeof(path), "%s/%s", aml->GetAndroidDataPath(), filepath);
+
+    DIR* dir = opendir(path);
+    if(dir)
+    {
+        struct dirent *entry;
+        struct stat buf;
+        char filecheckpath[256];
+        while((entry = readdir(dir)) != NULL)
+        {
+            snprintf(filecheckpath, sizeof(filecheckpath), "%s/%s", path, entry->d_name);
+            lstat(filecheckpath, &buf);
+
+            if(!S_ISDIR(buf.st_mode))
+            {
+                CLEO_DirScan *scan = new CLEO_DirScan;
+                strncpy(scan->path, path, sizeof(scan->path));
+                scan->dir = dir;
+
+                CLEO_WriteStringEx(handle, entry->d_name);
+                cleo->GetPointerToScriptVar(handle)->i = (int)scan;
+                UpdateCompareFlag(handle, true);
+                return;
+            }
+        }
+        closedir(dir);
+    }
+
+    cleo->GetPointerToScriptVar(handle)->i = 0;
+    CLEO_WriteStringEx(handle, "");
+    UpdateCompareFlag(handle, false);
+}
+
+CLEO_Fn(FIND_NEXT_FILE)
+{
+    CLEO_DirScan *scan = (CLEO_DirScan*)cleo->ReadParam(handle)->i;
+
+    if(scan && scan->dir)
+    {
+        struct dirent *entry;
+        struct stat buf;
+        char filecheckpath[256];
+        while((entry = readdir(scan->dir)) != NULL)
+        {
+            snprintf(filecheckpath, sizeof(filecheckpath), "%s/%s", scan->path, entry->d_name);
+            lstat(filecheckpath, &buf);
+
+            if(!S_ISDIR(buf.st_mode))
+            {
+                CLEO_WriteStringEx(handle, entry->d_name);
+                UpdateCompareFlag(handle, true);
+                return;
+            }
+        }
+    }
+
+    CLEO_WriteStringEx(handle, "");
+    UpdateCompareFlag(handle, false);
+}
+
+CLEO_Fn(FIND_CLOSE)
+{
+    CLEO_DirScan *scan = (CLEO_DirScan*)cleo->ReadParam(handle)->i;
+    closedir(scan->dir);
+    delete scan;
 }
 
 CLEO_Fn(GET_VEHICLE_REF)
@@ -919,14 +1027,14 @@ CLEO_Fn(SAVE_LOCAL_VARS)
     char savename[32], savepath[256];
     int maxParams = ValueForSA(40, 16);
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    sprintf(savepath, "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
-    logger->Info("SAVE_LOCAL_VARS: %s", savepath);
+    snprintf(savepath, sizeof(savepath), "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
+    //logger->Info("SAVE_LOCAL_VARS: %s", savepath);
 
     FILE* savefile = fopen(savepath, "w+b");
     if(!savefile)
     {
         UpdateCompareFlag(handle, false);
-        logger->Error("SAVE_LOCAL_VARS");
+        //logger->Error("SAVE_LOCAL_VARS");
         return;
     }
 
@@ -954,7 +1062,7 @@ CLEO_Fn(LOAD_LOCAL_VARS)
     char savename[32], savepath[256];
     int maxParams = ValueForSA(40, 16);
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    sprintf(savepath, "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
     FILE* savefile = fopen(savepath, "r+b");
     if(!savefile)
     {
@@ -1000,7 +1108,7 @@ CLEO_Fn(DELETE_LOCAL_VARS_SAVE)
 {
     char savename[32], savepath[256];
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    sprintf(savepath, "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
     UpdateCompareFlag(handle, remove(savepath) == 0);
 }
 
@@ -1009,7 +1117,7 @@ CLEO_Fn(SAVE_VARS)
     static int* varsPointers[MAX_SCRIPT_VARS_TO_SAVE];
     char savename[32], savepath[256];
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    sprintf(savepath, "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
 
     FILE* savefile = fopen(savepath, "w+b");
     if(!savefile)
@@ -1053,7 +1161,7 @@ CLEO_Fn(LOAD_VARS)
     static int* varsPointers[MAX_SCRIPT_VARS_TO_SAVE];
     char savename[32], savepath[256];
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    sprintf(savepath, "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
     FILE* savefile = fopen(savepath, "r+b");
     if(!savefile)
     {
@@ -1115,7 +1223,7 @@ CLEO_Fn(DELETE_VARS_SAVE)
 {
     char savename[32], savepath[256];
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    sprintf(savepath, "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
     UpdateCompareFlag(handle, remove(savepath) == 0);
 }
 
@@ -1230,6 +1338,9 @@ void Init4Opcodes()
 
     CLEO_RegisterOpcode(0x0AE4, DOES_DIRECTORY_EXIST); // 0AE4=1,directory_exist %1d%
     CLEO_RegisterOpcode(0x0AE5, CREATE_DIRECTORY); // 0AE5=1,create_directory %1d% //IF and SET
+    CLEO_RegisterOpcode(0x0AE6, FIND_FIRST_FILE); // 0AE6=3,%2d% = find_first_file %1d% get_filename_to %3d% //IF and SET
+    CLEO_RegisterOpcode(0x0AE7, FIND_NEXT_FILE); // 0AE7=2,%2d% = find_next_file %1d% //IF and SET
+    CLEO_RegisterOpcode(0x0AE8, FIND_CLOSE); // 0AE8=1,find_close %1d%
     CLEO_RegisterOpcode(0x0AEA, GET_PED_REF); // 0AEA=2,%2d% = actor_struct %1d% handle
     CLEO_RegisterOpcode(0x0AEB, GET_VEHICLE_REF); // 0AEB=2,%2d% = car_struct %1d% handle
     CLEO_RegisterOpcode(0x0AEC, GET_OBJECT_REF); // 0AEC=2,%2d% = object_struct %1d% handle

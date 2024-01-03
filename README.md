@@ -51,6 +51,10 @@ Here is how to do this:
 0ADF=2,add_dynamic_GXT_entry %1d% text %2d%
 0AE0=1,remove_dynamic_GXT_entry %1d%
 0AE4=1,directory_exist %1d%
+0AE5=1,create_directory %1d% //IF and SET
+0AE6=3,%2d% = find_first_file %1d% get_filename_to %3d% //IF and SET
+0AE7=2,%2d% = find_next_file %1d% //IF and SET
+0AE8=1,find_close %1d%
 0AEA=2,%2d% = actor_struct %1d% handle
 0AEB=2,%2d% = car_struct %1d% handle
 0AEC=2,%2d% = object_struct %1d% handle

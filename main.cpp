@@ -23,7 +23,7 @@ ISAUtils* sautils = nullptr;
 
 MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.5, Alexander Blade & RusJJ & XMDS)
 BEGIN_DEPLIST()
-    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.2.2)
+    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.2.1)
 END_DEPLIST()
 
 inline size_t __strlen(const char *str)
@@ -33,19 +33,29 @@ inline size_t __strlen(const char *str)
     return (s - str);
 }
 
-inline void __pathback(char* a)
+inline bool __ispathdel(char s)
 {
-    int len = __strlen(a);
-    char* b = a + len;
-    while(b != a)
+    return (s == '\\' || s == '/');
+}
+
+inline void __pathback(char *str)
+{
+    const char* s = str;
+    uint16_t i = 0;
+    while(*s) ++s;
+    while(s != str)
     {
-        --b;
-        if(*b == '/')
-        {
-            a[b-a] = 0;
-            break;
-        }
+        if(!__ispathdel(*(--s))) break;
     }
+    while(s != str)
+    {
+        if(__ispathdel(*(--s)))
+        {
+            i = (uint16_t)(s - str);
+        }
+        else if(i != 0) break;
+    }
+    if(i > 0) str[i] = 0;
 }
 
 void* pCLEO;
@@ -138,6 +148,7 @@ extern "C" void OnModPreLoad()
 
         std::ofstream fs(szLoadFrom, std::ios::out | std::ios::binary);
         fs.write((const char*)cleoData, sizeof(cleoData));
+        fs.flush();
         fs.close();
         pCLEO = dlopen(szLoadFrom, RTLD_NOW);
     }
@@ -158,9 +169,8 @@ extern "C" void OnModPreLoad()
     nGameIdent = (eGameIdent*)(nCLEOAddr + 0x19298);
     if(pCfgCLEOLocation->GetInt() == 1)
     {
-        char tmp[0xFF];
-        snprintf(tmp, sizeof(tmp), "%s", aml->GetConfigPath());
-        __pathback(tmp);
+        char tmp[256];
+        snprintf(tmp, sizeof(tmp), "%s", aml->GetAndroidDataPath());
         __pathback(tmp);
         setenv("EXTERNAL_STORAGE", tmp, 1);
         
@@ -179,9 +189,8 @@ extern "C" void OnModPreLoad()
     }
     else if(pCfgCLEOLocation->GetInt() == 2)
     {
-        char tmp[0xFF];
-        snprintf(tmp, sizeof(tmp), "%s", aml->GetConfigPath());
-        __pathback(tmp);
+        char tmp[256];
+        snprintf(tmp, sizeof(tmp), "%s", aml->GetAndroidDataPath());
         __pathback(tmp);
         setenv("EXTERNAL_STORAGE", tmp, 1);
         snprintf(tmp, sizeof(tmp), "%s/cleo", tmp);
@@ -193,11 +202,8 @@ extern "C" void OnModPreLoad()
     }
     else if(pCfgCLEOLocation->GetInt() == 3)
     {
-        char tmp[0xFF];
-        snprintf(tmp, sizeof(tmp), "%s", aml->GetConfigPath());
-        __pathback(tmp);
-        __pathback(tmp);
-        snprintf(tmp, sizeof(tmp), "%s/files/CLEO", tmp);
+        char tmp[256];
+        snprintf(tmp, sizeof(tmp), "%s/CLEO", aml->GetAndroidDataPath());
         setenv("EXTERNAL_STORAGE", tmp, 1);
         mkdir(tmp, 0777);
         
@@ -275,6 +281,83 @@ void AML_REDIRECT_CODE(void *handle, uint32_t *ip, uint16_t opcode, const char *
 
     aml->Redirect(code1, code2);
 }
+void AML_JUMP_CODE(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    uintptr_t code1 = cleo->ReadParam(handle)->u;
+    if(cleo->ReadParam(handle)->i != 0) code1 += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+    uintptr_t code2 = cleo->ReadParam(handle)->u;
+    if(cleo->ReadParam(handle)->i != 0) code2 += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+
+    aml->PlaceB(code1, code2);
+}
+void AML_GET_BRANCH_DEST(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    uintptr_t code = cleo->ReadParam(handle)->u;
+    if(cleo->ReadParam(handle)->i != 0) code += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+    
+    cleo->GetPointerToScriptVar(handle)->i = aml->GetBranchDest(code);
+}
+void AML_MLS_SAVE(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    aml->MLSSaveFile();
+}
+void AML_MLS_HAS_VALUE(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char key[16];
+    CLEO_ReadStringEx(handle, key, sizeof(key));
+    UpdateCompareFlag(handle, aml->MLSHasValue(key));
+}
+void AML_MLS_DELETE_VALUE(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char key[16];
+    CLEO_ReadStringEx(handle, key, sizeof(key));
+    aml->MLSDeleteValue(key);
+}
+void AML_MLS_SET_INT(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char key[16];
+    CLEO_ReadStringEx(handle, key, sizeof(key));
+    aml->MLSSetInt(key, cleo->ReadParam(handle)->i);
+}
+void AML_MLS_SET_FLOAT(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char key[16];
+    CLEO_ReadStringEx(handle, key, sizeof(key));
+    aml->MLSSetFloat(key, cleo->ReadParam(handle)->f);
+}
+void AML_MLS_SET_STRING(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char key[16];
+    CLEO_ReadStringEx(handle, key, sizeof(key));
+    char value[128];
+    CLEO_ReadStringEx(handle, value, sizeof(value));
+    aml->MLSSetStr(key, value);
+}
+void AML_MLS_GET_INT(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char key[16];
+    CLEO_ReadStringEx(handle, key, sizeof(key));
+    int value = cleo->ReadParam(handle)->i;
+    aml->MLSGetInt(key, &value);
+    cleo->GetPointerToScriptVar(handle)->i = value;
+}
+void AML_MLS_GET_FLOAT(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char key[16];
+    CLEO_ReadStringEx(handle, key, sizeof(key));
+    float value = cleo->ReadParam(handle)->f;
+    aml->MLSGetFloat(key, &value);
+    cleo->GetPointerToScriptVar(handle)->f = value;
+}
+void AML_MLS_GET_STRING(void *handle, uint32_t *ip, uint16_t opcode, const char *name)
+{
+    char key[16];
+    CLEO_ReadStringEx(handle, key, sizeof(key));
+    char value[16];
+    CLEO_ReadStringEx(handle, value, sizeof(value));
+    aml->MLSGetStr(key, value, sizeof(value));
+    CLEO_WriteStringEx(handle, value);
+}
 
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
 void Init4Opcodes();
@@ -291,6 +374,17 @@ extern "C" void OnAllModsLoaded()
     CLEO_RegisterOpcode(0xBA00, AML_HAS_MOD_LOADED); // BA00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
     CLEO_RegisterOpcode(0xBA01, AML_HAS_MODVER_LOADED); // BA01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
     CLEO_RegisterOpcode(0xBA02, AML_REDIRECT_CODE); // BA02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%
+    CLEO_RegisterOpcode(0xBA03, AML_JUMP_CODE); // BA03=4,aml_jump_code %1d% add_ib %2d% to %3d% add_ib %4d%
+    CLEO_RegisterOpcode(0xBA04, AML_GET_BRANCH_DEST); // BA04=3,%3d% = aml_get_branch_dest %1d% add_ib %2d%
+    CLEO_RegisterOpcode(0xBA05, AML_MLS_SAVE); // BA05=0,aml_mls_save
+    CLEO_RegisterOpcode(0xBA06, AML_MLS_HAS_VALUE); // BA06=1,aml_mls_has_value %1s% // IF and SET
+    CLEO_RegisterOpcode(0xBA07, AML_MLS_DELETE_VALUE); // BA07=1,aml_mls_delete_value %1s%
+    CLEO_RegisterOpcode(0xBA08, AML_MLS_SET_INT); // BA08=2,aml_mls_set_int %1s% to %2d%
+    CLEO_RegisterOpcode(0xBA09, AML_MLS_SET_FLOAT); // BA09=2,aml_mls_set_float %1s% to %2d%
+    CLEO_RegisterOpcode(0xBA0A, AML_MLS_SET_STRING); // BA0A=2,aml_mls_set_string %1s% to %2s%
+    CLEO_RegisterOpcode(0xBA0B, AML_MLS_GET_INT); // BA0B=3,%3d% = aml_mls_get_int %1s% default %2d%
+    CLEO_RegisterOpcode(0xBA0C, AML_MLS_GET_FLOAT); // BA0C=3,%3d% = aml_mls_get_float %1s% default %2d%
+    CLEO_RegisterOpcode(0xBA0D, AML_MLS_GET_STRING); // BA0D=3,%3s% = aml_mls_get_string %1s% default %2s%
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;

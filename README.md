@@ -68,20 +68,20 @@ Here is how to do this:
 0AFB=-1,save_script_vars_named %1d% //IF and SET
 0AFC=-1,load_script_vars_named %1d% //IF and SET
 0AFD=1,delete_script_vars_save %1d% //IF and SET
-BA00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
-BA01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
-BA02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%
-BA03=4,aml_jump_code %1d% add_ib %2d% to %3d% add_ib %4d%
-BA04=3,%3d% = aml_get_branch_dest %1d% add_ib %2d%
-BA05=0,aml_mls_save
-BA06=1,aml_mls_has_value %1s% // IF and SET
-BA07=1,aml_mls_delete_value %1s%
-BA08=2,aml_mls_set_int %1s% to %2d%
-BA09=2,aml_mls_set_float %1s% to %2d%
-BA0A=2,aml_mls_set_string %1s% to %2s%
-BA0B=3,%3d% = aml_mls_get_int %1s% default %2d%
-BA0C=3,%3d% = aml_mls_get_float %1s% default %2d%
-BA0D=3,%3s% = aml_mls_get_string %1s% default %2s%
+3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
+3A01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
+3A02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%
+3A03=4,aml_jump_code %1d% add_ib %2d% to %3d% add_ib %4d%
+3A04=3,%3d% = aml_get_branch_dest %1d% add_ib %2d%
+3A05=0,aml_mls_save
+3A06=1,aml_mls_has_value %1s% // IF and SET
+3A07=1,aml_mls_delete_value %1s%
+3A08=2,aml_mls_set_int %1s% to %2d%
+3A09=2,aml_mls_set_float %1s% to %2d%
+3A0A=2,aml_mls_set_string %1s% to %2s%
+3A0B=3,%3d% = aml_mls_get_int %1s% default %2d%
+3A0C=3,%3d% = aml_mls_get_float %1s% default %2d%
+3A0D=3,%3s% = aml_mls_get_string %1s% default %2s%
 ```
 
 There is an additional opcodes for GTA:SA Android:

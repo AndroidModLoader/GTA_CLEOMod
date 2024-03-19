@@ -252,6 +252,16 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
         default:
             return cleo->ReadStringLong(handle, buf, size) ? buf : NULL;
 
+        case 0x01:
+        case 0x02:
+        case 0x03:
+        case 0x04:
+        case 0x05:
+        case 0x06:
+        case 0x07:
+        case 0x08:
+            return (char*)cleo->ReadParam(handle)->i;
+
         case 0x09:
             GetPC(handle) += 1;
             return cleo->ReadString8byte(handle, buf, size) ? buf : NULL;

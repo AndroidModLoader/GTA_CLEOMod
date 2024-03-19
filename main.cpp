@@ -21,7 +21,7 @@ ISAUtils* sautils = nullptr;
 // Size of array
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
-MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.5, Alexander Blade & RusJJ & XMDS)
+MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.6, Alexander Blade & RusJJ & XMDS)
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.2.1)
 END_DEPLIST()
@@ -143,7 +143,7 @@ extern "C" void OnModPreLoad()
     pCLEO = dlopen("libcleo.so", RTLD_LAZY);
     if(!pCLEO)
     {
-        char szLoadFrom[0xFF];
+        char szLoadFrom[256];
         snprintf(szLoadFrom, sizeof(szLoadFrom), "%s/libcleo.mod.so", aml->GetDataPath());
 
         std::ofstream fs(szLoadFrom, std::ios::out | std::ios::binary);
@@ -371,20 +371,20 @@ extern "C" void OnAllModsLoaded()
         sautils->AddClickableItem(SetType_Game, "CLEO Location", pCfgCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
         sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCfgCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
     }
-    CLEO_RegisterOpcode(0x3A00, AML_HAS_MOD_LOADED); // BA00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
-    CLEO_RegisterOpcode(0x3A01, AML_HAS_MODVER_LOADED); // BA01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
-    CLEO_RegisterOpcode(0x3A02, AML_REDIRECT_CODE); // BA02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%
-    CLEO_RegisterOpcode(0x3A03, AML_JUMP_CODE); // BA03=4,aml_jump_code %1d% add_ib %2d% to %3d% add_ib %4d%
-    CLEO_RegisterOpcode(0x3A04, AML_GET_BRANCH_DEST); // BA04=3,%3d% = aml_get_branch_dest %1d% add_ib %2d%
-    CLEO_RegisterOpcode(0x3A05, AML_MLS_SAVE); // BA05=0,aml_mls_save
-    CLEO_RegisterOpcode(0x3A06, AML_MLS_HAS_VALUE); // BA06=1,aml_mls_has_value %1s% // IF and SET
-    CLEO_RegisterOpcode(0x3A07, AML_MLS_DELETE_VALUE); // BA07=1,aml_mls_delete_value %1s%
-    CLEO_RegisterOpcode(0x3A08, AML_MLS_SET_INT); // BA08=2,aml_mls_set_int %1s% to %2d%
-    CLEO_RegisterOpcode(0x3A09, AML_MLS_SET_FLOAT); // BA09=2,aml_mls_set_float %1s% to %2d%
-    CLEO_RegisterOpcode(0x3A0A, AML_MLS_SET_STRING); // BA0A=2,aml_mls_set_string %1s% to %2s%
-    CLEO_RegisterOpcode(0x3A0B, AML_MLS_GET_INT); // BA0B=3,%3d% = aml_mls_get_int %1s% default %2d%
-    CLEO_RegisterOpcode(0x3A0C, AML_MLS_GET_FLOAT); // BA0C=3,%3d% = aml_mls_get_float %1s% default %2d%
-    CLEO_RegisterOpcode(0x3A0D, AML_MLS_GET_STRING); // BA0D=3,%3s% = aml_mls_get_string %1s% default %2s%
+    CLEO_RegisterOpcode(0x3A00, AML_HAS_MOD_LOADED); // 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
+    CLEO_RegisterOpcode(0x3A01, AML_HAS_MODVER_LOADED); // 3A01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
+    CLEO_RegisterOpcode(0x3A02, AML_REDIRECT_CODE); // 3A02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%
+    CLEO_RegisterOpcode(0x3A03, AML_JUMP_CODE); // 3A03=4,aml_jump_code %1d% add_ib %2d% to %3d% add_ib %4d%
+    CLEO_RegisterOpcode(0x3A04, AML_GET_BRANCH_DEST); // 3A04=3,%3d% = aml_get_branch_dest %1d% add_ib %2d%
+    CLEO_RegisterOpcode(0x3A05, AML_MLS_SAVE); // 3A05=0,aml_mls_save
+    CLEO_RegisterOpcode(0x3A06, AML_MLS_HAS_VALUE); // 3A06=1,aml_mls_has_value %1s% // IF and SET
+    CLEO_RegisterOpcode(0x3A07, AML_MLS_DELETE_VALUE); // 3A07=1,aml_mls_delete_value %1s%
+    CLEO_RegisterOpcode(0x3A08, AML_MLS_SET_INT); // 3A08=2,aml_mls_set_int %1s% to %2d%
+    CLEO_RegisterOpcode(0x3A09, AML_MLS_SET_FLOAT); // 3A09=2,aml_mls_set_float %1s% to %2d%
+    CLEO_RegisterOpcode(0x3A0A, AML_MLS_SET_STRING); // 3A0A=2,aml_mls_set_string %1s% to %2s%
+    CLEO_RegisterOpcode(0x3A0B, AML_MLS_GET_INT); // 3A0B=3,%3d% = aml_mls_get_int %1s% default %2d%
+    CLEO_RegisterOpcode(0x3A0C, AML_MLS_GET_FLOAT); // 3A0C=3,%3d% = aml_mls_get_float %1s% default %2d%
+    CLEO_RegisterOpcode(0x3A0D, AML_MLS_GET_STRING); // 3A0D=3,%3s% = aml_mls_get_string %1s% default %2s%
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;

@@ -1,5 +1,6 @@
 #define MAX_STR_LEN 0xFF
 #define MAX_SCRIPT_VARS_TO_SAVE 32
+#define CHEAT_STRING_SIZE 30
 
 #include <stdint.h>
 #include "cleo.h"

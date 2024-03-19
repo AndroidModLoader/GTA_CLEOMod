@@ -36,6 +36,8 @@ uintptr_t* vehiclePool;
 uintptr_t* objectPool;
 void* TheText;
 void** curCheatCar_VC;
+char* m_CheatString;
+int *keys;
 
 // Game Funcs
 void (*UpdateCompareFlag)(void*, uint8_t);
@@ -72,6 +74,21 @@ inline bool IsEndSlash(const char* str)
         ++s;
     }
     return false;
+}
+inline char *strrev(char *str)
+{
+    int i, n, len = 0;
+    char temp;
+    len = strlen(str);
+    n = len-1;
+    for(i = 0; i <= (len / 2); ++i)
+    {
+        temp = str[i];
+        str[i] = str[n];
+        str[n] = temp;
+        --n;
+    }
+    return str;
 }
 
 // CLEO Structs
@@ -278,7 +295,7 @@ CLEO_Fn(DOES_FILE_EXIST)
 CLEO_Fn(IS_KEY_PRESSED)
 {
     int key = cleo->ReadParam(handle)->i;
-    UpdateCompareFlag(handle, false);
+    UpdateCompareFlag(handle, keys[key] == 2);
 }
 
 #include "cleo4scmfunc.h"
@@ -824,9 +841,11 @@ CLEO_Fn(GET_NAME_OF_VEHICLE_MODEL)
 
 CLEO_Fn(TEST_CHEAT)
 {
-    char buf[MAX_STR_LEN];
+    char buf[CHEAT_STRING_SIZE];
     CLEO_ReadStringEx(handle, buf, sizeof(buf));
-    UpdateCompareFlag(handle, false);
+    char *s = strrev(buf);
+    char *c = m_CheatString;
+    UpdateCompareFlag(handle, strncmp(s, c, strlen(s)) == 0);
 }
 
 CLEO_Fn(SPAWN_VEHICLE_BY_CHEATING)
@@ -1412,22 +1431,24 @@ CLEO_Fn(DELETE_VARS_SAVE)
 
 void Init4Opcodes()
 {
-    SET_TO(ScriptSpace, cleo->GetMainLibrarySymbol("_ZN11CTheScripts11ScriptSpaceE"));
-    SET_TO(UpdateCompareFlag, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17UpdateCompareFlagEh"));
-    SET_TO(pActiveScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
-    SET_TO(ScriptParams, cleo->GetMainLibrarySymbol("ScriptParams"));
-    SET_TO(GetPedFromRef, cleo->GetMainLibrarySymbol("_ZN6CPools6GetPedEi"));
-    SET_TO(GetVehicleFromRef, cleo->GetMainLibrarySymbol("_ZN6CPools10GetVehicleEi"));
-    SET_TO(GetObjectFromRef, cleo->GetMainLibrarySymbol("_ZN6CPools9GetObjectEi"));
-    SET_TO(GetPedRef, cleo->GetMainLibrarySymbol("_ZN6CPools9GetPedRefEP4CPed"));
-    SET_TO(GetVehicleRef, cleo->GetMainLibrarySymbol("_ZN6CPools13GetVehicleRefEP8CVehicle"));
-    SET_TO(GetObjectRef, cleo->GetMainLibrarySymbol("_ZN6CPools12GetObjectRefEP7CObject"));
-    SET_TO(AddBigMessage, cleo->GetMainLibrarySymbol("_ZN9CMessages13AddBigMessageEPtjt"));
+    SET_TO(ScriptSpace,         cleo->GetMainLibrarySymbol("_ZN11CTheScripts11ScriptSpaceE"));
+    SET_TO(UpdateCompareFlag,   cleo->GetMainLibrarySymbol("_ZN14CRunningScript17UpdateCompareFlagEh"));
+    SET_TO(pActiveScripts,      cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
+    SET_TO(ScriptParams,        cleo->GetMainLibrarySymbol("ScriptParams"));
+    SET_TO(GetPedFromRef,       cleo->GetMainLibrarySymbol("_ZN6CPools6GetPedEi"));
+    SET_TO(GetVehicleFromRef,   cleo->GetMainLibrarySymbol("_ZN6CPools10GetVehicleEi"));
+    SET_TO(GetObjectFromRef,    cleo->GetMainLibrarySymbol("_ZN6CPools9GetObjectEi"));
+    SET_TO(GetPedRef,           cleo->GetMainLibrarySymbol("_ZN6CPools9GetPedRefEP4CPed"));
+    SET_TO(GetVehicleRef,       cleo->GetMainLibrarySymbol("_ZN6CPools13GetVehicleRefEP8CVehicle"));
+    SET_TO(GetObjectRef,        cleo->GetMainLibrarySymbol("_ZN6CPools12GetObjectRefEP7CObject"));
+    SET_TO(AddBigMessage,       cleo->GetMainLibrarySymbol("_ZN9CMessages13AddBigMessageEPtjt"));
     SET_TO(CLEO_STD_PutStrToAlloced, nCLEOAddr + 0x8F08 + 0x1);
     SET_TO(CLEO_STD_AddToGxtStorage, nCLEOAddr + 0x96CC + 0x1);
     SET_TO(CLEO_STD_DeallocStorage, nCLEOAddr + 0x5F34 + 0x1);
-    SET_TO(TheText, cleo->GetMainLibrarySymbol("TheText"));
-    SET_TO(TextGet, cleo->GetMainLibrarySymbol("_ZN5CText3GetEPKc"));
+    SET_TO(TheText,             cleo->GetMainLibrarySymbol("TheText"));
+    SET_TO(TextGet,             cleo->GetMainLibrarySymbol("_ZN5CText3GetEPKc"));
+    SET_TO(m_CheatString,       cleo->GetMainLibrarySymbol("_ZN6CCheat13m_CheatStringE"));
+    SET_TO(keys,                cleo->GetMainLibrarySymbol("keys"));
     SET_TO(ms_modelInfoPtrs, *(uintptr_t*)((uintptr_t)cleo->GetMainLibraryLoadAddress() + (*nGameIdent == GTASA ? 0x6796D4 : 0x394D94)));
     if(*nGameIdent == GTASA)
     {

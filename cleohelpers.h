@@ -9,6 +9,7 @@ extern uint8_t* ScriptSpace;
 
 #include <set>
 extern std::set<void*> gAllocationsMap;
+extern std::set<FILE*> gFilesMap;
 
 // Game Structs
 struct GTAVector3D
@@ -91,6 +92,30 @@ inline void FreeMem(void* mem)
     {
         free(mem);
         gAllocationsMap.erase(mem);
+    }
+}
+inline FILE* DoFile(const char* filename, const char* mode)
+{
+    char path[256];
+    snprintf(path, sizeof(path), "%s/%s", cleo->GetCleoStorageDir(), filename);
+    FILE* file = fopen(path, mode);
+    if(file) gFilesMap.insert(file);
+    return file;
+}
+inline bool IsFileCreated(FILE* file)
+{
+    return (file && gFilesMap.find(file) != gFilesMap.end());
+}
+inline void FreeFile(FILE* file)
+{
+    if(file)
+    {
+        fflush(file);
+        fclose(file);
+        if (gFilesMap.find(file) != gFilesMap.end())
+        {
+            gFilesMap.erase(file);
+        }
     }
 }
 inline void AsciiToGXTChar(const char* src, GXTChar* dst)

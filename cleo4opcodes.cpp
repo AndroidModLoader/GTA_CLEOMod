@@ -21,6 +21,7 @@ struct CLEO_STD_String;
 
 // Own Vars
 std::set<void*> gAllocationsMap;
+std::set<FILE*> gFilesMap;
 
 // Game Vars
 uint8_t* ScriptSpace;
@@ -138,6 +139,60 @@ CLEO_Fn(GET_OBJECT_POINTER)
     cleo->GetPointerToScriptVar(handle)->i = GetObjectFromRef(ref);
 }
 
+CLEO_Fn(OPEN_FILE)
+{
+    char filename[MAX_STR_LEN], mode[10];
+    CLEO_ReadStringEx(handle, filename, sizeof(filename));
+    CLEO_ReadStringEx(handle, mode, sizeof(mode));
+
+    FILE* file = DoFile(filename, mode);
+    cleo->GetPointerToScriptVar(handle)->i = (int)file;
+    UpdateCompareFlag(handle, file != NULL);
+}
+
+CLEO_Fn(CLOSE_FILE)
+{
+    FILE* file = (FILE*)cleo->ReadParam(handle)->i;
+    FreeFile(file);
+}
+
+CLEO_Fn(GET_FILE_SIZE)
+{
+    FILE* file = (FILE*)cleo->ReadParam(handle)->i;
+    int filesize = 0;
+    if(file)
+    {
+        auto savedPos = ftell(file);
+        fseek(file, 0, SEEK_END);
+        filesize = (int)ftell(file);
+        fseek(file, savedPos, SEEK_SET);
+    }
+    cleo->GetPointerToScriptVar(handle)->i = filesize;
+}
+
+CLEO_Fn(READ_FROM_FILE)
+{
+    FILE* file = (FILE*)cleo->ReadParam(handle)->i;
+    int size = cleo->ReadParam(handle)->i;
+    if(file)
+    {
+        char *str = new char[size];
+        fread(str, size, 1, file);
+        CLEO_WriteStringEx(handle, str);
+        free(str);
+    }
+    else CLEO_WriteStringEx(handle, "");
+}
+
+CLEO_Fn(WRITE_TO_FILE)
+{
+    FILE* file = (FILE*)cleo->ReadParam(handle)->i;
+    int size = cleo->ReadParam(handle)->i;
+    char buf[256];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    fwrite(buf, size, 1, file);
+}
+
 CLEO_Fn(GET_THIS_SCRIPT_STRUCT)
 {
     cleo->GetPointerToScriptVar(handle)->i = (int)handle;
@@ -218,6 +273,12 @@ CLEO_Fn(DOES_FILE_EXIST)
     FILE *file = fopen(path, "r");
     UpdateCompareFlag(handle, file != NULL);
     if(file) fclose(file);
+}
+
+CLEO_Fn(IS_KEY_PRESSED)
+{
+    int key = cleo->ReadParam(handle)->i;
+    UpdateCompareFlag(handle, false);
 }
 
 #include "cleo4scmfunc.h"
@@ -650,10 +711,122 @@ CLEO_Fn(SCAN_STRING)
     UpdateCompareFlag(handle, cExParams == *result);
 }
 
+CLEO_Fn(FILE_SEEK)
+{
+    FILE *file = (FILE*)cleo->ReadParam(handle)->i;
+    int seek = cleo->ReadParam(handle)->i;
+    int origin = cleo->ReadParam(handle)->i;
+
+    if(!file)
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+    UpdateCompareFlag(handle, fseek(file, seek, origin) == 0);
+}
+
+CLEO_Fn(IS_END_OF_FILE_REACHED)
+{
+    FILE *file = (FILE*)cleo->ReadParam(handle)->i;
+    if(!file)
+    {
+        UpdateCompareFlag(handle, true);
+        return;
+    }
+    UpdateCompareFlag(handle, ferror(file) || feof(file) != 0);
+}
+
+CLEO_Fn(READ_STRING_FROM_FILE)
+{
+    FILE *file = (FILE*)cleo->ReadParam(handle)->i;
+    int maxsize = CLEO_GetStringPtrMaxSize(handle);
+    char *buf = CLEO_GetStringPtr(handle);
+    int scriptmaxsize = cleo->ReadParam(handle)->i;
+
+    if(!file)
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+    int size = scriptmaxsize;
+    if(size > maxsize) size = maxsize;
+    UpdateCompareFlag(handle, fgets(buf, size, file) == buf);
+}
+
+CLEO_Fn(WRITE_STRING_TO_FILE)
+{
+    FILE *file = (FILE*)cleo->ReadParam(handle)->i;
+    char buf[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+
+    if(!file)
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+    UpdateCompareFlag(handle, fputs(buf, file) > 0);
+    fflush(file);
+}
+
+CLEO_Fn(WRITE_FORMATTED_STRING_TO_FILE)
+{
+    FILE *file = (FILE*)cleo->ReadParam(handle)->i;
+    char fmt[MAX_STR_LEN], text[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, fmt, sizeof(fmt));
+    CLEO_FormatString(handle, text, sizeof(text), fmt);
+
+    if(!file) return;
+    fputs(text, file);
+    fflush(file);
+}
+
+CLEO_Fn(SCAN_FILE)
+{
+    FILE *file = (FILE*)cleo->ReadParam(handle)->i;
+    char fmt[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, fmt, sizeof(fmt));
+    
+    size_t cExParams = 0;
+    int* ExParams[35];
+    int *result = (int*)cleo->GetPointerToScriptVar(handle);
+
+    for (int i = 0; i < 35; ++i)
+    {
+        if(*GetPC(handle))
+        {
+            ExParams[i] = (int*)cleo->GetPointerToScriptVar(handle);
+            ++cExParams;
+        }
+        else
+        {
+            ExParams[i] = NULL;
+        }
+    }
+    ++GetPC(handle);
+
+    *result = fscanf(file, fmt,
+        /* extra parameters (will be aligned automatically, but the limit of 35 elements maximum exists) */
+        ExParams[0], ExParams[1], ExParams[2], ExParams[3], ExParams[4], ExParams[5],
+        ExParams[6], ExParams[7], ExParams[8], ExParams[9], ExParams[10], ExParams[11],
+        ExParams[12], ExParams[13], ExParams[14], ExParams[15], ExParams[16], ExParams[17],
+        ExParams[18], ExParams[19], ExParams[20], ExParams[21], ExParams[22], ExParams[23],
+        ExParams[24], ExParams[25], ExParams[26], ExParams[27], ExParams[28], ExParams[29],
+        ExParams[30], ExParams[31], ExParams[32], ExParams[33], ExParams[34]
+    );
+    UpdateCompareFlag(handle, cExParams == *result);
+}
+
 CLEO_Fn(GET_NAME_OF_VEHICLE_MODEL)
 {
     int model = cleo->ReadParam(handle)->i;
     CLEO_WriteStringEx(handle, (char*)(*(uintptr_t*)(ms_modelInfoPtrs + model * 4) + ValueForSA(74, 86)));
+}
+
+CLEO_Fn(TEST_CHEAT)
+{
+    char buf[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    UpdateCompareFlag(handle, false);
 }
 
 CLEO_Fn(SPAWN_VEHICLE_BY_CHEATING)
@@ -998,6 +1171,16 @@ CLEO_Fn(GET_OBJECT_REF)
     cleo->GetPointerToScriptVar(handle)->i = GetObjectRef(ref);
 }
 
+CLEO_Fn(STRING_FLOAT_FORMAT)
+{
+    // added to support old-ass scripts
+    float val = cleo->ReadParam(handle)->f;
+    
+    char fmt[MAX_STR_LEN], str[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, fmt, sizeof(fmt));
+    snprintf(str, sizeof(str), fmt, val);
+}
+
 CLEO_Fn(POW)
 {
     float base = cleo->ReadParam(handle)->f;
@@ -1281,6 +1464,11 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0A96, GET_PED_POINTER); // 0A96=2,%2d% = actor %1d% struct
     CLEO_RegisterOpcode(0x0A97, GET_VEHICLE_POINTER); // 0A97=2,%2d% = car %1d% struct
     CLEO_RegisterOpcode(0x0A98, GET_OBJECT_POINTER); // 0A98=2,%2d% = object %1d% struct
+    CLEO_RegisterOpcode(0x0A9A, OPEN_FILE); // 0A9A=3,%3d% = openfile %1d% mode %2d% // IF and SET
+    CLEO_RegisterOpcode(0x0A9B, CLOSE_FILE); // 0A9B=1,closefile %1d%
+    CLEO_RegisterOpcode(0x0A9C, GET_FILE_SIZE); // 0A9C=2,%2d% = file %1d% size
+    CLEO_RegisterOpcode(0x0A9D, READ_FROM_FILE); // 0A9D=3,readfile %1d% size %2d% to %3d%
+    CLEO_RegisterOpcode(0x0A9E, WRITE_TO_FILE); // 0A9E=3,writefile %1d% size %2d% from %3d%
     CLEO_RegisterOpcode(0x0A9F, GET_THIS_SCRIPT_STRUCT); // 0A9F=1,%1d% = current_thread_pointer
     CLEO_RegisterOpcode(0x0AA0, GOSUB_IF_FALSE); // 0AA0=1,gosub_if_false %1p%
     CLEO_RegisterOpcode(0x0AA1, RETURN_IF_FALSE); // 0AA1=0,return_if_false
@@ -1291,6 +1479,7 @@ void Init4Opcodes()
     //CLEO_RegisterOpcode(0x0AA9, IS_GAME_VERSION_ORIGINAL);
     CLEO_RegisterOpcode(0x0AAA, GET_SCRIPT_STRUCT_NAMED); // 0AAA=2,%2d% = thread %1d% pointer  // IF and SET
     CLEO_RegisterOpcode(0x0AAB, DOES_FILE_EXIST); // 0AAB=1,file_exists %1d%
+    CLEO_RegisterOpcode(0x0AB0, IS_KEY_PRESSED); // 0AB0=1,key_pressed %1d%
     CLEO_RegisterOpcode(0x0AB1, CLEO_CALL); // 0AB1=-1,call_scm_func %1p%
     CLEO_RegisterOpcode(0x0AB2, CLEO_RETURN); // 0AB2=-1,ret
     // Those are 0DDC and 0DDD on Mobile so lets comment it out:
@@ -1323,7 +1512,14 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AD2, GET_CHAR_PLAYER_IS_TARGETING); // 0AD2=2,%2d% = player %1d% targeted_actor //IF and SET
     CLEO_RegisterOpcode(0x0AD3, STRING_FORMAT); // 0AD3=-1,string %1d% format %2d% ...
     CLEO_RegisterOpcode(0x0AD4, SCAN_STRING); // 0AD4=-1,%3d% = scan_string %1d% format %2d%  //IF and SET
+    CLEO_RegisterOpcode(0x0AD5, FILE_SEEK); // 0AD5=3,file %1d% seek %2d% from_origin %3d% //IF and SET
+    CLEO_RegisterOpcode(0x0AD6, IS_END_OF_FILE_REACHED); // 0AD6=1,end_of_file %1d% reached
+    CLEO_RegisterOpcode(0x0AD7, READ_STRING_FROM_FILE); // 0AD7=3,read_string_from_file %1d% to %2d% size %3d% //IF and SET
+    CLEO_RegisterOpcode(0x0AD8, WRITE_STRING_TO_FILE); // 0AD8=2,write_string_to_file %1d% from %2d% //IF and SET
+    CLEO_RegisterOpcode(0x0AD9, WRITE_FORMATTED_STRING_TO_FILE); // 0AD9=-1,write_formated_text %2d% to_file %1d%
+    CLEO_RegisterOpcode(0x0ADA, SCAN_FILE); // 0ADA=-1,%3d% = scan_file %1d% format %2d% //IF and SET
     CLEO_RegisterOpcode(0x0ADB, GET_NAME_OF_VEHICLE_MODEL); // 0ADB=2,%2d% = car_model %1o% name
+    CLEO_RegisterOpcode(0x0ADC, TEST_CHEAT); // 0ADC=1,test_cheat %1d%
     CLEO_RegisterOpcode(0x0ADD, SPAWN_VEHICLE_BY_CHEATING); // 0ADD=1,spawn_car_with_model %1o% at_player_location //IF and SET // custom if-set condition
     CLEO_RegisterOpcode(0x0ADE, GET_TEXT_LABEL_STRING); // 0ADE=2,%2d% = text_by_GXT_entry %1d%
     CLEO_RegisterOpcode(0x0ADF, ADD_TEXT_LABEL); // 0ADF=2,add_dynamic_GXT_entry %1d% text %2d%
@@ -1344,6 +1540,7 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AEA, GET_PED_REF); // 0AEA=2,%2d% = actor_struct %1d% handle
     CLEO_RegisterOpcode(0x0AEB, GET_VEHICLE_REF); // 0AEB=2,%2d% = car_struct %1d% handle
     CLEO_RegisterOpcode(0x0AEC, GET_OBJECT_REF); // 0AEC=2,%2d% = object_struct %1d% handle
+    CLEO_RegisterOpcode(0x0AED, STRING_FLOAT_FORMAT); // 0AED=3,%3d% = float %1d% to_string_format %2d%
     CLEO_RegisterOpcode(0x0AEE, POW); // 0AEE=3,%3d% = %1d% exp %2d% //all floats
     CLEO_RegisterOpcode(0x0AEF, LOG); // 0AEF=3,%3d% = log %1d% base %2d% //all floats
 

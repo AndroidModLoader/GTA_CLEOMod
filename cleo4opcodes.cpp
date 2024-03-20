@@ -20,6 +20,7 @@ union GXTChar;
 struct CLEO_STD_String;
 
 // Own Vars
+int CleoVariables[0x400];
 std::set<void*> gAllocationsMap;
 std::set<FILE*> gFilesMap;
 
@@ -241,10 +242,15 @@ CLEO_Fn(RETURN_IF_FALSE)
 CLEO_Fn(LOAD_DYNAMIC_LIBRARY)
 {
     char buf[64]; CLEO_ReadStringEx(handle, buf, sizeof(buf));
-    void* libHandle = aml->GetLibHandle(buf);
+    void* libHandle = dlopen(buf, RTLD_NOW);
 
     cleo->GetPointerToScriptVar(handle)->i = (int)libHandle;
     UpdateCompareFlag(handle, libHandle != NULL);
+}
+
+CLEO_Fn(FREE_DYNAMIC_LIBRARY)
+{
+    dlclose((void*)cleo->ReadParam(handle)->i);
 }
 
 CLEO_Fn(GET_DYNAMIC_LIBRARY_PROCEDURE)
@@ -255,6 +261,12 @@ CLEO_Fn(GET_DYNAMIC_LIBRARY_PROCEDURE)
 
     cleo->GetPointerToScriptVar(handle)->i = (int)symAddr;
     UpdateCompareFlag(handle, symAddr != 0);
+}
+
+CLEO_Fn(IS_GAME_VERSION_ORIGINAL)
+{
+    // We are not GTA:SA PC 1.0 US/EU
+    UpdateCompareFlag(handle, false);
 }
 
 CLEO_Fn(GET_SCRIPT_STRUCT_NAMED)
@@ -402,6 +414,19 @@ CLEO_Fn(CLEO_RETURN)
     }
     //SkipUnusedParameters(handle);
     delete scmFunc;
+}
+
+CLEO_Fn(SET_CLEO_SHARED_VAR)
+{
+    int varId = cleo->ReadParam(handle)->i;
+    int value = cleo->ReadParam(handle)->i;
+    if(varId >= 0 && varId < 1024) CleoVariables[varId] = value;
+}
+
+CLEO_Fn(GET_CLEO_SHARED_VAR)
+{
+    int varId = cleo->ReadParam(handle)->i;
+    cleo->GetPointerToScriptVar(handle)->i = (varId >= 0 && varId < 1024) ? CleoVariables[varId] : 0;
 }
 
 CLEO_Fn(STORE_CLOSEST_ENTITIES)
@@ -1494,18 +1519,19 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AA0, GOSUB_IF_FALSE); // 0AA0=1,gosub_if_false %1p%
     CLEO_RegisterOpcode(0x0AA1, RETURN_IF_FALSE); // 0AA1=0,return_if_false
     CLEO_RegisterOpcode(0x0AA2, LOAD_DYNAMIC_LIBRARY); // 0AA2=2,%2h% = load_library %1d% // IF and SET
-    //CLEO_RegisterOpcode(0x0AA3, FREE_DYNAMIC_LIBRARY); // nuh-uh
+    CLEO_RegisterOpcode(0x0AA3, FREE_DYNAMIC_LIBRARY); // 0AA3=1,free_library %1h%
     CLEO_RegisterOpcode(0x0AA4, GET_DYNAMIC_LIBRARY_PROCEDURE); // 0AA4=3,%3d% = get_proc_address %1d% library %2d% // IF and SET
-    // This one is IS_GAME_VERSION_ORIGINAL on PC. We have our own GET_GAME_VERSION at 0DD6 so lets comment it out:
-    //CLEO_RegisterOpcode(0x0AA9, IS_GAME_VERSION_ORIGINAL);
+    // 0AA5 - 0AA8 - Call funcs (we dont support such things, we have a different opcode on Android)
+    CLEO_RegisterOpcode(0x0AA9, IS_GAME_VERSION_ORIGINAL); // 0AA9=0,is_game_version_original // always false, use 0DD6 (GET_GAME_VERSION) for Android
     CLEO_RegisterOpcode(0x0AAA, GET_SCRIPT_STRUCT_NAMED); // 0AAA=2,%2d% = thread %1d% pointer  // IF and SET
     CLEO_RegisterOpcode(0x0AAB, DOES_FILE_EXIST); // 0AAB=1,file_exists %1d%
+    // 0AAC - 0AAF - AudioStreams
     CLEO_RegisterOpcode(0x0AB0, IS_KEY_PRESSED); // 0AB0=1,key_pressed %1d%
     CLEO_RegisterOpcode(0x0AB1, CLEO_CALL); // 0AB1=-1,call_scm_func %1p%
     CLEO_RegisterOpcode(0x0AB2, CLEO_RETURN); // 0AB2=-1,ret
-    // Those are 0DDC and 0DDD on Mobile so lets comment it out:
-    //CLEO_RegisterOpcode(0x0AB3, SET_CLEO_SHARED_VAR);
-    //CLEO_RegisterOpcode(0x0AB4, GET_CLEO_SHARED_VAR);
+    // Those are 0DDC and 0DDD on Mobile:
+    CLEO_RegisterOpcode(0x0AB3, SET_CLEO_SHARED_VAR); // 0AB3=2,var %1d% = %2d%
+    CLEO_RegisterOpcode(0x0AB4, GET_CLEO_SHARED_VAR); // 0AB4=2,%2d% = var %1d%
 
     if(*nGameIdent == GTASA)
     {
@@ -1513,11 +1539,14 @@ void Init4Opcodes()
         CLEO_RegisterOpcode(0x0AB6, GET_TARGET_BLIP_COORDS); // 0AB6=3,store_target_marker_coords_to %1d% %2d% %3d% // IF and SET
         CLEO_RegisterOpcode(0x0AB7, GET_CAR_NUMBER_OF_GEARS); // 0AB7=2,get_vehicle %1d% number_of_gears_to %2d%
         CLEO_RegisterOpcode(0x0AB8, GET_CAR_CURRENT_GEAR); // 0AB8=2,get_vehicle %1d% current_gear_to %2d%
+        // 0AB9, 0ABB-0ABC - AudioStreams
+        // 0ABA - Threads (we dont have them!)
         CLEO_RegisterOpcode(0x0ABD, IS_CAR_SIREN_ON); // 0ABD=1,vehicle %1d% siren_on
         CLEO_RegisterOpcode(0x0ABE, IS_CAR_ENGINE_ON); // 0ABE=1,vehicle %1d% engine_on
         CLEO_RegisterOpcode(0x0ABF, CLEO_SET_CAR_ENGINE_ON); // 0ABF=2,set_vehicle %1d% engine_state_to %2d%
     }
 
+    // 0AC0 - 0AC5 - AudioStreams
     CLEO_RegisterOpcode(0x0AC6, PUSH_STRING_TO_VAR); // 0DD0, so this one is CUSTOM: 0AC6=2,push_string %1d% var %2d%
     CLEO_RegisterOpcode(0x0AC7, GET_VAR_POINTER); // 0AC7=2,%2d% = var %1d% offset
     CLEO_RegisterOpcode(0x0AC8, ALLOCATE_MEMORY); // 0AC8=2,%2d% = allocate_memory_size %1d%
@@ -1558,6 +1587,7 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AE6, FIND_FIRST_FILE); // 0AE6=3,%2d% = find_first_file %1d% get_filename_to %3d% //IF and SET
     CLEO_RegisterOpcode(0x0AE7, FIND_NEXT_FILE); // 0AE7=2,%2d% = find_next_file %1d% //IF and SET
     CLEO_RegisterOpcode(0x0AE8, FIND_CLOSE); // 0AE8=1,find_close %1d%
+    // popfloat? we have a different logic of FPU
     CLEO_RegisterOpcode(0x0AEA, GET_PED_REF); // 0AEA=2,%2d% = actor_struct %1d% handle
     CLEO_RegisterOpcode(0x0AEB, GET_VEHICLE_REF); // 0AEB=2,%2d% = car_struct %1d% handle
     CLEO_RegisterOpcode(0x0AEC, GET_OBJECT_REF); // 0AEC=2,%2d% = object_struct %1d% handle

@@ -286,7 +286,13 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
         case 0x06:
         case 0x07:
         case 0x08:
-            return (char*)cleo->ReadParam(handle)->i;
+        {
+            char *str = (char*)cleo->ReadParam(handle)->i;
+            if(!str) return NULL;
+            strncpy(buf, str, size - 1);
+            buf[size - 1] = 0;
+            return buf;
+        }
 
         case 0x09:
             GetPC(handle) += 1;

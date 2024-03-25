@@ -134,6 +134,18 @@ extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opc
     );
 }
 
+void* g_pForceInterrupt = NULL;
+DECL_HOOK(int8_t, ProcessOneCommand, void* handle)
+{
+    int8_t retCode = ProcessOneCommand(handle);
+    if(g_pForceInterrupt && g_pForceInterrupt == handle)
+    {
+        g_pForceInterrupt = NULL;
+        return 1;
+    }
+    return retCode;
+}
+
 extern "C" void OnModPreLoad()
 {
     logger->SetTag("CLEO Mod");
@@ -261,7 +273,12 @@ extern "C" void OnModPreLoad()
     cleo_addon_ifs.GetCond =                GetCond;
     cleo_addon_ifs.GetNotFlag =             GetNotFlag;
     cleo_addon_ifs.GetLogicalOp =           GetLogicalOp;
+    cleo_addon_ifs.Interrupt =              [](void *handle)
+    {
+        g_pForceInterrupt = handle;
+    };
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
+    HOOK(ProcessOneCommand, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17ProcessOneCommandEv"));
     logger->Info("CLEO Addon Initialized!");
 }
 

@@ -21,4 +21,5 @@ struct cleo_addon_ifs_t
     bool&       (*GetCond)(void *handle);
     bool&       (*GetNotFlag)(void *handle);
     uint16_t&   (*GetLogicalOp)(void *handle);
+    void        (*Interrupt)(void *handle);
 };

@@ -14,6 +14,9 @@
 #include "cleo.h"
 cleo_ifs_t* cleo = nullptr;
 
+#include "cleoaddon.h"
+cleo_addon_ifs_t cleo_addon_ifs;
+
 // SAUtils
 #include "isautils.h"
 ISAUtils* sautils = nullptr;
@@ -234,6 +237,32 @@ extern "C" void OnModPreLoad()
     libEntry();
     RegisterInterface("CLEO", cleo);
     logger->Info("CLEO Initialized!");
+
+    cleo_addon_ifs.GetInterfaceVersion = []() -> uint32_t
+    {
+        return 1;
+    };
+    cleo_addon_ifs.ReadString =             CLEO_ReadStringEx;
+    cleo_addon_ifs.WriteString =            CLEO_WriteStringEx;
+    cleo_addon_ifs.GetStringMaxSize =       CLEO_GetStringPtrMaxSize;
+    cleo_addon_ifs.GetStringPointer =       CLEO_GetStringPtr;
+    cleo_addon_ifs.FormatString =           CLEO_FormatString;
+    cleo_addon_ifs.AsciiToGXTChar =         AsciiToGXTChar;
+    cleo_addon_ifs.GXTCharToAscii =         GXTCharToAscii;
+    cleo_addon_ifs.ValueForGame =           ValueForGame;
+    cleo_addon_ifs.ThreadJump =             ThreadJump;
+    cleo_addon_ifs.SkipUnusedParameters =   SkipUnusedParameters;
+    cleo_addon_ifs.GetScriptPC =            [](void *handle) -> uint8_t*
+    {
+        return cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle);
+    };
+    cleo_addon_ifs.PushStack =              PushStack;
+    cleo_addon_ifs.PopStack =               PopStack;
+    cleo_addon_ifs.GetCond =                GetCond;
+    cleo_addon_ifs.GetNotFlag =             GetNotFlag;
+    cleo_addon_ifs.GetLogicalOp =           GetLogicalOp;
+    RegisterInterface("CLEOAddon", &cleo_addon_ifs);
+    logger->Info("CLEO Addon Initialized!");
 }
 
 const char* GetCLEODir()

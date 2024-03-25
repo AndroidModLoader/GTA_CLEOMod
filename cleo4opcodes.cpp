@@ -222,11 +222,7 @@ CLEO_Fn(GOSUB_IF_FALSE)
     bool condition = *(bool*)((uintptr_t)handle + ValueForGame(120, 121, 229, 525, 521));
     if(!condition)
     {
-        uint8_t** stack = GetStack(handle);
-        uint8_t*& bytePtr = GetPC(handle);
-        uint16_t& stackDepth = GetStackDepth(handle);
-
-        stack[stackDepth++] = bytePtr;
+        PushStack(handle);
         ThreadJump(handle, offset);
     }
 }
@@ -235,7 +231,7 @@ CLEO_Fn(RETURN_IF_FALSE)
 {
     if(!GetCond(handle))
     {
-        GetPC(handle) = PopStack(handle);
+        PopStack(handle);
     }
 }
 

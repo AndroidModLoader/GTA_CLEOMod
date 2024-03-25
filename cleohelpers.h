@@ -47,7 +47,7 @@ struct tByteFlag
 };
 struct GTAEntity
 {
-    inline int AsInt() { return (int)this; }
+    inline uintptr_t AsInt() { return (uintptr_t)this; }
     inline int& IntAt(int off) { return *(int*)(AsInt() + off); }
     inline uint32_t& UIntAt(int off) { return *(uint32_t*)(AsInt() + off); }
     inline uint8_t& UInt8At(int off) { return *(uint8_t*)(AsInt() + off); }
@@ -174,6 +174,7 @@ inline const char* GXTCharToAscii(const GXTChar* src, uint8_t start)
 
     return buf;
 }
+inline const char* GXTCharToAscii(const uint16_t* src, uint8_t start) { return GXTCharToAscii((const GXTChar*)src, start); }
 inline int ValueForGame(int for3, int forvc, int forsa, int forlcs = 0, int forvcs = 0)
 {
     switch(*nGameIdent)
@@ -236,9 +237,16 @@ inline bool& IsMissionScript(void* handle)
 {
     return *(bool*)((uintptr_t)handle + ValueForGame(133, 133, 252));
 }
-inline uint8_t* PopStack(void* handle)
+inline void PushStack(void* handle)
 {
-    return GetStack(handle)[--GetStackDepth(handle)];
+    uint8_t** stack = GetStack(handle);
+    uint8_t*& bytePtr = GetPC(handle);
+    uint16_t& stackDepth = GetStackDepth(handle);
+    stack[stackDepth++] = bytePtr;
+}
+inline void PopStack(void* handle)
+{
+    GetPC(handle) = GetStack(handle)[--GetStackDepth(handle)];
 }
 inline int* GetLocalVars(void* handle)
 {
@@ -270,7 +278,7 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
 {
     uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
 
-    static char newBuf[128];
+    static char newBuf[MAX_STR_LEN];
     if(!buf || size < 1) buf = (char*)newBuf;
 
     switch(byte)
@@ -366,13 +374,13 @@ inline char* CLEO_GetStringPtr(void* handle)
         return (char*)cleo->ReadParam(handle)->i;
     }
 }
-inline int CLEO_GetStringPtrMaxSize(void* handle)
+inline uint32_t CLEO_GetStringPtrMaxSize(void* handle)
 {
     uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
     switch(byte)
     {
         default:
-            return 256;
+            return MAX_STR_LEN;
 
         case 0x0A:
         case 0x0B:

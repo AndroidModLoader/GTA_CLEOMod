@@ -347,7 +347,7 @@ inline void CLEO_WriteStringEx(void* handle, const char* buf)
         case 0x0D:
         {
             dst = (char*)cleo->GetPointerToScriptVar(handle);
-            memcpy(dst, buf, 7); dst[7] = 0;
+            strncpy(dst, buf, 7); dst[7] = 0;
             break;
         }
 
@@ -357,7 +357,7 @@ inline void CLEO_WriteStringEx(void* handle, const char* buf)
         case 0x13:
         {
             dst = (char*)cleo->GetPointerToScriptVar(handle);
-            memcpy(dst, buf, 15); dst[15] = 0;
+            strncpy(dst, buf, 15); dst[15] = 0;
             break;
         }
     }

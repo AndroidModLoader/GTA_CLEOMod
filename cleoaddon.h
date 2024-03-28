@@ -22,4 +22,14 @@ struct cleo_addon_ifs_t
     bool&       (*GetNotFlag)(void *handle);
     uint16_t&   (*GetLogicalOp)(void *handle);
     void        (*Interrupt)(void *handle);
+    void        (*Skip1Byte)(void* handle);
+    void        (*Skip2Bytes)(void* handle);
+    void        (*Skip4Bytes)(void* handle);
+    void        (*SkipBytes)(void* handle, uint32_t bytes);
+    uint8_t     (*Read1Byte)(void* handle);
+    uint16_t    (*Read2Bytes)(void* handle);
+    uint32_t    (*Read4Bytes)(void* handle);
+    uint8_t     (*Read1Byte_NoSkip)(void* handle);
+    uint16_t    (*Read2Bytes_NoSkip)(void* handle);
+    uint32_t    (*Read4Bytes_NoSkip)(void* handle);
 };

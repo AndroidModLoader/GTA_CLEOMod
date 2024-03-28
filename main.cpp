@@ -264,10 +264,7 @@ extern "C" void OnModPreLoad()
     cleo_addon_ifs.ValueForGame =           ValueForGame;
     cleo_addon_ifs.ThreadJump =             ThreadJump;
     cleo_addon_ifs.SkipUnusedParameters =   SkipUnusedParameters;
-    cleo_addon_ifs.GetScriptPC =            [](void *handle) -> uint8_t*
-    {
-        return cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle);
-    };
+    cleo_addon_ifs.GetScriptPC =            GetRealPC;
     cleo_addon_ifs.PushStack =              PushStack;
     cleo_addon_ifs.PopStack =               PopStack;
     cleo_addon_ifs.GetCond =                GetCond;
@@ -277,6 +274,16 @@ extern "C" void OnModPreLoad()
     {
         g_pForceInterrupt = handle;
     };
+    cleo_addon_ifs.Skip1Byte =              Skip1Byte;
+    cleo_addon_ifs.Skip2Bytes =             Skip2Bytes;
+    cleo_addon_ifs.Skip4Bytes =             Skip4Bytes;
+    cleo_addon_ifs.SkipBytes =              SkipBytes;
+    cleo_addon_ifs.Read1Byte =              Read1Byte;
+    cleo_addon_ifs.Read2Bytes =             Read2Bytes;
+    cleo_addon_ifs.Read4Bytes =             Read4Bytes;
+    cleo_addon_ifs.Read1Byte_NoSkip =       Read1Byte_NoSkip;
+    cleo_addon_ifs.Read2Bytes_NoSkip =      Read2Bytes_NoSkip;
+    cleo_addon_ifs.Read4Bytes_NoSkip =      Read4Bytes_NoSkip;
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
     HOOK(ProcessOneCommand, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17ProcessOneCommandEv"));
     logger->Info("CLEO Addon Initialized!");

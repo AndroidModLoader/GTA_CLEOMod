@@ -8,6 +8,44 @@ extern eGameIdent* nGameIdent;
 extern cleo_ifs_t* cleo;
 extern uint8_t* ScriptSpace;
 
+// https://github.com/gta-reversed/gta-reversed-modern/blob/1b37b015fbda7957ebbc36dbe8d5e4a90ebb6891/source/game_sa/Scripts/RunningScript.h#L17
+constexpr auto SHORT_STRING_SIZE = 8;
+constexpr auto LONG_STRING_SIZE = 16;
+enum eScriptParameterType : int8_t
+{
+    SCRIPT_PARAM_END_OF_ARGUMENTS, //< Special type used for vararg stuff
+
+    SCRIPT_PARAM_STATIC_INT_32BITS,
+    SCRIPT_PARAM_GLOBAL_NUMBER_VARIABLE, //< Global int32 variable
+    SCRIPT_PARAM_LOCAL_NUMBER_VARIABLE, //< Local int32 variable
+    SCRIPT_PARAM_STATIC_INT_8BITS,
+    SCRIPT_PARAM_STATIC_INT_16BITS,
+    SCRIPT_PARAM_STATIC_FLOAT,
+
+    // Types below are only available in GTA SA
+
+    // Number arrays
+    SCRIPT_PARAM_GLOBAL_NUMBER_ARRAY, //< Global array of numbers (always int32)
+    SCRIPT_PARAM_LOCAL_NUMBER_ARRAY, //< Local array of numbers (always int32)
+
+    SCRIPT_PARAM_STATIC_SHORT_STRING, //< Static 8 byte string
+
+    SCRIPT_PARAM_GLOBAL_SHORT_STRING_VARIABLE, //< Local 8 byte string
+    SCRIPT_PARAM_LOCAL_SHORT_STRING_VARIABLE, //< Local 8 byte string
+
+    SCRIPT_PARAM_GLOBAL_SHORT_STRING_ARRAY, //< Global 8 byte string array
+    SCRIPT_PARAM_LOCAL_SHORT_STRING_ARRAY,  //< Local 8 byte string array
+
+    SCRIPT_PARAM_STATIC_PASCAL_STRING, //< Pascal string is a sequence of characters with optional size specification. (So says Google)
+    SCRIPT_PARAM_STATIC_LONG_STRING,    //< 16 byte string
+
+    SCRIPT_PARAM_GLOBAL_LONG_STRING_VARIABLE, //< Global 16 byte string
+    SCRIPT_PARAM_LOCAL_LONG_STRING_VARIABLE, //< Local 16 byte string
+
+    SCRIPT_PARAM_GLOBAL_LONG_STRING_ARRAY, //< Global array of 16 byte strings
+    SCRIPT_PARAM_LOCAL_LONG_STRING_ARRAY, //< Local array of 16 byte strings
+};
+
 #include <set>
 extern std::set<void*> gAllocationsMap;
 extern std::set<FILE*> gFilesMap;
@@ -274,26 +312,77 @@ inline void ThreadJump(void* handle, int offset)
         }
     }
 }
+inline void Skip1Byte(void* handle)
+{
+    GetPC(handle) += 1;
+}
+inline void Skip2Bytes(void* handle)
+{
+    GetPC(handle) += 2;
+}
+inline void Skip4Bytes(void* handle)
+{
+    GetPC(handle) += 4;
+}
+inline void SkipBytes(void* handle, uint32_t bytes)
+{
+    GetPC(handle) += bytes;
+}
+inline uint8_t* GetRealPC(void* handle)
+{
+    return (cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
+}
+inline uint8_t Read1Byte_NoSkip(void* handle)
+{
+    return *GetRealPC(handle);
+}
+inline uint16_t Read2Bytes_NoSkip(void* handle)
+{
+    return *(uint16_t*)GetRealPC(handle);
+}
+inline uint32_t Read4Bytes_NoSkip(void* handle)
+{
+    return *(uint32_t*)GetRealPC(handle);
+}
+inline uint8_t Read1Byte(void* handle)
+{
+    uint8_t thatOneByte = *GetRealPC(handle);
+    Skip1Byte(handle);
+    return thatOneByte;
+}
+inline uint16_t Read2Bytes(void* handle)
+{
+    uint16_t theseBytes = *(uint16_t*)GetRealPC(handle);
+    Skip2Bytes(handle);
+    return theseBytes;
+}
+inline uint32_t Read4Bytes(void* handle)
+{
+    uint32_t theseBytes = *(uint16_t*)GetRealPC(handle);
+    Skip4Bytes(handle);
+    return theseBytes;
+}
 inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
 {
-    uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
+    uint8_t type = Read1Byte_NoSkip(handle);
 
     static char newBuf[MAX_STR_LEN];
     if(!buf || size < 1) buf = (char*)newBuf;
 
-    switch(byte)
+    switch(type)
     {
         default:
-            return cleo->ReadStringLong(handle, buf, size) ? buf : NULL;
+        //case SCRIPT_PARAM_STATIC_INT_8BITS:
+        //case SCRIPT_PARAM_STATIC_INT_16BITS:
+            // They cant hold any info in 'em
+            return NULL;
 
-        case 0x01:
-        case 0x02:
-        case 0x03:
-        case 0x04:
-        case 0x05:
-        case 0x06:
-        case 0x07:
-        case 0x08:
+        case SCRIPT_PARAM_STATIC_INT_32BITS:
+        case SCRIPT_PARAM_GLOBAL_NUMBER_VARIABLE:
+        case SCRIPT_PARAM_LOCAL_NUMBER_VARIABLE:
+        case SCRIPT_PARAM_STATIC_FLOAT:
+        case SCRIPT_PARAM_GLOBAL_NUMBER_ARRAY:
+        case SCRIPT_PARAM_LOCAL_NUMBER_ARRAY:
         {
             char *str = (char*)cleo->ReadParam(handle)->i;
             if(!str) return NULL;
@@ -302,28 +391,47 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
             return buf;
         }
 
-        case 0x09:
-            GetPC(handle) += 1;
-            return cleo->ReadString8byte(handle, buf, size) ? buf : NULL;
+        case SCRIPT_PARAM_STATIC_SHORT_STRING:
+            Skip1Byte(handle); // "type" byte
+            if(size < 1) size = SHORT_STRING_SIZE;
+            for(int i = 0; i < SHORT_STRING_SIZE; ++i)
+            {
+                if(i < size) buf[i] = (char)Read1Byte(handle);
+                else Skip1Byte(handle);
+                buf[size - 1] = 0;
+            }
+            return buf;
+            //return cleo->ReadString8byte(handle, buf, size) ? buf : NULL;
 
-        case 0x0A:
-        case 0x0B:
-        case 0x0C:
-        case 0x0D:
+        case SCRIPT_PARAM_GLOBAL_SHORT_STRING_VARIABLE:
+        case SCRIPT_PARAM_LOCAL_SHORT_STRING_VARIABLE:
+        case SCRIPT_PARAM_GLOBAL_SHORT_STRING_ARRAY:
+        case SCRIPT_PARAM_LOCAL_SHORT_STRING_ARRAY:
         {
-            size = (size > 8) ? 8 : size;
-            memcpy(buf, (char*)cleo->GetPointerToScriptVar(handle), size);
+            size = (size > SHORT_STRING_SIZE) ? SHORT_STRING_SIZE : size;
+            strncpy(buf, (char*)cleo->GetPointerToScriptVar(handle), size);
             buf[size-1] = 0;
             return buf;
         }
 
-        case 0x10:
-        case 0x11:
-        case 0x12:
-        case 0x13:
+        case SCRIPT_PARAM_STATIC_PASCAL_STRING: // not even a LONG STRING
+            return cleo->ReadStringLong(handle, buf, size) ? buf : NULL;
+
+        case SCRIPT_PARAM_STATIC_LONG_STRING:
+            Skip1Byte(handle);
+            size = (size > LONG_STRING_SIZE) ? LONG_STRING_SIZE : size;
+            strncpy(buf, (char*)GetRealPC(handle), size);
+            buf[size-1] = 0;
+            SkipBytes(handle, LONG_STRING_SIZE);
+            return buf;
+
+        case SCRIPT_PARAM_GLOBAL_LONG_STRING_VARIABLE:
+        case SCRIPT_PARAM_LOCAL_LONG_STRING_VARIABLE:
+        case SCRIPT_PARAM_GLOBAL_LONG_STRING_ARRAY:
+        case SCRIPT_PARAM_LOCAL_LONG_STRING_ARRAY:
         {
-            size = (size > 16) ? 16 : size;
-            memcpy(buf, (char*)cleo->GetPointerToScriptVar(handle), size);
+            size = (size > LONG_STRING_SIZE) ? LONG_STRING_SIZE : size;
+            strncpy(buf, (char*)cleo->GetPointerToScriptVar(handle), size);
             buf[size-1] = 0;
             return buf;
         }
@@ -332,7 +440,7 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf, size_t size)
 }
 inline void CLEO_WriteStringEx(void* handle, const char* buf)
 {
-    uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
+    uint8_t byte = Read1Byte_NoSkip(handle);
     char* dst;
     switch(byte)
     {
@@ -364,7 +472,7 @@ inline void CLEO_WriteStringEx(void* handle, const char* buf)
 }
 inline char* CLEO_GetStringPtr(void* handle)
 {
-    uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
+    uint8_t byte = Read1Byte_NoSkip(handle);
     if(byte > 8)
     {
         return (char*)cleo->GetPointerToScriptVar(handle);
@@ -376,7 +484,7 @@ inline char* CLEO_GetStringPtr(void* handle)
 }
 inline uint32_t CLEO_GetStringPtrMaxSize(void* handle)
 {
-    uint8_t byte = *(cleo->GetGameIdentifier() == GTASA ? GetPC(handle) : GetPC_CLEO(handle));
+    uint8_t byte = Read1Byte_NoSkip(handle);
     switch(byte)
     {
         default:

@@ -513,20 +513,19 @@ inline int CLEO_FormatString(void* handle, char *str, size_t len, const char *fo
     {
         while (*iter && *iter != '%')
         {
-            if (written++ >= len)
-                return -1;
+            if (written++ >= len) return -1;
             *str++ = *iter++;
         }
         if (*iter == '%')
         {
             if (iter[1] == '%')
             {
-                if (written++ >= len)
-                    return -1;
+                if (written++ >= len) return -1;
                 *str++ = '%'; /* "%%"->'%' */
                 iter += 2;
                 continue;
             }
+
             //get flags and width specifier
             fmta = fmtbufa;
             *fmta++ = *iter++;
@@ -542,16 +541,18 @@ inline int CLEO_FormatString(void* handle, char *str, size_t len, const char *fo
                     char *buffiter = bufa;
                     //get width
                     sprintf(buffiter, "%d", cleo->ReadParam(handle)->i);
-                    while (*buffiter)
-                        *fmta++ = *buffiter++;
+                    while (*buffiter) *fmta++ = *buffiter++;
                 }
                 else
+                {
                     *fmta++ = *iter;
+                }
                 iter++;
             }
-            //get immidiate width value
-            while (isdigit(*iter))
-                *fmta++ = *iter++;
+
+            //get immediate width value
+            while (isdigit(*iter)) *fmta++ = *iter++;
+
             //get precision
             if (*iter == '.')
             {
@@ -560,77 +561,89 @@ inline int CLEO_FormatString(void* handle, char *str, size_t len, const char *fo
                 {
                     char *buffiter = bufa;
                     sprintf(buffiter, "%d", cleo->ReadParam(handle)->i);
-                    while (*buffiter)
-                        *fmta++ = *buffiter++;
+                    while (*buffiter) *fmta++ = *buffiter++;
                 }
                 else
-                    while (isdigit(*iter))
-                        *fmta++ = *iter++;
+                {
+                    while (isdigit(*iter)) *fmta++ = *iter++;
+                }
             }
+
             //get size
             if (*iter == 'h' || *iter == 'l')
+            {
                 *fmta++ = *iter++;
+            }
             switch (*iter)
             {
-            case 's':
-            {
-                static const char none[] = "(null)";
-                const char *astr = CLEO_ReadStringEx(handle, readbuf, sizeof(readbuf));
-                const char *striter = astr ? astr : none;
-                while (*striter)
+                case 's':
                 {
-                    if (written++ >= len)
-                        return -1;
-                    *str++ = *striter++;
-                }
-                iter++;
-                break;
-            }
-            case 'c':
-                if (written++ >= len) return -1;
-                *str++ = (char)cleo->ReadParam(handle)->i;
-                iter++;
-                break;
-            default:
-            {
-                /* For non wc types, use system sprintf and append to wide char output */
-                /* FIXME: for unrecognised types, should ignore % when printing */
-                char *bufaiter = bufa;
-                if (*iter == 'p' || *iter == 'P')
-                {
-                    sprintf(bufaiter, "%08X", cleo->ReadParam(handle)->i);
-                }
-                else
-                {
-                    *fmta++ = *iter;
-                    *fmta = '\0';
-                    if (*iter == 'a' || *iter == 'A' ||
-                        *iter == 'e' || *iter == 'E' ||
-                        *iter == 'f' || *iter == 'F' ||
-                        *iter == 'g' || *iter == 'G')
+                    static const char none[] = "(null)";
+                    const char *astr = CLEO_ReadStringEx(handle, readbuf, sizeof(readbuf));
+                    const char *striter = astr ? astr : none;
+                    *fmta++ = *iter++;
+                    *fmta++ = 0;
+                    snprintf(bufa, sizeof(bufa), fmtbufa, striter); striter = bufa;
+                    while (*striter)
                     {
-                        sprintf(bufaiter, fmtbufa, cleo->ReadParam(handle)->f);
+                        if (written++ >= len) return -1;
+                        *str++ = *striter++;
+                    }
+                    break;
+                }
+                case 'c':
+                {
+                    if (written++ >= len) return -1;
+                    *fmta++ = *iter++;
+                    *fmta++ = 0;
+                    snprintf(bufa, sizeof(bufa), fmtbufa, (char)cleo->ReadParam(handle)->i);
+                    const char *striter = bufa;
+                    while (*striter)
+                    {
+                        if (written++ >= len) return -1;
+                        *str++ = *striter++;
+                    }
+                    break;
+                }
+                default:
+                {
+                    /* For non wc types, use system sprintf and append to wide char output */
+                    /* FIXME: for unrecognised types, should ignore % when printing */
+                    char *bufaiter = bufa;
+                    if (*iter == 'p' || *iter == 'P')
+                    {
+                        sprintf(bufaiter, "%08X", cleo->ReadParam(handle)->i);
                     }
                     else
                     {
-                        sprintf(bufaiter, fmtbufa, (void*)(cleo->ReadParam(handle)->i));
+                        *fmta++ = *iter;
+                        *fmta = '\0';
+                        if (*iter == 'a' || *iter == 'A' ||
+                            *iter == 'e' || *iter == 'E' ||
+                            *iter == 'f' || *iter == 'F' ||
+                            *iter == 'g' || *iter == 'G')
+                        {
+                            sprintf(bufaiter, fmtbufa, cleo->ReadParam(handle)->f);
+                        }
+                        else
+                        {
+                            sprintf(bufaiter, fmtbufa, (void*)(cleo->ReadParam(handle)->i));
+                        }
                     }
+                    while (*bufaiter)
+                    {
+                        if (written++ >= len) return -1;
+                        *str++ = *bufaiter++;
+                    }
+                    iter++;
+                    break;
                 }
-                while (*bufaiter)
-                {
-                    if (written++ >= len)
-                        return -1;
-                    *str++ = *bufaiter++;
-                }
-                iter++;
-                break;
-            }
             }
         }
     }
-    if (written >= len)
-        return -1;
+    if (written >= len) return -1;
     *str++ = 0;
+    
     return (int)written;
 }
 inline bool IsCLEORelatedGXTKey(char* gxtLabel)

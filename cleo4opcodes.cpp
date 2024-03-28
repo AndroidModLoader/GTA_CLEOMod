@@ -7,6 +7,9 @@
 #include <string>
 #include <sys/stat.h>
 
+// mini-scanf
+#include <mini-scanf-cleo/c_scan.h>
+
 // CLEO
 #include "cleo.h"
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
@@ -737,7 +740,7 @@ CLEO_Fn(SCAN_STRING)
     }
     ++GetPC(handle);
 
-    *result = sscanf(src, format,
+    *result = c_sscanf(src, format,
         /* extra parameters (will be aligned automatically, but the limit of 35 elements maximum exists) */
         ExParams[0], ExParams[1], ExParams[2], ExParams[3], ExParams[4], ExParams[5],
         ExParams[6], ExParams[7], ExParams[8], ExParams[9], ExParams[10], ExParams[11],

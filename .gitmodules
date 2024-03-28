@@ -1,0 +1,3 @@
+[submodule "mini-scanf-cleo"]
+	path = mini-scanf-cleo
+	url = https://github.com/RusJJ/mini-scanf-cleo

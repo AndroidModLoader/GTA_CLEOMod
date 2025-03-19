@@ -2,7 +2,7 @@
 #define _CLEO_ADDON_H
 
 #include <stdint.h>
-#include <string.h>
+#include <string>
 #include <list>
 
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)

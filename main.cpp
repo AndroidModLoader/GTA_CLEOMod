@@ -175,6 +175,8 @@ DECL_HOOKv(CLEO_StartScripts)
 DECL_HOOKb(CLEO_OnOpcodeCall, void *storageItem, uint16_t opcode)
 {
     bool ret = CLEO_OnOpcodeCall(storageItem, opcode);
+    int param1 = *ScriptParams;
+    
     if(opcode == 0x0DF0)
     {
         // Init cleo variables
@@ -187,7 +189,7 @@ DECL_HOOKb(CLEO_OnOpcodeCall, void *storageItem, uint16_t opcode)
         for(int i = 0; i < len; ++i)
         {
             int storageItem = *(int*)(*pScriptsStorage + i * 4);
-            if(storageItem && *(int*)(storageItem + 24) != -1 && *(int*)(storageItem + 24) == *ScriptParams)
+            if(storageItem && *(int*)(storageItem + 24) != -1 && *(int*)(storageItem + 24) == param1)
             {
                 void* handle = *(void**)(storageItem + 28);
                 if(handle != NULL)
@@ -351,7 +353,7 @@ extern "C" void OnModPreLoad()
 
     cleo_addon_ifs.GetInterfaceVersion = []() -> uint32_t
     {
-        return 1;
+        return 2;
     };
     cleo_addon_ifs.ReadString =             CLEO_ReadStringEx;
     cleo_addon_ifs.WriteString =            CLEO_WriteStringEx;

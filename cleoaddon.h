@@ -12,6 +12,8 @@ struct ScriptAddonInfo
 {
     ScriptAddonInfo()
     {
+        unused = 0xFFFF;
+
         workDir.clear();
         childThreads.clear();
         parentThread = NULL;
@@ -26,13 +28,13 @@ struct ScriptAddonInfo
     std::list<void*> childThreads;
     void* parentThread;
     
-    uint16_t scmFuncId : 10; // [0-1024] - 2^10
-    uint16_t isCustom : 1; // [0-1]
-    uint16_t debugMode : 1; // [0-1]
-    uint16_t enableThreadSaving : 1; // [0-1]
+    uint16_t unused;
 
     // GetInterfaceVersion() == 2
-    
+    uint16_t scmFuncId;
+    bool isCustom;
+    bool debugMode;
+    bool enableThreadSaving;
 };
 
 

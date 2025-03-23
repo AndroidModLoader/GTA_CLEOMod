@@ -42,6 +42,7 @@ enum eDataType
     DT_LVAR_STRING_ARRAY
 };
 extern uint8_t* LocalVariablesForCurrentMission;
+static void* zeroReturn = NULL; // gag the warn
 struct ScmFunction
 {
     unsigned short prevScmFunctionId, thisScmFunctionId;
@@ -63,7 +64,6 @@ struct ScmFunction
         size_t start_search = allocationPlace;
         while (Store[allocationPlace]) // find first unused position in store
         {
-            static void* zeroReturn = NULL; // gag the warn
             if (++allocationPlace >= store_size) allocationPlace = 0; // end of store reached
             if (allocationPlace == start_search) return zeroReturn;   // the store is filled up
         }
@@ -95,12 +95,13 @@ struct ScmFunction
         GetCond(thread) = false;
         GetLogicalOp(thread) = eLogicalOperation::NONE;
         GetNotFlag(thread) = false;
-        SetScmFunc(thread, (thisScmFunctionId = allocationPlace));
+        thisScmFunctionId = (uint16_t)allocationPlace;
+        SetScmFunc(thread, thisScmFunctionId);
     }
     void Return(void *thread)
     {
         // restore parent scope's gosub call stack
-        memcpy(GetStack(thread), &savedStack, sizeof(void*) * ValueForSA(8, 6));
+        memcpy(GetStack(thread), &savedStack[0], sizeof(void*) * ValueForSA(8, 6));
         GetStackDepth(thread) = savedSP;
         
         // restore parent scope's local variables
@@ -132,7 +133,12 @@ struct ScmFunction
     {
         for(int i = 0; i < store_size; ++i)
         {
-            if(Store[i] != NULL) delete Store[i];
+            if(Store[i] != NULL)
+            {
+                delete Store[i];
+                Store[i] = NULL;
+            }
         }
+        allocationPlace = 0;
     }
 };

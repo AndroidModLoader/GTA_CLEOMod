@@ -426,7 +426,7 @@ CLEO_Fn(COPY_DIRECTORY)
 CLEO_Fn(GET_CLEO_ARG_COUNT)
 {
     ScmFunction *scmFunc = ScmFunction::Store[GetScmFunc(handle)];
-    cleo->GetPointerToScriptVar(handle)->i = scmFunc->callArgCount;
+    cleo->GetPointerToScriptVar(handle)->i = scmFunc ? scmFunc->callArgCount : 0;
 }
 CLEO_Fn(CLEO_RETURN_WITH)
 {

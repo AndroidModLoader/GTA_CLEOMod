@@ -787,7 +787,8 @@ inline int GetScriptsStorageSize()
 }
 inline void* GetScriptHandleFromStorage(int i)
 {
-    if(i >= 0 && i < (*pScriptsStorageEnd - *pScriptsStorage) >> 2)
+    int size = GetScriptsStorageSize();
+    if(i >= 0 && i < size)
     {
         int storageItem = *(int*)(*pScriptsStorage + i * 4);
         if(storageItem)
@@ -799,7 +800,8 @@ inline void* GetScriptHandleFromStorage(int i)
 }
 inline int GetScriptMenuIndexFromStorage(int i)
 {
-    if(i >= 0 && i < (*pScriptsStorageEnd - *pScriptsStorage) >> 2)
+    int size = GetScriptsStorageSize();
+    if(i >= 0 && i < size)
     {
         int storageItem = *(int*)(*pScriptsStorage + i * 4);
         if(storageItem)
@@ -1032,3 +1034,14 @@ inline std::string ResolvePath(void* handle, const char* path, const char* custo
     for(auto it = ++fsPath.begin(); it != fsPath.end(); it++) resolved /= *it;
     return fs::weakly_canonical(resolved).string(); // collapse "..\" uses
 }
+
+struct CLEO201Script
+{
+    char pad[20]; // std::string header
+    const char* name;
+    int index;
+    void* handle; // CRunningScript*
+    char pad2[8];
+    uint8_t** scriptPC;
+    bool launched;
+};

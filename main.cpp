@@ -81,7 +81,7 @@ uint8_t* pCLEOArrowLastAlpha; // 2194FC
 int* pScriptsStorage; // 192E0
 int* pScriptsStorageEnd; // 192E4
 void* CLEOOpcodesStorage; // 219B20
-void** (*LookupForOpcodeFunc)(void* storage, uint16_t& opcode);
+void** (*LookupForOpcodeFunc)(void* storage, uint16_t& opcode); // CE88
 
 // CLEO itself
 extern unsigned char cleoData[100160];
@@ -151,6 +151,11 @@ extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opc
     );
 }
 
+DECL_HOOKb(CLEO_ExecuteCustomOpcode, void* handle, void** pcPointerPtr, uint16_t opcode)
+{
+    GetNotFlag(handle) = (opcode & 0x8000) != 0;
+    return CLEO_ExecuteCustomOpcode(handle, pcPointerPtr, opcode & 0x7FFF);
+}
 extern int* ScriptParams;
 void ScmCleanup();
 DECL_HOOKv(CLEO_StartScripts)
@@ -217,7 +222,7 @@ DECL_HOOK(int8_t, ProcessOneCommand, void* handle)
         }
         lastScriptHandle[0] = handle;
         lastScriptPC[0] = GetPC(handle);
-        lastScriptOp[0] = Read2Bytes_NoSkip(handle) & 0x7FFF;
+        lastScriptOp[0] = Read2Bytes_NoSkip(handle);// & 0x7FFF;
     }
     
     int siz = pausedScripts.size();
@@ -320,7 +325,9 @@ extern "C" void OnModPreLoad()
     }
 
     if(!pCfgCLEORedArrow->GetBool())
+    {
         aml->PlaceNOP(nCLEOAddr + 0xBD82, 2);
+    }
         
     // XMDS Part 1
     // Fixed OPCODE 0DD2
@@ -343,6 +350,7 @@ extern "C" void OnModPreLoad()
     SET_TO(pScriptsStorageEnd, nCLEOAddr + 0x192E4);
     SET_TO(CLEOOpcodesStorage, nCLEOAddr + 0x219B20);
     SET_TO(LookupForOpcodeFunc, nCLEOAddr + 0xCE88 + 0x1);
+    HOOK(CLEO_ExecuteCustomOpcode, nCLEOAddr + 0xD2F8 + 0x1);
     HOOK(CLEO_StartScripts, nCLEOAddr + 0x5CD8 + 0x1);
     HOOK(CLEO_OnOpcodeCall, nCLEOAddr + 0x75B4 + 0x1);
     
@@ -396,6 +404,7 @@ extern "C" void OnModPreLoad()
     };
     cleo_addon_ifs.IsOpcodeAlreadyExists =  [](uint16_t opcode) -> bool
     {
+        opcode &= 0x7FFF;
         void** fn = LookupForOpcodeFunc(CLEOOpcodesStorage, opcode);
         return (fn != NULL && *fn != NULL);
     };

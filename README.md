@@ -126,11 +126,14 @@ Opcodes from CLEO5 in this mod (except debugging ones!!!):
 2603=3, is_text_prefix %1s% prefix %2s% ignore_case %3d%
 2604=3, is_text_suffix %1s% suffix %2s% ignore_case %3d%
 2605=-1, display_text_formatted offset_left %1d% offset_top %2d% format %3d% args
+2608=3, get_text_length %1d% store_to %2d%
+2609=-1,add_text_label_formatted %1d% args %2d%
 2300=2, get_file_position %1d% store_to %2d%
 2301=3, read_block_from_file %1d% size %2d% buffer %3d% // IF and SET
 2302=3, write_block_to_file %1d% size %2d% address %3d% // IF and SET
 2303=2, %2s% = resolve_filepath %1s%
 2304=3, %3s% = get_script_filename %1d% full_path %2d% // IF and SET
+2305=8, get_file_write_time %1s% year %2d% month %3d% day %3d% hour %4d% minute %5d% second %6d% milisecond %7d% // IF and SET
 0B00=1, delete_file %1s% //IF and SET
 0B01=1, delete_directory %1s% with_all_files_and_subdirectories %2d% //IF and SET
 0B02=2, move_file %1s% to %2s% //IF and SET

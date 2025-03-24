@@ -2,6 +2,7 @@
 #include <mod/logger.h>
 #include <cleohelpers.h>
 #include <cleo4scmfunc.h>
+#include <sys/stat.h>
 
 // There wont be that much opcodes, because some of them are in their own plugins
 
@@ -271,6 +272,23 @@ CLEO_Fn(DISPLAY_TEXT_FORMATTED)
     }
     ++(*NumberOfIntroTextLinesThisFrame);
 }
+CLEO_Fn(GET_TEXT_LENGTH)
+{
+    char path[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, path, sizeof(path));
+    cleo->GetPointerToScriptVar(handle)->i = strlen(path);
+}
+CLEO_Fn(ADD_TEXT_LABEL_FORMATTED)
+{
+    char gxtLabel[8], text[MAX_STR_LEN], buf[2 * MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, gxtLabel, sizeof(gxtLabel));
+    CLEO_ReadStringEx(handle, text, sizeof(text));
+    CLEO_FormatString(handle, buf, sizeof(buf), text);
+
+    if(IsCLEORelatedGXTKey(gxtLabel)) return; // NUH-UH
+
+    AddGXTLabel(gxtLabel, buf);
+}
 
 // FileSystemOperations
 CLEO_Fn(GET_FILE_POSITION)
@@ -348,6 +366,35 @@ CLEO_Fn(GET_SCRIPT_FILENAME)
             CLEO_WriteStringEx(handle, ((GTAScript*)script)->name);
         }
     }
+}
+CLEO_Fn(GET_FILE_WRITE_TIME)
+{
+    char path[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, path, sizeof(path));
+    std::string str = ResolvePath(handle, path);
+
+    FILE *file = fopen(str.c_str(), "r");
+    if(!file)
+    {
+        SkipOpcodeParameters(handle, 7);
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    fclose(file);
+    struct stat attr;
+    stat(str.c_str(), &attr);
+    struct tm* ti = localtime( &attr.st_mtime );
+
+    cleo->GetPointerToScriptVar(handle)->i = ti->tm_year;
+    cleo->GetPointerToScriptVar(handle)->i = ti->tm_mon;
+    cleo->GetPointerToScriptVar(handle)->i = ti->tm_mday;
+    cleo->GetPointerToScriptVar(handle)->i = ti->tm_hour;
+    cleo->GetPointerToScriptVar(handle)->i = ti->tm_min;
+    cleo->GetPointerToScriptVar(handle)->i = ti->tm_sec;
+    cleo->GetPointerToScriptVar(handle)->i = 0; // TODO: fixup somehow?
+
+    UpdateCompareFlag(handle, true);
 }
 CLEO_Fn(DELETE_FILE)
 {
@@ -474,6 +521,8 @@ void Init5Opcodes()
     CLEO_RegisterOpcode(0x2603, IS_TEXT_PREFIX); // 2603=3, is_text_prefix %1s% prefix %2s% ignore_case %3d%
     CLEO_RegisterOpcode(0x2604, IS_TEXT_SUFFIX); // 2604=3, is_text_suffix %1s% suffix %2s% ignore_case %3d% // originally it's sufix *facepalm*
     CLEO_RegisterOpcode(0x2605, DISPLAY_TEXT_FORMATTED); // 2605=-1, display_text_formatted offset_left %1d% offset_top %2d% format %3d% args
+    CLEO_RegisterOpcode(0x2608, GET_TEXT_LENGTH); // 2608=3, get_text_length %1d% store_to %2d%
+    CLEO_RegisterOpcode(0x2609, ADD_TEXT_LABEL_FORMATTED); // 2609=-1,add_text_label_formatted %1d% args %2d%
 
     // FileSystemOperations
     // Literally brainless move... #3
@@ -482,6 +531,7 @@ void Init5Opcodes()
     CLEO_RegisterOpcode(0x2302, WRITE_BLOCK_TO_FILE); // 2302=3, write_block_to_file %1d% size %2d% address %3d% // IF and SET
     CLEO_RegisterOpcode(0x2303, RESOLVE_FILEPATH); // 2303=2, %2s% = resolve_filepath %1s%
     CLEO_RegisterOpcode(0x2304, GET_SCRIPT_FILENAME); // 2304=3, %3s% = get_script_filename %1d% full_path %2d% // IF and SET
+    CLEO_RegisterOpcode(0x2305, GET_FILE_WRITE_TIME); // 2305=8, get_file_write_time %1s% year %2d% month %3d% day %3d% hour %4d% minute %5d% second %6d% milisecond %7d% // IF and SET
     CLEO_RegisterOpcode(0x0B00, DELETE_FILE); // 0B00=1, delete_file %1s% //IF and SET
     CLEO_RegisterOpcode(0x0B01, DELETE_DIRECTORY); // 0B01=1, delete_directory %1s% with_all_files_and_subdirectories %2d% //IF and SET
     CLEO_RegisterOpcode(0x0B02, MOVE_FILE); // 0B02=2, move_file %1s% to %2s% //IF and SET

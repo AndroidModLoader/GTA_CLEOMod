@@ -290,6 +290,10 @@ inline bool& GetNotFlag(void* handle)
 {
     return *(bool*)((uintptr_t)handle + ValueForGame(130, 130, 242));
 }
+inline bool& GetActiveFlag(void* handle)
+{
+    return *(bool*)((uintptr_t)handle + ValueForGame(120, 120, 228));
+}
 inline uint16_t& GetLogicalOp(void* handle)
 {
     return *(uint16_t*)((uintptr_t)handle + ValueForGame(128, 128, 240));
@@ -384,6 +388,28 @@ inline uint32_t Read4Bytes(void* handle)
     uint32_t theseBytes = *(uint16_t*)GetRealPC(handle);
     Skip4Bytes(handle);
     return theseBytes;
+}
+inline bool IsAnyStringTypeNow(void* handle)
+{
+    uint8_t type = Read1Byte_NoSkip(handle);
+    switch(type)
+    {
+        case SCRIPT_PARAM_STATIC_SHORT_STRING:
+        case SCRIPT_PARAM_GLOBAL_SHORT_STRING_VARIABLE:
+        case SCRIPT_PARAM_LOCAL_SHORT_STRING_VARIABLE:
+        case SCRIPT_PARAM_GLOBAL_SHORT_STRING_ARRAY:
+        case SCRIPT_PARAM_LOCAL_SHORT_STRING_ARRAY:
+        case SCRIPT_PARAM_STATIC_PASCAL_STRING:
+        case SCRIPT_PARAM_STATIC_LONG_STRING:
+        case SCRIPT_PARAM_GLOBAL_LONG_STRING_VARIABLE:
+        case SCRIPT_PARAM_LOCAL_LONG_STRING_VARIABLE:
+        case SCRIPT_PARAM_GLOBAL_LONG_STRING_ARRAY:
+        case SCRIPT_PARAM_LOCAL_LONG_STRING_ARRAY:
+            return true;
+
+        default: return false;
+    }
+    return false;
 }
 inline char* CLEO_ReadStringEx(void* handle, char* buf = NULL, size_t size = 0)
 {

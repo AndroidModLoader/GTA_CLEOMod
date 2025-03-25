@@ -83,6 +83,12 @@ int* pScriptsStorageEnd; // 192E4
 void* CLEOOpcodesStorage; // 219B20
 void** (*LookupForOpcodeFunc)(void* storage, uint16_t& opcode); // CE88
 
+// Game pointers
+void** ppActiveScripts, **ppIdleScripts;
+void (*RemoveScriptFromList)(void* handle, void** list);
+void (*AddScriptToList)(void* handle, void** list);
+void (*ShutdownThisScript)(void* handle);
+
 // CLEO itself
 extern unsigned char cleoData[100160];
 
@@ -115,6 +121,34 @@ void OnRedArrowChanged(int oldVal, int newVal, void* userdata)
 {
     pCfgCLEORedArrow->SetBool(newVal != 0);
     cfg->Save();
+}
+void RemoveScript(void* handle)
+{
+    RemoveScriptFromList(handle, ppActiveScripts);
+    if(GetAddonInfo(handle).isCustom)
+    {
+        GetActiveFlag(handle) = false;
+        int size = GetScriptsStorageSize();
+        for(int i = 0; i < size; ++i)
+        {
+            int storageItem = *(int*)(*pScriptsStorage + i * 4);
+            if(handle == *(void**)(storageItem + 28))
+            {
+                // TODO: check if this is enough
+                *(bool*)(storageItem + 44) = false; // not launched
+                return;
+            }
+        }
+    }
+    else
+    {
+        AddScriptToList(handle, ppIdleScripts);
+        if(*nGameIdent == GTASA) ShutdownThisScript(handle);
+        else
+        {
+            GetActiveFlag(handle) = false;
+        }
+    }
 }
 
 extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opcode0DD2_inject()
@@ -404,7 +438,7 @@ extern "C" void OnModPreLoad()
     };
     cleo_addon_ifs.IsOpcodeAlreadyExists =  [](uint16_t opcode) -> bool
     {
-        opcode &= 0x7FFF;
+        opcode &= 0x7FFF; // need to do that, using __reference__ below (pointer under the hood)
         void** fn = LookupForOpcodeFunc(CLEOOpcodesStorage, opcode);
         return (fn != NULL && *fn != NULL);
     };
@@ -583,6 +617,11 @@ extern "C" void OnAllModsLoaded()
     Init4Opcodes();
     Init5Opcodes();
     HOOK(ProcessOneCommand, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17ProcessOneCommandEv"));
+    SET_TO(RemoveScriptFromList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript20RemoveScriptFromListEPPS_"));
+    SET_TO(AddScriptToList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript15AddScriptToListEPPS_"));
+    SET_TO(ShutdownThisScript, cleo->GetMainLibrarySymbol("_ZN14CRunningScript18ShutdownThisScriptEv"));
+    SET_TO(ppActiveScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
+    SET_TO(ppIdleScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts12pIdleScriptsE"));
 
     // MathOperations Opcodes
     InitMathOpcodes();

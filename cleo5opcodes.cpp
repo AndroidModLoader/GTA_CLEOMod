@@ -6,10 +6,12 @@
 
 // There wont be that much opcodes, because some of them are in their own plugins
 
+extern void* g_pForceInterrupt;
 std::deque<PausedScriptInfo> pausedScripts;
 extern void (*UpdateCompareFlag)(void*, uint8_t);
 extern GTAScript **pActiveScripts;
 void CleoReturnGeneric(void* handle, bool returnArgs, int returnArgCount);
+void RemoveScript(void* handle);
 
 
 // Game vars
@@ -192,6 +194,12 @@ CLEO_Fn(IS_MEMORY_EQUAL)
     void* target = (void*)cleo->ReadParam(handle)->u;
     int size = cleo->ReadParam(handle)->i;
     UpdateCompareFlag(handle, (memcmp(source, target, size)) == 0);
+}
+CLEO_Fn(TERMINATE_SCRIPT)
+{
+    void* handleParam = (void*)cleo->ReadParam(handle)->u;
+    RemoveScript(handleParam);
+    if(handleParam == handle) g_pForceInterrupt = handle;
 }
 
 // Text plugin
@@ -469,6 +477,72 @@ CLEO_Fn(COPY_DIRECTORY)
     UpdateCompareFlag(handle, ec.value() == 0);
 }
 
+// Math plugin
+CLEO_Fn(IS_BIT_SET)
+{
+    uint32_t value = cleo->ReadParam(handle)->u;
+    int bitIndex = cleo->ReadParam(handle)->i;
+    UpdateCompareFlag(handle, (bitIndex >= 0 && bitIndex <= 32) && ((value >> bitIndex) & 1));
+}
+CLEO_Fn(SET_BIT)
+{
+    uint32_t* value = &cleo->GetPointerToScriptVar(handle)->u;
+    int bitIndex = cleo->ReadParam(handle)->i;
+    if(bitIndex >= 0 && bitIndex <= 32)
+    {
+        *value |= (1 << bitIndex);
+    }
+}
+CLEO_Fn(CLEAR_BIT)
+{
+    uint32_t* value = &cleo->GetPointerToScriptVar(handle)->u;
+    int bitIndex = cleo->ReadParam(handle)->i;
+    if(bitIndex >= 0 && bitIndex <= 32)
+    {
+        *value &= ~(1 << bitIndex);
+    }
+}
+CLEO_Fn(TOGGLE_BIT)
+{
+    uint32_t* value = &cleo->GetPointerToScriptVar(handle)->u;
+    int bitIndex = cleo->ReadParam(handle)->i;
+    bool state = cleo->ReadParam(handle)->i;
+    if(bitIndex >= 0 && bitIndex <= 32)
+    {
+        uint32_t flag = 1 << bitIndex;
+        if(state) *value |= flag;
+        else      *value &= ~flag;
+    }
+}
+CLEO_Fn(IS_TRUTHY)
+{
+    if(IsAnyStringTypeNow(handle))
+    {
+        char str[2];
+        CLEO_ReadStringEx(handle, str, sizeof(str));
+        UpdateCompareFlag(handle, str[0] != 0);
+        return;
+    }
+    cleo->ReadParam(handle);
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(PICK_RANDOM_INT)
+{
+    
+}
+CLEO_Fn(PICK_RANDOM_FLOAT)
+{
+    
+}
+CLEO_Fn(PICK_RANDOM_TEXT)
+{
+    
+}
+CLEO_Fn(RANDOM_CHANCE)
+{
+    
+}
+
 // CLEO 5
 CLEO_Fn(GET_CLEO_ARG_COUNT)
 {
@@ -512,6 +586,7 @@ void Init5Opcodes()
     CLEO_RegisterOpcode(0x2405, IS_SCRIPT_RUNNING); // 2405=1, is_script_running %1d%
     CLEO_RegisterOpcode(0x2406, GET_SCRIPT_STRUCT_FROM_FILENAME); // 2406=1, get_script_struct_from_filename %1s%
     CLEO_RegisterOpcode(0x2407, IS_MEMORY_EQUAL); // 2407=3, is_memory_equal address_a %1d% address_b %2d% size %d3%
+    CLEO_RegisterOpcode(0x2408, TERMINATE_SCRIPT); // 2408=1,terminate_script %1d%
 
     // Text plugin
     // Literally brainless move... #2
@@ -538,6 +613,17 @@ void Init5Opcodes()
     CLEO_RegisterOpcode(0x0B03, MOVE_DIRECTORY); // 0B03=2, move_directory %1s% to %2s% //IF and SET
     CLEO_RegisterOpcode(0x0B04, COPY_FILE); // 0B04=2, copy_file %1s% to %2s% //IF and SET
     CLEO_RegisterOpcode(0x0B05, COPY_DIRECTORY); // 0B05=2, copy_directory %1d% to %2d% //IF and SET
+
+    // Math plugin
+    CLEO_RegisterOpcode(0x2300, IS_BIT_SET); // 2700=2, is_bit_set value %1d% bit_index %2d%
+    CLEO_RegisterOpcode(0x2301, SET_BIT); // 2701=2, set_bit value %1d% bit_index %2d%
+    CLEO_RegisterOpcode(0x2302, CLEAR_BIT); // 2702=2, clear_bit value %1d% bit_index %2d%
+    CLEO_RegisterOpcode(0x2303, TOGGLE_BIT); // 2703=3, toggle_bit value %1d% bit_index %2d% state %3d%
+    CLEO_RegisterOpcode(0x2304, IS_TRUTHY); // 2704=1, is_truthy value %1d%
+    CLEO_RegisterOpcode(0x2305, PICK_RANDOM_INT); // 2705=-1, pick_random_int values %d% store_to %d%
+    CLEO_RegisterOpcode(0x2306, PICK_RANDOM_FLOAT); // 2706=-1, pick_random_float values %d% store_to %d%
+    CLEO_RegisterOpcode(0x2307, PICK_RANDOM_TEXT); // 2707=-1, pick_random_text values %d% store_to %d%
+    CLEO_RegisterOpcode(0x2308, RANDOM_CHANCE); // 2708=1, random_chance %1d%
 
     // CLEO 5
     CLEO_RegisterOpcode(0x2000, GET_CLEO_ARG_COUNT); // 2000=1, %1d% = get_cleo_arg_count

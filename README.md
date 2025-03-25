@@ -120,6 +120,7 @@ Opcodes from CLEO5 in this mod (except debugging ones!!!):
 2405=1, is_script_running %1d%
 2406=1, get_script_struct_from_filename %1s%
 2407=3, is_memory_equal address_a %1d% address_b %2d% size %d3%
+2408=1,terminate_script %1d%
 2600=1, is_text_empty %1s%
 2601=3, is_text_equal %1s% another %2s% ignore_case %3d%
 2602=3, is_text_in_text %1s% sub_text %2s% ignore_case %3d%
@@ -143,6 +144,11 @@ Opcodes from CLEO5 in this mod (except debugging ones!!!):
 2000=1, %1d% = get_cleo_arg_count
 2002=-1, cleo_return_with ...
 2003=-1, cleo_return_fail
+2700=2, is_bit_set value %1d% bit_index %2d%
+2701=2, set_bit value %1d% bit_index %2d%
+2702=2, clear_bit value %1d% bit_index %2d%
+2703=3, toggle_bit value %1d% bit_index %2d% state %3d%
+2704=1, is_truthy value %1d%
 ```
 
 ### Another opcodes

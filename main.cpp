@@ -211,9 +211,11 @@ DECL_HOOKv(CLEO_StartScripts)
         }
     }
 }
-DECL_HOOKb(CLEO_OnOpcodeCall, void *storageItem, uint16_t opcode)
+int lastStorageItem = 0;
+DECL_HOOKb(CLEO_OnOpcodeCall, int thisStorageItem, uint16_t opcode)
 {
-    bool ret = CLEO_OnOpcodeCall(storageItem, opcode);
+    lastStorageItem = thisStorageItem;
+    bool ret = CLEO_OnOpcodeCall(thisStorageItem, opcode);
     int param1 = *ScriptParams;
     
     if(opcode == 0x0DF0)
@@ -577,6 +579,7 @@ CLEO_Fn(AML_DO_OPCODE_EXIST)
     UpdateCompareFlag(handle, fn != NULL && *fn != NULL);
 }
 
+void Init201Opcodes();
 void Init4Opcodes();
 void Init5Opcodes();
 void InitMathOpcodes();
@@ -614,6 +617,7 @@ extern "C" void OnAllModsLoaded()
     char savpath[256];
     sprintf(savpath, "%s/sav", cleo->GetCleoStorageDir());
     mkdir(savpath, 0777);
+    Init201Opcodes();
     Init4Opcodes();
     Init5Opcodes();
     HOOK(ProcessOneCommand, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17ProcessOneCommandEv"));

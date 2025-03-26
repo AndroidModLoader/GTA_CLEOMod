@@ -824,6 +824,19 @@ inline void* GetScriptHandleFromStorage(int i)
     }
     return NULL;
 }
+inline int GetCustomHandleFromScriptHandle(void* handle)
+{
+    int size = GetScriptsStorageSize();
+    for(int i = 0; i < size; ++i)
+    {
+        int storageItem = *(int*)(*pScriptsStorage + i * 4);
+        if(storageItem && *(void**)(storageItem + 28) == handle)
+        {
+            return storageItem;
+        }
+    }
+    return 0;
+}
 inline int GetScriptMenuIndexFromStorage(int i)
 {
     int size = GetScriptsStorageSize();
@@ -1067,7 +1080,8 @@ struct CLEO201Script
     const char* name;
     int index;
     void* handle; // CRunningScript*
-    char pad2[8];
+    uint8_t** baseScriptPC;
+    char pad2[4];
     uint8_t** scriptPC;
     bool launched;
 };

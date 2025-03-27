@@ -80,6 +80,18 @@ struct cleo_addon_ifs_t
     bool            (*IsValidScriptHandle)(void* handle);
     std::string     (*ResolvePath)(void* handle, const char* path, const char* customWorkDir);
     void            (*AddGXTLabel)(const char* gxtLabel, const char* text);
+
+    // Interface ver 2
+    bool&           (*GetActiveFlag)(void *handle);
+    bool            (*IsInActiveScripts)(void *handle);
+    bool            (*IsInPausedScripts)(void *handle);
+    bool            (*IsInCLEOScripts)(void *handle);
+    bool            (*IsParamString)(void *handle, bool checkIfPointer);
+    const char*     (*GetScriptFilename)(void* handle);
+    const char*     (*GetVarTypeName)(int varType);
+    char*           (*GetStringPtr)(void* handle);
+    uint32_t        (*GetStringPtrMaxSize)(void* handle);
+    bool&           (*IsMissionScript)(void *handle);
 };
 
 #endif // _CLEO_ADDON_H

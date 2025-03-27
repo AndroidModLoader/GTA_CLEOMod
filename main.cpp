@@ -395,6 +395,7 @@ extern "C" void OnModPreLoad()
     RegisterInterface("CLEO", cleo);
     logger->Info("CLEO Initialized!");
 
+    // CleoAddon interface == 1
     cleo_addon_ifs.GetInterfaceVersion = []() -> uint32_t
     {
         return 2;
@@ -447,6 +448,23 @@ extern "C" void OnModPreLoad()
     cleo_addon_ifs.IsValidScriptHandle =    IsValidScriptHandle;
     cleo_addon_ifs.ResolvePath =            ResolvePath;
     cleo_addon_ifs.AddGXTLabel =            AddGXTLabel;
+
+    // CleoAddon interface == 2
+    cleo_addon_ifs.GetActiveFlag =          GetActiveFlag;
+    cleo_addon_ifs.IsInActiveScripts =      IsInActiveScripts;
+    cleo_addon_ifs.IsInPausedScripts =      IsInPausedScripts;
+    cleo_addon_ifs.IsInCLEOScripts =        IsInCLEOScripts;
+    cleo_addon_ifs.IsParamString =          IsParamString;
+    cleo_addon_ifs.GetScriptFilename =      CLEO_GetScriptFilename;
+    cleo_addon_ifs.GetVarTypeName =         [](int varType) -> const char*
+    {
+        return GetVarTypeName((eScriptParameterType)varType);
+    };;
+    cleo_addon_ifs.GetStringPtr =           CLEO_GetStringPtr;
+    cleo_addon_ifs.GetStringPtrMaxSize =    CLEO_GetStringPtrMaxSize;
+    cleo_addon_ifs.IsMissionScript =        IsMissionScript;
+
+    // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
     logger->Info("CLEO Addon Initialized!");
 }
@@ -459,7 +477,7 @@ const char* GetCLEODir()
     {
         char pad[24];
         char* (*CLEO_GetDir)(char*);
-        SET_TO(CLEO_GetDir, nCLEOAddr + 0x607D);
+        SET_TO(CLEO_GetDir, nCLEOAddr + 0x607C + 0x1);
         CLEO_GetDir(&pad[0]);
         strcpy(gotIt, *(char**)(pad + 20));
         bGotit = true;
@@ -630,7 +648,7 @@ extern "C" void OnAllModsLoaded()
     // MathOperations Opcodes
     InitMathOpcodes();
 
-    // DMA Fix
+    // DMA Fix (only in GTA:SA!)
     if(*nGameIdent == GTASA)
     {
         uintptr_t pGTASA = aml->GetLib("libGTASA.so");

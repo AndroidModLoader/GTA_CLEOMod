@@ -886,7 +886,10 @@ inline const char* CLEO_GetScriptFilename(void* handle)
     {
         int storageItem = *(int*)(*pScriptsStorage + i * 4);
         void* scriptHandle = *(void**)(storageItem + 28);
-        if(scriptHandle == handle) return *(const char**)(storageItem + 20);
+        if(scriptHandle == handle)
+        {
+            return *(const char**)(storageItem + 20);
+        }
     }
     return NULL;
 }

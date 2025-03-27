@@ -719,17 +719,21 @@ inline bool IsCLEORelatedGXTKey(char* gxtLabel)
     return false; // uh-nuh
 }
 extern uint16_t FreeScriptAddonInfoId;
-extern ScriptAddonInfo ScriptAddonInfosStorage[0x400];
+extern ScriptAddonInfo ScriptAddonInfosStorage[ScriptAddonInfo::allocSize];
 inline uint16_t AssignAddonInfo(void* handle)
 {
-    uint16_t id = FreeScriptAddonInfoId++;
+    uint16_t id = FreeScriptAddonInfoId;
     *(uint16_t*)((uintptr_t)handle + ValueForGame(0x26, 0x2E, 0x3A, 0, 0)) = id;
+    ++FreeScriptAddonInfoId;
     return id;
 }
 inline ScriptAddonInfo& GetAddonInfo(void* handle)
 {
     uint16_t id = *(uint16_t*)((uintptr_t)handle + ValueForGame(0x26, 0x2E, 0x3A, 0, 0));
-    if(!id) id = AssignAddonInfo(handle);
+    if(!id || id >= ScriptAddonInfo::allocSize)
+    {
+        id = AssignAddonInfo(handle);
+    }
     return ScriptAddonInfosStorage[id];
 }
 inline uint16_t GetScmFunc(void* handle)

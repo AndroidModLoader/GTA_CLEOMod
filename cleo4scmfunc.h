@@ -45,6 +45,7 @@ extern uint8_t* LocalVariablesForCurrentMission;
 static void* zeroReturn = NULL; // gag the warn
 struct ScmFunction
 {
+    void* callerHandle;
     unsigned short prevScmFunctionId, thisScmFunctionId;
     uint8_t *retnAddress;
     uint8_t *savedStack[8]; // gosub stack
@@ -78,6 +79,9 @@ struct ScmFunction
     }
     ScmFunction(void *thread) : prevScmFunctionId(GetScmFunc(thread))
     {
+        callerHandle = thread;
+        thisScmFunctionId = (uint16_t)allocationPlace;
+        SetScmFunc(thread, thisScmFunctionId);
         // create snapshot of current scope
         memcpy(&savedStack, GetStack(thread), sizeof(void*) * ValueForSA(8, 6));
         savedSP = GetStackDepth(thread);
@@ -95,8 +99,6 @@ struct ScmFunction
         GetCond(thread) = false;
         GetLogicalOp(thread) = eLogicalOperation::NONE;
         GetNotFlag(thread) = false;
-        thisScmFunctionId = (uint16_t)allocationPlace;
-        SetScmFunc(thread, thisScmFunctionId);
     }
     void Return(void *thread)
     {

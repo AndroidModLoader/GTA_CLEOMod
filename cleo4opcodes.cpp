@@ -444,6 +444,18 @@ CLEO_Fn(CLEO_CALL)
 inline void CleoReturnGeneric(void* handle, bool returnArgs, int returnArgCount)
 {
     ScmFunction *scmFunc = ScmFunction::Store[GetScmFunc(handle)];
+    if(!scmFunc)
+    {
+        for(int i = ScmFunction::store_size-1; i >= 0; --i)
+        {
+            if(ScmFunction::Store[i] && ScmFunction::Store[i]->callerHandle == handle)
+            {
+                scmFunc = ScmFunction::Store[i];
+                logger->Error("Thread has func %d but the real one is %d (probably!)", GetScmFunc(handle), i);
+                break;
+            }
+        }
+    }
     if(*nGameIdent == GTASA)
     {
         if(returnArgs && returnArgCount) CollectParameters_SA(handle, returnArgCount);

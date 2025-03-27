@@ -17,7 +17,7 @@ cleo_ifs_t* cleo = nullptr;
 #include "cleoaddon.h"
 cleo_addon_ifs_t cleo_addon_ifs;
 uint16_t FreeScriptAddonInfoId = 1; // 0 is "not assigned" (used for dumbo scripts without that info)
-ScriptAddonInfo ScriptAddonInfosStorage[0x400];
+ScriptAddonInfo ScriptAddonInfosStorage[ScriptAddonInfo::allocSize];
 
 // SAUtils
 #include "isautils.h"

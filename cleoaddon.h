@@ -10,6 +10,8 @@
 
 struct ScriptAddonInfo
 {
+    static const int allocSize = 0x400;
+
     ScriptAddonInfo()
     {
         unused = 0xFFFF;

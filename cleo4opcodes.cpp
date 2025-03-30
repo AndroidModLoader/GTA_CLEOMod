@@ -1564,41 +1564,41 @@ void Init4Opcodes()
     SET_TO(AddBigMessage,       cleo->GetMainLibrarySymbol("_ZN9CMessages13AddBigMessageEPtjt"));
     SET_TO(CLEO_STD_PutStrToAlloced, nCLEOAddr + 0x8F08 + 0x1);
     SET_TO(CLEO_STD_AddToGxtStorage, nCLEOAddr + 0x96CC + 0x1);
-    SET_TO(CLEO_STD_DeallocStorage, nCLEOAddr + 0x5F34 + 0x1);
+    SET_TO(CLEO_STD_DeallocStorage,  nCLEOAddr + 0x5F34 + 0x1);
     SET_TO(TheText,             cleo->GetMainLibrarySymbol("TheText"));
     SET_TO(TextGet,             cleo->GetMainLibrarySymbol("_ZN5CText3GetEPKc"));
     SET_TO(m_CheatString,       cleo->GetMainLibrarySymbol("_ZN6CCheat13m_CheatStringE"));
     SET_TO(keys,                cleo->GetMainLibrarySymbol("keys"));
-    SET_TO(ms_modelInfoPtrs, *(uintptr_t*)((uintptr_t)cleo->GetMainLibraryLoadAddress() + (*nGameIdent == GTASA ? 0x6796D4 : 0x394D94)));
+    SET_TO(ms_modelInfoPtrs, *(uintptr_t*)(nGameAddr + (*nGameIdent == GTASA ? 0x6796D4 : 0x394D94)));
     if(*nGameIdent == GTASA)
     {
-        SET_TO(gMobileMenu, cleo->GetMainLibrarySymbol("gMobileMenu"));
-        SET_TO(ms_RadarTrace, *(uintptr_t*)((uintptr_t)cleo->GetMainLibraryLoadAddress() + 0x6773CC));
-        SET_TO(FindGroundZForCoord, cleo->GetMainLibrarySymbol("_ZN6CWorld19FindGroundZForCoordEff"));
+        SET_TO(gMobileMenu,                     cleo->GetMainLibrarySymbol("gMobileMenu"));
+        SET_TO(ms_RadarTrace,                   *(uintptr_t*)(nGameAddr + 0x6773CC));
+        SET_TO(FindGroundZForCoord,             cleo->GetMainLibrarySymbol("_ZN6CWorld19FindGroundZForCoordEff"));
         SET_TO(LocalVariablesForCurrentMission, cleo->GetMainLibrarySymbol("_ZN11CTheScripts31LocalVariablesForCurrentMissionE"));
-        SET_TO(CollectParameters_SA, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17CollectParametersEs"));
-        SET_TO(StoreParameters_SA, cleo->GetMainLibrarySymbol("_ZN14CRunningScript15StoreParametersEs"));
-        SET_TO(SetHelpMessage_SA, cleo->GetMainLibrarySymbol("_ZN4CHud14SetHelpMessageEPKcPtbbbj"));
-        SET_TO(FindPlayerPed, cleo->GetMainLibrarySymbol("_Z13FindPlayerPedi"));
-        SET_TO(pedPool, cleo->GetMainLibrarySymbol("_ZN6CPools11ms_pPedPoolE"));
-        SET_TO(vehiclePool, cleo->GetMainLibrarySymbol("_ZN6CPools15ms_pVehiclePoolE"));
-        SET_TO(objectPool, cleo->GetMainLibrarySymbol("_ZN6CPools14ms_pObjectPoolE"));
-        SET_TO(AddMessage_SA, cleo->GetMainLibrarySymbol("_ZN9CMessages10AddMessageEPKcPtjtb"));
-        SET_TO(AddMessageJumpQ_SA, cleo->GetMainLibrarySymbol("_ZN9CMessages15AddMessageJumpQEPKcPtjtb"));
-        SET_TO(SpawnCar, cleo->GetMainLibrarySymbol("_ZN6CCheat12VehicleCheatEi"));
-        SET_TO(IsHIDPressed, cleo->GetMainLibrarySymbol("_ZN4CHID9IsPressedE10HIDMappingPf"));
-        SET_TO(ClearAllCrosshairs, cleo->GetMainLibrarySymbol("_ZN14CWeaponEffects18ClearAllCrosshairsEv"));
-        SET_TO(SetWeaponLockOnTarget, cleo->GetMainLibrarySymbol("_ZN4CPed21SetWeaponLockOnTargetEP7CEntity"));
+        SET_TO(CollectParameters_SA,            cleo->GetMainLibrarySymbol("_ZN14CRunningScript17CollectParametersEs"));
+        SET_TO(StoreParameters_SA,              cleo->GetMainLibrarySymbol("_ZN14CRunningScript15StoreParametersEs"));
+        SET_TO(SetHelpMessage_SA,               cleo->GetMainLibrarySymbol("_ZN4CHud14SetHelpMessageEPKcPtbbbj"));
+        SET_TO(FindPlayerPed,                   cleo->GetMainLibrarySymbol("_Z13FindPlayerPedi"));
+        SET_TO(pedPool,                         cleo->GetMainLibrarySymbol("_ZN6CPools11ms_pPedPoolE"));
+        SET_TO(vehiclePool,                     cleo->GetMainLibrarySymbol("_ZN6CPools15ms_pVehiclePoolE"));
+        SET_TO(objectPool,                      cleo->GetMainLibrarySymbol("_ZN6CPools14ms_pObjectPoolE"));
+        SET_TO(AddMessage_SA,                   cleo->GetMainLibrarySymbol("_ZN9CMessages10AddMessageEPKcPtjtb"));
+        SET_TO(AddMessageJumpQ_SA,              cleo->GetMainLibrarySymbol("_ZN9CMessages15AddMessageJumpQEPKcPtjtb"));
+        SET_TO(SpawnCar,                        cleo->GetMainLibrarySymbol("_ZN6CCheat12VehicleCheatEi"));
+        SET_TO(IsHIDPressed,                    cleo->GetMainLibrarySymbol("_ZN4CHID9IsPressedE10HIDMappingPf"));
+        SET_TO(ClearAllCrosshairs,              cleo->GetMainLibrarySymbol("_ZN14CWeaponEffects18ClearAllCrosshairsEv"));
+        SET_TO(SetWeaponLockOnTarget,           cleo->GetMainLibrarySymbol("_ZN4CPed21SetWeaponLockOnTargetEP7CEntity"));
     }
     else
     {
-        SET_TO(CollectParameters_VC, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17CollectParametersEPjs"));
-        SET_TO(StoreParameters_VC, cleo->GetMainLibrarySymbol("_ZN14CRunningScript15StoreParametersEPjs"));
-        SET_TO(SetHelpMessage_VC, cleo->GetMainLibrarySymbol("_ZN4CHud14SetHelpMessageEPtbbb"));
-        SET_TO(AddMessage_VC, cleo->GetMainLibrarySymbol("_ZN9CMessages10AddMessageEPtjt"));
-        SET_TO(AddMessageJumpQ_VC, cleo->GetMainLibrarySymbol("_ZN9CMessages15AddMessageJumpQEPtjt"));
-        SET_TO(SpawnCar, cleo->GetMainLibrarySymbol("_Z12VehicleCheati"));
-        SET_TO(curCheatCar_VC, cleo->GetMainLibrarySymbol("curCheatCar"));
+        SET_TO(CollectParameters_VC,            cleo->GetMainLibrarySymbol("_ZN14CRunningScript17CollectParametersEPjs"));
+        SET_TO(StoreParameters_VC,              cleo->GetMainLibrarySymbol("_ZN14CRunningScript15StoreParametersEPjs"));
+        SET_TO(SetHelpMessage_VC,               cleo->GetMainLibrarySymbol("_ZN4CHud14SetHelpMessageEPtbbb"));
+        SET_TO(AddMessage_VC,                   cleo->GetMainLibrarySymbol("_ZN9CMessages10AddMessageEPtjt"));
+        SET_TO(AddMessageJumpQ_VC,              cleo->GetMainLibrarySymbol("_ZN9CMessages15AddMessageJumpQEPtjt"));
+        SET_TO(SpawnCar,                        cleo->GetMainLibrarySymbol("_Z12VehicleCheati"));
+        SET_TO(curCheatCar_VC,                  cleo->GetMainLibrarySymbol("curCheatCar"));
     }
     
     //CLEO_RegisterOpcode(0x0A8C, WRITE_MEMORY); // WIDGET opcode on Mobile (thanks WarDrum, lol)

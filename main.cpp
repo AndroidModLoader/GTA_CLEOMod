@@ -63,7 +63,7 @@ inline void __pathback(char *str)
 
 // Pointers
 void* pCLEO;
-uintptr_t nCLEOAddr;
+uintptr_t nCLEOAddr, nGameAddr;
 Dl_info pDLInfo;
 eGameIdent* nGameIdent;
 
@@ -507,25 +507,25 @@ CLEO_Fn(AML_HAS_MODVER_LOADED)
 CLEO_Fn(AML_REDIRECT_CODE)
 {
     uintptr_t code1 = cleo->ReadParam(handle)->u;
-    if(cleo->ReadParam(handle)->i != 0) code1 += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+    if(cleo->ReadParam(handle)->i != 0) code1 += nGameAddr;
     uintptr_t code2 = cleo->ReadParam(handle)->u;
-    if(cleo->ReadParam(handle)->i != 0) code2 += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+    if(cleo->ReadParam(handle)->i != 0) code2 += nGameAddr;
 
     aml->Redirect(code1, code2);
 }
 CLEO_Fn(AML_JUMP_CODE)
 {
     uintptr_t code1 = cleo->ReadParam(handle)->u;
-    if(cleo->ReadParam(handle)->i != 0) code1 += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+    if(cleo->ReadParam(handle)->i != 0) code1 += nGameAddr;
     uintptr_t code2 = cleo->ReadParam(handle)->u;
-    if(cleo->ReadParam(handle)->i != 0) code2 += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+    if(cleo->ReadParam(handle)->i != 0) code2 += nGameAddr;
 
     aml->PlaceB(code1, code2);
 }
 CLEO_Fn(AML_GET_BRANCH_DEST)
 {
     uintptr_t code = cleo->ReadParam(handle)->u;
-    if(cleo->ReadParam(handle)->i != 0) code += (uintptr_t)cleo->GetMainLibraryLoadAddress();
+    if(cleo->ReadParam(handle)->i != 0) code += nGameAddr;
     
     cleo->GetPointerToScriptVar(handle)->i = aml->GetBranchDest(code);
 }
@@ -601,10 +601,13 @@ void Init201Opcodes();
 void Init4Opcodes();
 void Init5Opcodes();
 void InitMathOpcodes();
+char g_szScriptStore[256 * 0x100]; // 0x100 is the size of script in GTA:SA
+                                   // (VC has smaller size=0x88 so it's fine to use BIGGER static value)
 extern "C" void OnAllModsLoaded()
 {
     if(!cleo) return;
 
+    nGameAddr = (uintptr_t)cleo->GetMainLibraryLoadAddress();
     sautils = (ISAUtils*)GetInterface("SAUtils");
     if(sautils)
     {
@@ -631,6 +634,28 @@ extern "C" void OnAllModsLoaded()
     cleo->GetCleoStorageDir = GetCLEODir;
     cleo->GetCleoPluginLoadDir = GetCLEODir;
 
+    // CLEO Scripts limit
+    if(*nGameIdent == GTASA)
+    {
+        // 96 to 256
+        if(cfg->GetBool("BumpScriptsLimit", true) &&
+           *(uintptr_t*)(nGameAddr + 0x679658) == (nGameAddr + 0x7B778C))
+        {
+            aml->WriteAddr(nGameAddr + 0x679658, &g_szScriptStore[0]);
+            aml->Write32(nGameAddr + 0x329F88, 0xE3550903);
+        }
+    }
+    else if(*nGameIdent == GTAVC)
+    {
+        // 128 to 256
+        if(cfg->GetBool("BumpScriptsLimit", true) &&
+           *(uintptr_t*)(nGameAddr + 0x395C48) == (nGameAddr + 0x58F018))
+        {
+            aml->WriteAddr(nGameAddr + 0x395C48, &g_szScriptStore[0]);
+            aml->Write32(nGameAddr + 0x10B658, 0x4708F504);
+        }
+    }
+
     // CLEO4+5 Opcodes
     char savpath[256];
     sprintf(savpath, "%s/sav", cleo->GetCleoStorageDir());
@@ -651,9 +676,17 @@ extern "C" void OnAllModsLoaded()
     // DMA Fix (only in GTA:SA!)
     if(*nGameIdent == GTASA)
     {
-        uintptr_t pGTASA = aml->GetLib("libGTASA.so");
-        aml->Write8(pGTASA + 0x32950A + 0x1, 0x68);
+        aml->Write8(nGameAddr + 0x32950A + 0x1, 0x68);
     }
+}
+
+extern "C" void OnModUnload()
+{
+    delete pCfgCLEOLocation;
+    delete pCfgCLEORedArrow;
+    delete pCfgCLEOMenuColor;
+    delete pCfgCLEOMenuArrowColor;
+    delete pCfgCLEOMenuArrowPressedAlpha;
 }
 
 extern "C" void OnGameCrash(const char* szLibName, int sig, int code, uintptr_t libaddr, mcontext_t* mcontext)

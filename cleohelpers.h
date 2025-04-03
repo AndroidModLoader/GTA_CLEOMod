@@ -491,6 +491,13 @@ inline char* CLEO_ReadStringEx(void* handle, char* buf = NULL, size_t size = 0)
     }
     return buf;
 }
+inline std::string CLEO_ReadStdString(void* handle)
+{
+    std::string ret;
+    ret.resize(MAX_STR_LEN + 1);
+    CLEO_ReadStringEx(handle, ret.data(), MAX_STR_LEN);
+    return ret;
+}
 inline void CLEO_WriteStringEx(void* handle, const char* buf)
 {
     uint8_t byte = Read1Byte_NoSkip(handle);

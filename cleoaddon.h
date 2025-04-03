@@ -94,6 +94,7 @@ struct cleo_addon_ifs_t
     char*           (*GetStringPtr)(void* handle);
     uint32_t        (*GetStringPtrMaxSize)(void* handle);
     bool&           (*IsMissionScript)(void *handle);
+    std::string     (*ReadStdString)(void* handle);
 };
 
 #endif // _CLEO_ADDON_H

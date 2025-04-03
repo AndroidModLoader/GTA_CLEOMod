@@ -463,6 +463,7 @@ extern "C" void OnModPreLoad()
     cleo_addon_ifs.GetStringPtr =           CLEO_GetStringPtr;
     cleo_addon_ifs.GetStringPtrMaxSize =    CLEO_GetStringPtrMaxSize;
     cleo_addon_ifs.IsMissionScript =        IsMissionScript;
+    cleo_addon_ifs.ReadStdString =          CLEO_ReadStdString;
 
     // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);

@@ -258,15 +258,16 @@ CLEO_Fn(DELETE_VARS_SAVE)
 
 CLEO_Fn(FIND_CUSTOM_SCRIPT_WITH_NAME)
 {
-    char name[MAX_STR_LEN];
+    char scrname[MAX_STR_LEN];
     void** scriptRet = (void**)&cleo->GetPointerToScriptVar(handle)->u;
-    CLEO_ReadStringEx(handle, name, sizeof(name));
+    CLEO_ReadStringEx(handle, scrname, sizeof(scrname));
     bool caseSensitive = cleo->ReadParam(handle)->i;
     bool partial = cleo->ReadParam(handle)->i;
     bool checkFilename = cleo->ReadParam(handle)->i;
 
     *scriptRet = NULL;
     
+    // TODO:
 }
 
 void Init201Opcodes()

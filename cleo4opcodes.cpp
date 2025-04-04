@@ -1386,9 +1386,9 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0A8F, INT_SUB); // 0A8F=3,%3d% = %1d% - %2d% ; int
     CLEO_RegisterOpcode(0x0A90, INT_MUL); // 0A90=3,%3d% = %1d% * %2d% ; int
     CLEO_RegisterOpcode(0x0A91, INT_DIV); // 0A91=3,%3d% = %1d% / %2d% ; int
-    //CLEO_RegisterOpcode(0x0A92, STREAM_CUSTOM_SCRIPT); // 
-    //CLEO_RegisterOpcode(0x0A93, TERMINATE_THIS_CUSTOM_SCRIPT); // 
-    //CLEO_RegisterOpcode(0x0A94, LOAD_AND_LAUNCH_CUSTOM_MISSION); // 
+    //CLEO_RegisterOpcode(0x0A92, STREAM_CUSTOM_SCRIPT); // 0A92=-1,create_custom_thread %1d%
+    //CLEO_RegisterOpcode(0x0A93, TERMINATE_THIS_CUSTOM_SCRIPT); // 0A93=0,terminate_this_custom_script
+    //CLEO_RegisterOpcode(0x0A94, LOAD_AND_LAUNCH_CUSTOM_MISSION); // 0A94=-1,create_custom_mission %1d%
     CLEO_RegisterOpcode(0x0A95, SAVE_THIS_CUSTOM_SCRIPT); // 0A95=0,enable_thread_saving
     CLEO_RegisterOpcode(0x0A96, GET_PED_POINTER); // 0A96=2,%2d% = actor %1d% struct
     CLEO_RegisterOpcode(0x0A97, GET_VEHICLE_POINTER); // 0A97=2,%2d% = car %1d% struct

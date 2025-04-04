@@ -302,6 +302,10 @@ inline bool& IsMissionScript(void* handle)
 {
     return *(bool*)((uintptr_t)handle + ValueForGame(133, 133, 252));
 }
+inline uint32_t& GetWakeTime(void* handle)
+{
+    return *(uint32_t*)((uintptr_t)handle + ValueForGame(124, 124, 236, 528, 512));
+}
 inline void PushStack(void* handle)
 {
     uint8_t** stack = GetStack(handle);

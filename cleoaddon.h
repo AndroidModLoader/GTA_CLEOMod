@@ -96,6 +96,7 @@ struct cleo_addon_ifs_t
     bool&           (*IsMissionScript)(void *handle);
     std::string     (*ReadStdString)(void* handle);
     void*           (*GetLastCustomScriptCreated)();
+    uint32_t&       (*GetWakeTime)(void* handle);
 };
 
 #endif // _CLEO_ADDON_H

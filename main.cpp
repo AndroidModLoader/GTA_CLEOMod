@@ -125,8 +125,22 @@ void OnRedArrowChanged(int oldVal, int newVal, void* userdata)
 void RemoveScript(void* handle)
 {
     RemoveScriptFromList(handle, ppActiveScripts);
-    if(GetAddonInfo(handle).isCustom)
+    if(GetAddonInfo(handle).parentThread)
     {
+        // TODO: bring on threads?
+    }
+    else if(GetAddonInfo(handle).isCustom)
+    {
+        auto& threads = GetAddonInfo(handle).childThreads;
+        if(threads.size() > 0)
+        {
+            for(auto thread : threads)
+            {
+                RemoveScript(thread);
+            }
+            threads.clear();
+        }
+
         GetActiveFlag(handle) = false;
         int size = GetScriptsStorageSize();
         for(int i = 0; i < size; ++i)
@@ -136,6 +150,7 @@ void RemoveScript(void* handle)
             {
                 // TODO: check if this is enough
                 *(bool*)(storageItem + 44) = false; // not launched
+                GetWakeTime(handle) = 0xFFFFFFFF;
                 return;
             }
         }
@@ -206,6 +221,7 @@ DECL_HOOKv(CLEO_StartScripts)
             if(handle != NULL)
             {
                 AssignAddonInfo(handle);
+                GetAddonInfo(handle).parentThread = NULL;
                 GetAddonInfo(handle).isCustom = true;
             }
         }
@@ -236,6 +252,7 @@ DECL_HOOKb(CLEO_OnOpcodeCall, int thisStorageItem, uint16_t opcode)
                 if(handle != NULL)
                 {
                     AssignAddonInfo(handle);
+                    GetAddonInfo(handle).parentThread = NULL;
                     GetAddonInfo(handle).isCustom = true;
                 }
                 return ret;
@@ -475,6 +492,7 @@ extern "C" void OnModPreLoad()
     {
         return g_pLastScriptHandleStarted;
     };
+    cleo_addon_ifs.GetWakeTime =            GetWakeTime;
 
     // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
@@ -738,8 +756,25 @@ extern "C" void OnGameCrash(const char* szLibName, int sig, int code, uintptr_t 
             custName[0] = 0;
             if(isCustom)
             {
-                const char* filename = CLEO_GetScriptFilename(lastScriptHandle[i]);
-                if(filename) strncpy(custName, filename, sizeof(custName)); custName[sizeof(custName)-1] = 0;
+                void* parentThread = GetAddonInfo(lastScriptHandle[i]).parentThread;
+                if(parentThread)
+                {
+                    const char* filename = CLEO_GetScriptFilename(parentThread);
+                    if(filename)
+                    {
+                        snprintf(custName, sizeof(custName), "thread of \"%s\"", filename);
+                    }
+                    else
+                    {
+                        strncpy(custName, "thread of \"unknown script\"", sizeof(custName));
+                    }
+                    custName[sizeof(custName)-1] = 0;
+                }
+                else
+                {
+                    const char* filename = CLEO_GetScriptFilename(lastScriptHandle[i]);
+                    if(filename) strncpy(custName, filename, sizeof(custName)); custName[sizeof(custName)-1] = 0;
+                }
             }
             
             snprintf(buf, sizeof(buf), "CALL #%d, %s Script '%s', OpCode %04X", ++callNum, isCustom ? "CLEO" : "Game", custName[0] != 0 ? custName : defName, lastScriptOpcode);

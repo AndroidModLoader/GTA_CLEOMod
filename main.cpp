@@ -279,6 +279,13 @@ DECL_HOOK(int8_t, ProcessOneCommand, void* handle)
     return retCode;
 }
 
+void* g_pLastScriptHandleStarted = NULL;
+DECL_HOOK(void*, CLEO_StartScript, uint8_t* pc)
+{
+    g_pLastScriptHandleStarted = CLEO_StartScript(pc);
+    return g_pLastScriptHandleStarted;
+}
+
 void AddGXTLabel(const char* gxtLabel, const char* text);
 extern "C" void OnModPreLoad()
 {
@@ -459,11 +466,15 @@ extern "C" void OnModPreLoad()
     cleo_addon_ifs.GetVarTypeName =         [](int varType) -> const char*
     {
         return GetVarTypeName((eScriptParameterType)varType);
-    };;
+    };
     cleo_addon_ifs.GetStringPtr =           CLEO_GetStringPtr;
     cleo_addon_ifs.GetStringPtrMaxSize =    CLEO_GetStringPtrMaxSize;
     cleo_addon_ifs.IsMissionScript =        IsMissionScript;
     cleo_addon_ifs.ReadStdString =          CLEO_ReadStdString;
+    cleo_addon_ifs.GetLastCustomScriptCreated = []() -> void*
+    {
+        return g_pLastScriptHandleStarted;
+    };
 
     // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
@@ -665,6 +676,7 @@ extern "C" void OnAllModsLoaded()
     Init4Opcodes();
     Init5Opcodes();
     HOOK(ProcessOneCommand, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17ProcessOneCommandEv"));
+    HOOKPLT(CLEO_StartScript, nCLEOAddr + 0x1933C);
     SET_TO(RemoveScriptFromList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript20RemoveScriptFromListEPPS_"));
     SET_TO(AddScriptToList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript15AddScriptToListEPPS_"));
     SET_TO(ShutdownThisScript, cleo->GetMainLibrarySymbol("_ZN14CRunningScript18ShutdownThisScriptEv"));

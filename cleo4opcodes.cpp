@@ -147,6 +147,43 @@ CLEO_Fn(INT_MUL)
     }
 }
 
+void RemoveScript(void* handle);
+CLEO_Fn(TERMINATE_THIS_CUSTOM_SCRIPT)
+{
+    char defName[8], custName[128], buf[256];
+    bool isCustom = GetAddonInfo(handle).isCustom;
+
+    custName[0] = 0;
+    strncpy(defName, ((GTAScript*)handle)->name, sizeof(defName)); defName[sizeof(defName)-1] = 0;
+    if(isCustom)
+    {
+        void* parentThread = GetAddonInfo(handle).parentThread;
+        if(parentThread)
+        {
+            const char* filename = CLEO_GetScriptFilename(parentThread);
+            if(filename)
+            {
+                snprintf(custName, sizeof(custName), "thread of \"%s\"", filename);
+            }
+            else
+            {
+                strncpy(custName, "thread of \"unknown script\"", sizeof(custName));
+            }
+            custName[sizeof(custName)-1] = 0;
+        }
+        else
+        {
+            const char* filename = CLEO_GetScriptFilename(handle);
+            if(filename) strncpy(custName, filename, sizeof(custName)); custName[sizeof(custName)-1] = 0;
+        }
+    }
+
+    snprintf(buf, sizeof(buf), "[CLEOMod] terminating script '%s'", custName[0] != 0 ? custName : defName);
+    cleo->PrintToCleoLog(buf);
+
+    RemoveScript(handle);
+}
+
 CLEO_Fn(INT_DIV)
 {
     int a = cleo->ReadParam(handle)->i;
@@ -1387,7 +1424,7 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0A90, INT_MUL); // 0A90=3,%3d% = %1d% * %2d% ; int
     CLEO_RegisterOpcode(0x0A91, INT_DIV); // 0A91=3,%3d% = %1d% / %2d% ; int
     //CLEO_RegisterOpcode(0x0A92, STREAM_CUSTOM_SCRIPT); // 0A92=-1,create_custom_thread %1d%
-    //CLEO_RegisterOpcode(0x0A93, TERMINATE_THIS_CUSTOM_SCRIPT); // 0A93=0,terminate_this_custom_script
+    CLEO_RegisterOpcode(0x0A93, TERMINATE_THIS_CUSTOM_SCRIPT); // 0A93=0,terminate_this_custom_script
     //CLEO_RegisterOpcode(0x0A94, LOAD_AND_LAUNCH_CUSTOM_MISSION); // 0A94=-1,create_custom_mission %1d%
     CLEO_RegisterOpcode(0x0A95, SAVE_THIS_CUSTOM_SCRIPT); // 0A95=0,enable_thread_saving
     CLEO_RegisterOpcode(0x0A96, GET_PED_POINTER); // 0A96=2,%2d% = actor %1d% struct

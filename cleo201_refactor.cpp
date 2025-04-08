@@ -267,7 +267,7 @@ inline bool strcmp_partial(const char* source, const char* with)
 
     for(int i = 0; i < maxlen; ++i)
     {
-        if(!strncmp(source, with, len)) return true;
+        if(!strncmp(&source[i], with, len)) return true;
     }
     return false;
 }
@@ -278,7 +278,7 @@ inline bool strcasecmp_partial(const char* source, const char* with)
 
     for(int i = 0; i < maxlen; ++i)
     {
-        if(!strncasecmp(source, with, len)) return true;
+        if(!strncasecmp(&source[i], with, len)) return true;
     }
     return false;
 }

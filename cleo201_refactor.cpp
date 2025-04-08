@@ -347,12 +347,25 @@ CLEO_Fn(FIND_CUSTOM_SCRIPT_WITH_NAME)
     UpdateCompareFlag(handle, *scriptRet != NULL);
 }
 
+extern int (*FindTxdSlot)(const char*);
+extern void (*PushCurrentTxd)();
+extern void (*SetCurrentTxd)(int, const char*);
+extern void (*PopCurrentTxd)();
 CLEO_Fn(LOAD_SPRITE)
 {
-    char str[MAX_STR_LEN];
+    char str[MAX_STR_LEN], strLower[MAX_STR_LEN];
     int id = cleo->ReadParam(handle)->i - 1;
     CLEO_ReadStringEx(handle, str, sizeof(str));
 
+    int len = strlen(str);
+    for(int i = 0; i < len; ++i)
+    {
+        strLower[i] = std::tolower(str[i]);
+    }
+
+    int slot = FindTxdSlot("script");
+    PushCurrentTxd();
+    SetCurrentTxd(slot, NULL);
     if(GetAddonInfo(handle).isCustom)
     {
         void* bak = ScriptSprites[id];
@@ -362,15 +375,24 @@ CLEO_Fn(LOAD_SPRITE)
         snprintf(log, sizeof(log), "Loading sprite \"%s\" (%d) for custom script", str, id);
         cleo->PrintToCleoLog(log);
         
-        SetSprite2dTexture((void*)(&ScriptSprites[id]), str);
+        SetSprite2dTexture((void*)(&ScriptSprites[id]), strLower);
+        if(!ScriptSprites[id])
+        {
+            SetSprite2dTexture((void*)(&ScriptSprites[id]), str);
+        }
         SetCLEOSpriteTexture(handle, id, ScriptSprites[id]);
 
         ScriptSprites[id] = bak;
     }
     else
     {
-        SetSprite2dTexture((void*)(&ScriptSprites[id]), str);
+        SetSprite2dTexture((void*)(&ScriptSprites[id]), strLower);
+        if(!ScriptSprites[id])
+        {
+            SetSprite2dTexture((void*)(&ScriptSprites[id]), str);
+        }
     }
+    PopCurrentTxd();
 }
 
 void Init201Opcodes()

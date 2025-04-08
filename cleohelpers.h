@@ -741,10 +741,6 @@ inline uint16_t AssignAddonInfo(void* handle)
 inline ScriptAddonInfo& GetAddonInfo(void* handle)
 {
     uint16_t id = *(uint16_t*)((uintptr_t)handle + ValueForGame(0x26, 0x2E, 0x3A, 0, 0));
-    if(!id || id >= ScriptAddonInfo::allocSize)
-    {
-        id = AssignAddonInfo(handle);
-    }
     return ScriptAddonInfosStorage[id];
 }
 inline uint16_t GetScmFunc(void* handle)

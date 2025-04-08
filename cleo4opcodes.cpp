@@ -474,6 +474,10 @@ CLEO_Fn(CLEO_CALL)
 
 inline void CleoReturnGeneric(void* handle, bool returnArgs, int returnArgCount)
 {
+    char log[256];
+    snprintf(log, sizeof(log), "CleoReturnGeneric, addon id %d", *(uint16_t*)((uintptr_t)handle + ValueForGame(0x26, 0x2E, 0x3A, 0, 0)));
+    cleo->PrintToCleoLog(log);
+
     ScmFunction *scmFunc = ScmFunction::Store[GetScmFunc(handle)];
     if(!scmFunc)
     {

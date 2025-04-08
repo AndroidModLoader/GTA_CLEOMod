@@ -89,6 +89,10 @@ void (*RemoveScriptFromList)(void* handle, void** list);
 void (*AddScriptToList)(void* handle, void** list);
 void (*ShutdownThisScript)(void* handle);
 void (*SetSprite2dTexture)(void*, const char*);
+int (*FindTxdSlot)(const char*);
+void (*PushCurrentTxd)();
+void (*SetCurrentTxd)(int, const char*);
+void (*PopCurrentTxd)();
 void** ScriptSprites, **ScriptSpritesOrg;
 
 // CLEO itself
@@ -211,23 +215,15 @@ extern int* ScriptParams;
 void ScmCleanup();
 DECL_HOOKv(CLEO_StartScripts)
 {
-    CLEO_StartScripts();
-    
-    int len = GetScriptsStorageSize();
-    for(int i = 0; i < len; ++i)
+    uintptr_t basicScriptHandles = *(uintptr_t*)(nGameAddr + ValueForGame(0, 0x58F018, 0x679658));
+    for(int i = 0; i < 96; ++i)
     {
-        int storageItem = *(int*)(*pScriptsStorage + i * 4);
-        if(storageItem != 0 && *(int*)(storageItem + 24) == -1)
-        {
-            void* handle = *(void**)(storageItem + 28);
-            if(handle != NULL)
-            {
-                AssignAddonInfo(handle);
-                GetAddonInfo(handle).parentThread = NULL;
-                GetAddonInfo(handle).isCustom = true;
-            }
-        }
+        void* handle = (void*)(basicScriptHandles + i * ValueForGame(0x88, 0x88, 0x100));
+        AssignAddonInfo(handle);
+        GetAddonInfo(handle).parentThread = NULL;
+        GetAddonInfo(handle).isCustom = false;
     }
+    CLEO_StartScripts();
 }
 int lastStorageItem = 0;
 DECL_HOOKb(CLEO_OnOpcodeCall, int thisStorageItem, uint16_t opcode)
@@ -241,7 +237,7 @@ DECL_HOOKb(CLEO_OnOpcodeCall, int thisStorageItem, uint16_t opcode)
         // Init cleo variables
         ScmCleanup();
     }
-    if(opcode == 0x0DEF)
+    /*if(opcode == 0x0DEF)
     {
         // Launch CSI script from menu
         int len = GetScriptsStorageSize();
@@ -260,7 +256,7 @@ DECL_HOOKb(CLEO_OnOpcodeCall, int thisStorageItem, uint16_t opcode)
                 return ret;
             }
         }
-    }
+    }*/
     return ret;
 }
 
@@ -299,9 +295,18 @@ DECL_HOOK(int8_t, ProcessOneCommand, void* handle)
 }
 
 void* g_pLastScriptHandleStarted = NULL;
-DECL_HOOK(void*, CLEO_StartScript, uint8_t* pc)
+DECL_HOOK(void*, CLEO_StartSingleCustomScript, uint8_t* pc)
 {
-    g_pLastScriptHandleStarted = CLEO_StartScript(pc);
+    g_pLastScriptHandleStarted = CLEO_StartSingleCustomScript(pc);
+
+    /*char log[256];
+    snprintf(log, sizeof(log), "Lastly launched script has addon id %d", *(uint16_t*)((uintptr_t)g_pLastScriptHandleStarted + ValueForGame(0x26, 0x2E, 0x3A, 0, 0)));
+    cleo->PrintToCleoLog(log);*/
+    
+    AssignAddonInfo(g_pLastScriptHandleStarted);
+    GetAddonInfo(g_pLastScriptHandleStarted).parentThread = NULL;
+    GetAddonInfo(g_pLastScriptHandleStarted).isCustom = true;
+
     return g_pLastScriptHandleStarted;
 }
 
@@ -697,12 +702,20 @@ extern "C" void OnAllModsLoaded()
     Init201Opcodes();
     Init4Opcodes();
     Init5Opcodes();
+
     HOOK(ProcessOneCommand, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17ProcessOneCommandEv"));
-    HOOKPLT(CLEO_StartScript, nCLEOAddr + 0x1933C);
+    HOOKPLT(CLEO_StartSingleCustomScript, nCLEOAddr + 0x1933C);
+
     SET_TO(RemoveScriptFromList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript20RemoveScriptFromListEPPS_"));
     SET_TO(AddScriptToList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript15AddScriptToListEPPS_"));
     SET_TO(ShutdownThisScript, cleo->GetMainLibrarySymbol("_ZN14CRunningScript18ShutdownThisScriptEv"));
     SET_TO(SetSprite2dTexture, cleo->GetMainLibrarySymbol("_ZN9CSprite2d10SetTextureEPc"));
+    SET_TO(FindTxdSlot, cleo->GetMainLibrarySymbol("_ZN9CTxdStore11FindTxdSlotEPKc"));
+    SET_TO(PushCurrentTxd, cleo->GetMainLibrarySymbol("_ZN9CTxdStore14PushCurrentTxdEv"));
+    SET_TO(SetCurrentTxd, cleo->GetMainLibrarySymbol("_ZN9CTxdStore13SetCurrentTxdEiPKc"));
+    if(!SetCurrentTxd) SET_TO(SetCurrentTxd, cleo->GetMainLibrarySymbol("_ZN9CTxdStore13SetCurrentTxdEi"));
+    SET_TO(PopCurrentTxd, cleo->GetMainLibrarySymbol("_ZN9CTxdStore13PopCurrentTxdEv"));
+
     SET_TO(ppActiveScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
     SET_TO(ppIdleScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts12pIdleScriptsE"));
     SET_TO(ScriptSprites, *(void**)(nGameAddr + (*nGameIdent == GTASA ? 0x678EAC : 0x3945A4)));

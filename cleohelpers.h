@@ -1092,6 +1092,31 @@ inline std::string ResolvePath(void* handle, const char* path, const char* custo
     return fs::weakly_canonical(resolved).string(); // collapse "..\" uses
 }
 
+extern void** ScriptSprites, **ScriptSpritesOrg;
+inline void* GetCLEOSpriteTexture(void* handle, int id)
+{
+    id -= 1;
+
+    ScriptAddonInfo& ai = GetAddonInfo(handle);
+    if(ai.scriptTextures[id]) return ai.scriptTextures[id];
+    return ScriptSprites[id];
+}
+extern void (*SetSprite2dTexture)(void*, const char*);
+inline void SetCLEOSpriteTexture(void* handle, int id, void* texture)
+{
+    id -= 1;
+
+    ScriptAddonInfo& ai = GetAddonInfo(handle);
+    void* texToDelete = ai.scriptTextures[id];
+    SetSprite2dTexture((void*)(&texToDelete), NULL);
+    ai.scriptTextures[id] = texture;
+}
+
+inline char* GetScriptName(void* handle)
+{
+    return (char*)((uintptr_t)handle + ValueForGame(0x8, 0x8, 0x8, 0x8, 0x8));
+}
+
 struct CLEO201Script
 {
     char pad[20]; // std::string header

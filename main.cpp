@@ -88,6 +88,8 @@ void** ppActiveScripts, **ppIdleScripts;
 void (*RemoveScriptFromList)(void* handle, void** list);
 void (*AddScriptToList)(void* handle, void** list);
 void (*ShutdownThisScript)(void* handle);
+void (*SetSprite2dTexture)(void*, const char*);
+void** ScriptSprites, **ScriptSpritesOrg;
 
 // CLEO itself
 extern unsigned char cleoData[100160];
@@ -493,6 +495,8 @@ extern "C" void OnModPreLoad()
         return g_pLastScriptHandleStarted;
     };
     cleo_addon_ifs.GetWakeTime =            GetWakeTime;
+    cleo_addon_ifs.GetScriptTextureByID =   GetCLEOSpriteTexture;
+    cleo_addon_ifs.SetScriptTextureByID =   SetCLEOSpriteTexture;
 
     // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
@@ -698,8 +702,11 @@ extern "C" void OnAllModsLoaded()
     SET_TO(RemoveScriptFromList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript20RemoveScriptFromListEPPS_"));
     SET_TO(AddScriptToList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript15AddScriptToListEPPS_"));
     SET_TO(ShutdownThisScript, cleo->GetMainLibrarySymbol("_ZN14CRunningScript18ShutdownThisScriptEv"));
+    SET_TO(SetSprite2dTexture, cleo->GetMainLibrarySymbol("_ZN9CSprite2d10SetTextureEPc"));
     SET_TO(ppActiveScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts14pActiveScriptsE"));
     SET_TO(ppIdleScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts12pIdleScriptsE"));
+    SET_TO(ScriptSprites, *(void**)(nGameAddr + (*nGameIdent == GTASA ? 0x678EAC : 0x3945A4)));
+    ScriptSpritesOrg = ScriptSprites;
 
     // MathOperations Opcodes
     InitMathOpcodes();

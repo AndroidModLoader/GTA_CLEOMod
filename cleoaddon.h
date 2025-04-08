@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string>
 #include <list>
+#include <map>
 
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
 #define CLEO_Fn(h) void h (void *handle, uint32_t *ip, uint16_t opcode, const char *name)
@@ -37,6 +38,7 @@ struct ScriptAddonInfo
     bool isCustom;
     bool debugMode;
     bool enableThreadSaving;
+    std::map<int, void*> scriptTextures;
 };
 
 
@@ -97,6 +99,8 @@ struct cleo_addon_ifs_t
     std::string     (*ReadStdString)(void* handle);
     void*           (*GetLastCustomScriptCreated)();
     uint32_t&       (*GetWakeTime)(void* handle);
+    void*           (*GetScriptTextureByID)(void* handle, int id);
+    void            (*SetScriptTextureByID)(void* handle, int id, void* texture);
 };
 
 #endif // _CLEO_ADDON_H

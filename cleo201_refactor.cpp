@@ -12,6 +12,8 @@ CLEOLocalVarSave localVarsSave[40];
 
 extern uintptr_t nCLEOAddr;
 extern int lastStorageItem;
+extern void (*SetSprite2dTexture)(void*, const char*);
+extern void** ScriptSprites, **ScriptSpritesOrg;
 
 CLEO_Fn(GET_LABEL_ADDR)
 {
@@ -35,7 +37,7 @@ CLEO_Fn(GET_LABEL_ADDR)
         }
         else
         {
-            *pLabelAddr = (uint32_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x370E8, 0, 0) - labelOffset) : labelOffset);
+            *pLabelAddr = (uint32_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x3F9A0, 0) - labelOffset) : labelOffset);
         }
     }
 }
@@ -51,10 +53,12 @@ CLEO_Fn(CLEO_RETURN);
 CLEO_Fn(CLEO_RETURN_IF_FALSE)
 {
     if(!GetCond(handle)) CLEO_RETURN(handle, ip, opcode, name);
+    else SkipUnusedParameters(handle);
 }
 CLEO_Fn(CLEO_RETURN_IF_TRUE)
 {
     if(!GetCond(handle)) CLEO_RETURN(handle, ip, opcode, name);
+    else SkipUnusedParameters(handle);
 }
 CLEO_Fn(SAVE_LOCAL_VARS)
 {
@@ -256,6 +260,28 @@ CLEO_Fn(DELETE_VARS_SAVE)
     UpdateCompareFlag(handle, remove(savepath) == 0);
 }
 
+inline bool strcmp_partial(const char* source, const char* with)
+{
+    int len = strlen(with);
+    int maxlen = strlen(source) - len;
+
+    for(int i = 0; i < maxlen; ++i)
+    {
+        if(!strncmp(source, with, len)) return true;
+    }
+    return false;
+}
+inline bool strcasecmp_partial(const char* source, const char* with)
+{
+    int len = strlen(with);
+    int maxlen = strlen(source) - len;
+
+    for(int i = 0; i < maxlen; ++i)
+    {
+        if(!strncasecmp(source, with, len)) return true;
+    }
+    return false;
+}
 CLEO_Fn(FIND_CUSTOM_SCRIPT_WITH_NAME)
 {
     char scrname[MAX_STR_LEN];
@@ -266,8 +292,85 @@ CLEO_Fn(FIND_CUSTOM_SCRIPT_WITH_NAME)
     bool checkFilename = cleo->ReadParam(handle)->i;
 
     *scriptRet = NULL;
-    
-    // TODO:
+    int size = GetScriptsStorageSize();
+    for(int i = 0; i < size; ++i)
+    {
+        int storageItem = *(int*)(*pScriptsStorage + i * 4);
+        if(storageItem && *(void**)(storageItem + 28))
+        {
+            const char* scrOrgName = GetScriptName(*(void**)(storageItem + 28));
+            if(checkFilename)
+            {
+                scrOrgName = *(const char**)(storageItem + 20);
+            }
+
+            if(caseSensitive)
+            {
+                if(partial)
+                {
+                    if(!strcasecmp_partial(scrOrgName, scrname))
+                    {
+                        *scriptRet = *(void**)(storageItem + 28);
+                        break;
+                    }
+                }
+                else
+                {
+                    if(!strcasecmp(scrOrgName, scrname))
+                    {
+                        *scriptRet = *(void**)(storageItem + 28);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                if(partial)
+                {
+                    if(!strcmp_partial(scrOrgName, scrname))
+                    {
+                        *scriptRet = *(void**)(storageItem + 28);
+                        break;
+                    }
+                }
+                else
+                {
+                    if(!strcmp(scrOrgName, scrname))
+                    {
+                        *scriptRet = *(void**)(storageItem + 28);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    UpdateCompareFlag(handle, *scriptRet != NULL);
+}
+
+CLEO_Fn(LOAD_SPRITE)
+{
+    char str[MAX_STR_LEN];
+    int id = cleo->ReadParam(handle)->i - 1;
+    CLEO_ReadStringEx(handle, str, sizeof(str));
+
+    if(GetAddonInfo(handle).isCustom)
+    {
+        void* bak = ScriptSprites[id];
+        ScriptSprites[id] = NULL;
+
+        char log[256];
+        snprintf(log, sizeof(log), "Loading sprite \"%s\" (%d) for custom script", str, id);
+        cleo->PrintToCleoLog(log);
+        
+        SetSprite2dTexture((void*)(&ScriptSprites[id]), str);
+        SetCLEOSpriteTexture(handle, id, ScriptSprites[id]);
+
+        ScriptSprites[id] = bak;
+    }
+    else
+    {
+        SetSprite2dTexture((void*)(&ScriptSprites[id]), str);
+    }
 }
 
 void Init201Opcodes()
@@ -291,4 +394,5 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0AFD, DELETE_VARS_SAVE); // 0AFD=1,delete_script_vars_save %1d% //IF and SET
 
     CLEO_RegisterOpcode(0x0AFE, FIND_CUSTOM_SCRIPT_WITH_NAME); // 0AFE=4,%1d% = find_custom_script_named %2d% case %3d% partial %4d% check_filename %5d% //IF and SET
+    CLEO_RegisterOpcode(0x038F, LOAD_SPRITE); // 038F=2,load_texture %2h% as %1d%
 }

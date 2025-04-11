@@ -13,17 +13,20 @@ struct ScriptAddonInfo
 {
     static const int allocSize = 0x400;
 
-    ScriptAddonInfo()
+    ScriptAddonInfo() { Reset(); }
+    inline void Reset()
     {
         unused = 0xFFFF;
 
         workDir.clear();
         childThreads.clear();
         parentThread = NULL;
+
         scmFuncId = 0;
         isCustom = false;
         debugMode = false;
         enableThreadSaving = false;
+        scriptTextures.clear();
     }
 
     // GetInterfaceVersion() == 1

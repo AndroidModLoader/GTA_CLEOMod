@@ -462,7 +462,7 @@ CLEO_Fn(CLEO_CALL)
     {
         (*nGameIdent == GTASA) ? CollectParameters_SA(handle, nParams - maxParams) : CollectParameters_VC(handle, &GetPC(handle), nParams - maxParams);
     }
-    SkipUnusedParameters(handle);
+    //SkipUnusedParameters(handle); // TODO: RECHECK!!!!!!!
     scmFunc->retnAddress = GetPC(handle);
     memcpy(scope, arguments, 4 * nParams);
     
@@ -474,23 +474,7 @@ CLEO_Fn(CLEO_CALL)
 
 inline void CleoReturnGeneric(void* handle, bool returnArgs, int returnArgCount)
 {
-    char log[256];
-    snprintf(log, sizeof(log), "CleoReturnGeneric, addon id %d", *(uint16_t*)((uintptr_t)handle + ValueForGame(0x26, 0x2E, 0x3A, 0, 0)));
-    cleo->PrintToCleoLog(log);
-
     ScmFunction *scmFunc = ScmFunction::Store[GetScmFunc(handle)];
-    if(!scmFunc)
-    {
-        for(int i = ScmFunction::store_size-1; i >= 0; --i)
-        {
-            if(ScmFunction::Store[i] && ScmFunction::Store[i]->callerHandle == handle)
-            {
-                scmFunc = ScmFunction::Store[i];
-                logger->Error("Thread has func %d but the real one is %d (probably!)", GetScmFunc(handle), i);
-                break;
-            }
-        }
-    }
     if(*nGameIdent == GTASA)
     {
         if(returnArgs && returnArgCount) CollectParameters_SA(handle, returnArgCount);
@@ -1525,5 +1509,4 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AEF, LOG); // 0AEF=3,%3d% = log %1d% base %2d% //all floats
 }
 
-size_t ScmFunction::allocationPlace = 0;
 ScmFunction* ScmFunction::Store[store_size] = { NULL };

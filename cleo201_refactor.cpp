@@ -299,16 +299,13 @@ CLEO_Fn(FIND_CUSTOM_SCRIPT_WITH_NAME)
         if(storageItem && *(void**)(storageItem + 28))
         {
             const char* scrOrgName = GetScriptName(*(void**)(storageItem + 28));
-            if(checkFilename)
-            {
-                scrOrgName = *(const char**)(storageItem + 20);
-            }
+            if(checkFilename) scrOrgName = *(const char**)(storageItem + 20);
 
             if(caseSensitive)
             {
                 if(partial)
                 {
-                    if(!strcasecmp_partial(scrOrgName, scrname))
+                    if(strcasecmp_partial(scrOrgName, scrname))
                     {
                         *scriptRet = *(void**)(storageItem + 28);
                         break;
@@ -327,7 +324,7 @@ CLEO_Fn(FIND_CUSTOM_SCRIPT_WITH_NAME)
             {
                 if(partial)
                 {
-                    if(!strcmp_partial(scrOrgName, scrname))
+                    if(strcmp_partial(scrOrgName, scrname))
                     {
                         *scriptRet = *(void**)(storageItem + 28);
                         break;
@@ -372,7 +369,7 @@ CLEO_Fn(LOAD_SPRITE)
         ScriptSprites[id] = NULL;
 
         char log[256];
-        snprintf(log, sizeof(log), "Loading sprite \"%s\" (%d) for custom script", str, id);
+        snprintf(log, sizeof(log), "Loading sprite \"%s\" (%d) for custom script", strLower, id);
         cleo->PrintToCleoLog(log);
         
         SetSprite2dTexture((void*)(&ScriptSprites[id]), strLower);

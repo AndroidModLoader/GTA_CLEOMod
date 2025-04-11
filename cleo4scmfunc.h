@@ -45,6 +45,10 @@ extern uint8_t* LocalVariablesForCurrentMission;
 static void* zeroReturn = NULL; // gag the warn
 struct ScmFunction
 {
+    static const size_t store_size = 0x400;
+    static ScmFunction *Store[store_size];
+    static inline uint32_t allocationPlace = 1; // contains an index of last allocated object
+
     void* callerHandle;
     unsigned short prevScmFunctionId, thisScmFunctionId;
     uint8_t *retnAddress;
@@ -57,12 +61,9 @@ struct ScmFunction
     int callArgCount;
     bool savedCondResult;
     bool savedNotFlag;
-    static const size_t store_size = 0x400;
-    static ScmFunction *Store[store_size];
-    static size_t allocationPlace; // contains an index of last allocated object
     void *operator new(size_t size)
     {
-        size_t start_search = allocationPlace;
+        uint32_t start_search = allocationPlace;
         while (Store[allocationPlace]) // find first unused position in store
         {
             if (++allocationPlace >= store_size) allocationPlace = 0; // end of store reached
@@ -141,6 +142,6 @@ struct ScmFunction
                 Store[i] = NULL;
             }
         }
-        allocationPlace = 0;
+        allocationPlace = 1;
     }
 };

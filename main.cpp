@@ -220,8 +220,6 @@ DECL_HOOKv(CLEO_StartScripts)
     {
         void* handle = (void*)(basicScriptHandles + i * ValueForGame(0x88, 0x88, 0x100));
         AssignAddonInfo(handle);
-        GetAddonInfo(handle).parentThread = NULL;
-        GetAddonInfo(handle).isCustom = false;
     }
     CLEO_StartScripts();
 }
@@ -298,13 +296,8 @@ void* g_pLastScriptHandleStarted = NULL;
 DECL_HOOK(void*, CLEO_StartSingleCustomScript, uint8_t* pc)
 {
     g_pLastScriptHandleStarted = CLEO_StartSingleCustomScript(pc);
-
-    /*char log[256];
-    snprintf(log, sizeof(log), "Lastly launched script has addon id %d", *(uint16_t*)((uintptr_t)g_pLastScriptHandleStarted + ValueForGame(0x26, 0x2E, 0x3A, 0, 0)));
-    cleo->PrintToCleoLog(log);*/
     
     AssignAddonInfo(g_pLastScriptHandleStarted);
-    GetAddonInfo(g_pLastScriptHandleStarted).parentThread = NULL;
     GetAddonInfo(g_pLastScriptHandleStarted).isCustom = true;
 
     return g_pLastScriptHandleStarted;
@@ -356,17 +349,19 @@ extern "C" void OnModPreLoad()
         setenv("EXTERNAL_STORAGE", tmp, 1);
         
       SET_LOAD_DIRECTLY:
-        aml->Unprot(nCLEOAddr + 0x146A9, 11);
+        aml->Write8(nCLEOAddr + 0x146A9 + 3, 0x00);
+        /*aml->Unprot(nCLEOAddr + 0x146A9, 11);
         uintptr_t cleoDir = nCLEOAddr + 0x146A9;
-        *(char*)(cleoDir + 3) = '\0';
+        *(char*)(cleoDir + 3) = '\0';*/
 
-        aml->Unprot(nCLEOAddr + 0x14C2C, 16);
+        aml->Write(nCLEOAddr + 0x14C2C + 7, ".log", 5);
+        /*aml->Unprot(nCLEOAddr + 0x14C2C, 16);
         uintptr_t cleoLog = nCLEOAddr + 0x14C2C;
         *(char*)(cleoLog + 7) = '.';
         *(char*)(cleoLog + 8) = 'l';
         *(char*)(cleoLog + 9) = 'o';
         *(char*)(cleoLog + 10) = 'g';
-        *(char*)(cleoLog + 11) = '\0';
+        *(char*)(cleoLog + 11) = '\0';*/
     }
     else if(pCfgCLEOLocation->GetInt() == 2)
     {
@@ -377,9 +372,10 @@ extern "C" void OnModPreLoad()
         snprintf(tmp, sizeof(tmp), "%s/cleo", tmp);
         mkdir(tmp, 0777);
         
-        aml->Unprot(nCLEOAddr + 0x146A9, 11);
+        aml->Write8(nCLEOAddr + 0x146A9 + 8, 0x00);
+        /*aml->Unprot(nCLEOAddr + 0x146A9, 11);
         uintptr_t cleoDir = nCLEOAddr + 0x146A9;
-        *(char*)(cleoDir + 8) = '\0';
+        *(char*)(cleoDir + 8) = '\0';*/
     }
     else if(pCfgCLEOLocation->GetInt() == 3)
     {
@@ -508,20 +504,18 @@ extern "C" void OnModPreLoad()
     logger->Info("CLEO Addon Initialized!");
 }
 
+static char sCleoDir[512] { 0 };
 const char* GetCLEODir()
 {
-    static char gotIt[256];
-    bool bGotit = false;
-    if(!bGotit)
+    if(!sCleoDir[0])
     {
         char pad[24];
         char* (*CLEO_GetDir)(char*);
         SET_TO(CLEO_GetDir, nCLEOAddr + 0x607C + 0x1);
         CLEO_GetDir(&pad[0]);
-        strcpy(gotIt, *(char**)(pad + 20));
-        bGotit = true;
+        strcpy(sCleoDir, *(char**)(pad + 20));
     }
-    return gotIt;
+    return sCleoDir;
 }
 
 CLEO_Fn(AML_HAS_MOD_LOADED)

@@ -723,25 +723,27 @@ inline bool IsCLEORelatedGXTKey(char* gxtLabel)
            (gxtLabel[2] == 'D' && gxtLabel[3] == 'S' && gxtLabel[4] == 'C'))
             return true; // nuh-uh
     }
-    else if(gxtLabel[0] == 'C' && gxtLabel[1] == 'S' && gxtLabel[2] == 'I' && gxtLabel[3] == '_') return true; // nuh-uh
+    //else if(gxtLabel[0] == 'C' && gxtLabel[1] == 'S' && gxtLabel[2] == 'I' && gxtLabel[3] == '_') return true; // nuh-uh
+    else if(*(uint32_t*)(&gxtLabel[0]) == 0x5F495343) return true; // nuh-uh, CSI_
     else if(gxtLabel[0] == 'S' && gxtLabel[1] == 'P' && gxtLabel[2] == 'L' &&
             gxtLabel[3] == 'A' && gxtLabel[4] == 'S' && gxtLabel[5] == 'H') return true; // nuh-uh
 
     return false; // uh-nuh
 }
+inline uint16_t& GetAddonInfoId(void* handle)
+{
+    return *(uint16_t*)((uintptr_t)handle + ValueForGame(0x26, 0x2E, 0x3A, 0, 0));
+}
 extern uint16_t FreeScriptAddonInfoId;
 extern ScriptAddonInfo ScriptAddonInfosStorage[ScriptAddonInfo::allocSize];
-inline uint16_t AssignAddonInfo(void* handle)
-{
-    uint16_t id = FreeScriptAddonInfoId;
-    *(uint16_t*)((uintptr_t)handle + ValueForGame(0x26, 0x2E, 0x3A, 0, 0)) = id;
-    ++FreeScriptAddonInfoId;
-    return id;
-}
 inline ScriptAddonInfo& GetAddonInfo(void* handle)
 {
-    uint16_t id = *(uint16_t*)((uintptr_t)handle + ValueForGame(0x26, 0x2E, 0x3A, 0, 0));
-    return ScriptAddonInfosStorage[id];
+    return ScriptAddonInfosStorage[GetAddonInfoId(handle)];
+}
+inline void AssignAddonInfo(void* handle)
+{
+    GetAddonInfoId(handle) = FreeScriptAddonInfoId++;
+    GetAddonInfo(handle).Reset();
 }
 inline uint16_t GetScmFunc(void* handle)
 {
@@ -820,7 +822,7 @@ inline int GetVarArgCount(void* handle)
 }
 inline int GetScriptsStorageSize()
 {
-    return (*pScriptsStorageEnd - *pScriptsStorage) >> 2;
+    return (*pScriptsStorageEnd - *pScriptsStorage) >> 2; // div by 4
 }
 inline void* GetScriptHandleFromStorage(int i)
 {
@@ -828,10 +830,7 @@ inline void* GetScriptHandleFromStorage(int i)
     if(i >= 0 && i < size)
     {
         int storageItem = *(int*)(*pScriptsStorage + i * 4);
-        if(storageItem)
-        {
-            return *(void**)(storageItem + 28);
-        }
+        if(storageItem) return *(void**)(storageItem + 28);
     }
     return NULL;
 }
@@ -854,29 +853,20 @@ inline int GetScriptMenuIndexFromStorage(int i)
     if(i >= 0 && i < size)
     {
         int storageItem = *(int*)(*pScriptsStorage + i * 4);
-        if(storageItem)
-        {
-            return *(int*)(storageItem + 24);
-        }
+        if(storageItem) return *(int*)(storageItem + 24);
     }
     return -1;
 }
 inline void* GetScriptHandleFromStorage_NoCheck(int i)
 {
     int storageItem = *(int*)(*pScriptsStorage + i * 4);
-    if(storageItem)
-    {
-        return *(void**)(storageItem + 28);
-    }
+    if(storageItem) return *(void**)(storageItem + 28);
     return NULL;
 }
 inline int GetScriptMenuIndexFromStorage_NoCheck(int i)
 {
     int storageItem = *(int*)(*pScriptsStorage + i * 4);
-    if(storageItem)
-    {
-        return *(int*)(storageItem + 24);
-    }
+    if(storageItem) return *(int*)(storageItem + 24);
     return -1;
 }
 inline void* CLEO_GetScriptFromFilename(const char* filename)
@@ -897,10 +887,7 @@ inline const char* CLEO_GetScriptFilename(void* handle)
     {
         int storageItem = *(int*)(*pScriptsStorage + i * 4);
         void* scriptHandle = *(void**)(storageItem + 28);
-        if(scriptHandle == handle)
-        {
-            return *(const char**)(storageItem + 20);
-        }
+        if(scriptHandle == handle) return *(const char**)(storageItem + 20);
     }
     return NULL;
 }
@@ -939,10 +926,7 @@ inline bool IsInActiveScripts(void* handle)
 {
     for (GTAScript* script = *pActiveScripts; script != NULL; script = script->next)
     {
-        if (script == handle)
-        {
-            return true;
-        }
+        if (script == handle) return true;
     }
     return false;
 }
@@ -950,10 +934,7 @@ inline bool IsInPausedScripts(void* handle)
 {
     for (GTAScript* script = *pIdleScripts; script != NULL; script = script->next)
     {
-        if (script == handle)
-        {
-            return true;
-        }
+        if (script == handle) return true;
     }
     return false;
 }

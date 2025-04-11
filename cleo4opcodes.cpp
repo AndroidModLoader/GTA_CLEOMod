@@ -595,6 +595,29 @@ CLEO_Fn(GET_CAR_CURRENT_GEAR)
     cleo->GetPointerToScriptVar(handle)->i = *(uint8_t*)(vehiclePtr + ValueForGame(0, 524, 1216));
 }
 
+CLEO_Fn(TERMINATE_ALL_CUSTOM_SCRIPTS_WITH_THIS_NAME)
+{
+    char buf[128];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+
+    void* foundHandle = NULL;
+    while(true)
+    {
+        int size = GetScriptsStorageSize();
+        for(int i = 0; i < size; ++i)
+        {
+            int storageItem = *(int*)(*pScriptsStorage + i * 4);
+            foundHandle = *(void**)(storageItem + 28);
+            if(foundHandle && IsScriptCustom(foundHandle) && GetActiveFlag(foundHandle))
+            {
+                RemoveScript(foundHandle);
+                continue;
+            }
+        }
+        break;
+    }
+}
+
 CLEO_Fn(IS_CAR_SIREN_ON)
 {
     int ref = cleo->ReadParam(handle)->i;
@@ -626,11 +649,33 @@ CLEO_Fn(CLEO_SET_CAR_ENGINE_ON)
     }
 }
 
-CLEO_Fn(PUSH_STRING_TO_VAR)
+// cleo201_refactor.cpp, GET_LABEL_ADDR
+extern int lastStorageItem;
+CLEO_Fn(GET_LABEL_POINTER)
 {
-    char buf[128];
-    CLEO_ReadStringEx(handle, buf, sizeof(buf));
-    CLEO_WriteStringEx(handle, buf);
+    int labelOffset = cleo->ReadParam(handle)->i;
+    uint32_t* pLabelAddr = &cleo->GetPointerToScriptVar(handle)->u;
+
+    int storageItem = lastStorageItem;//GetCustomHandleFromScriptHandle(handle);
+    if(storageItem && *(void**)(storageItem + 28) == handle)
+    {
+        if(labelOffset < 0) labelOffset = -labelOffset;
+        *pLabelAddr = *(uint32_t*)(storageItem + 32) + labelOffset;
+    }
+    else
+    {
+        // sadge
+        int baseOffset = ValueForGame(0, 0, 16, 20, 20);
+        if(baseOffset)
+        {
+            uint8_t* basePtr = GetBasePC(handle);
+            *pLabelAddr = (uint32_t)((labelOffset < 0) ? (basePtr - labelOffset) : (ScriptSpace + labelOffset));
+        }
+        else
+        {
+            *pLabelAddr = (uint32_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x3F9A0, 0) - labelOffset) : labelOffset);
+        }
+    }
 }
 
 CLEO_Fn(GET_VAR_POINTER)
@@ -1454,13 +1499,13 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AB7, GET_CAR_NUMBER_OF_GEARS); // 0AB7=2,get_vehicle %1d% number_of_gears_to %2d%
     CLEO_RegisterOpcode(0x0AB8, GET_CAR_CURRENT_GEAR); // 0AB8=2,get_vehicle %1d% current_gear_to %2d%
     // 0AB9, 0ABB-0ABC - AudioStreams
-    //CLEO_RegisterOpcode(0x0ABA, TERMINATE_ALL_CUSTOM_SCRIPTS_WITH_THIS_NAME); // 
+    CLEO_RegisterOpcode(0x0ABA, TERMINATE_ALL_CUSTOM_SCRIPTS_WITH_THIS_NAME); // 0ABA=1,terminate_all_custom_scripts_with_this_name %1d%
     CLEO_RegisterOpcode(0x0ABD, IS_CAR_SIREN_ON); // 0ABD=1,vehicle %1d% siren_on
     CLEO_RegisterOpcode(0x0ABE, IS_CAR_ENGINE_ON); // 0ABE=1,vehicle %1d% engine_on
     CLEO_RegisterOpcode(0x0ABF, CLEO_SET_CAR_ENGINE_ON); // 0ABF=2,set_vehicle %1d% engine_state_to %2d%
 
     // 0AC0 - 0AC5 - AudioStreams
-    CLEO_RegisterOpcode(0x0AC6, PUSH_STRING_TO_VAR); // 0DD0, so this one is CUSTOM: 0AC6=2,push_string %1d% var %2d%
+    CLEO_RegisterOpcode(0x0AC6, GET_LABEL_POINTER); // 0AC6=2,get_label_pointer %1d% store_to %2d%
     CLEO_RegisterOpcode(0x0AC7, GET_VAR_POINTER); // 0AC7=2,%2d% = var %1d% offset
     CLEO_RegisterOpcode(0x0AC8, ALLOCATE_MEMORY); // 0AC8=2,%2d% = allocate_memory_size %1d%
     CLEO_RegisterOpcode(0x0AC9, FREE_MEMORY); // 0AC9=1,free_allocated_memory %1d%

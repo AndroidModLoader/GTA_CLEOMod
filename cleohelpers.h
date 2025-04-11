@@ -135,6 +135,10 @@ union GXTChar
     struct { char s1, s2; };
     uint16_t s;
 };
+struct GTASprite2D
+{
+    void* texture;
+};
 
 // Custom Funcs
 void AddGXTLabel(const char* gxtLabel, const char* text);
@@ -753,6 +757,10 @@ inline void SetScmFunc(void* handle, uint16_t idx)
 {
     GetAddonInfo(handle).scmFuncId = idx;
 }
+inline bool IsScriptCustom(void* handle)
+{
+    return GetAddonInfo(handle).isCustom;
+}
 inline void SkipOpcodeParameters(void* handle, int count)
 {
     int len;
@@ -1069,23 +1077,24 @@ inline std::string ResolvePath(void* handle, const char* path, const char* custo
     return fs::weakly_canonical(resolved).string(); // collapse "..\" uses
 }
 
-extern void** ScriptSprites, **ScriptSpritesOrg;
+extern GTASprite2D *ScriptSprites, *ScriptSpritesOrg;
 inline void* GetCLEOSpriteTexture(void* handle, int id)
 {
     id -= 1;
 
     ScriptAddonInfo& ai = GetAddonInfo(handle);
-    if(ai.scriptTextures[id]) return ai.scriptTextures[id];
-    return ScriptSprites[id];
+    void* ret = ai.GetScriptTexture(id);
+    return ret ? ret : ScriptSprites[id].texture;
 }
-extern void (*SetSprite2dTexture)(void*, const char*);
+extern void (*SetSprite2dTexture)(GTASprite2D&, const char*);
 inline void SetCLEOSpriteTexture(void* handle, int id, void* texture)
 {
     id -= 1;
 
     ScriptAddonInfo& ai = GetAddonInfo(handle);
-    void* texToDelete = ai.scriptTextures[id];
-    SetSprite2dTexture((void*)(&texToDelete), NULL);
+    GTASprite2D tmpSprite;
+    tmpSprite.texture = ai.GetScriptTexture(id);
+    if(tmpSprite.texture) SetSprite2dTexture(tmpSprite, NULL);
     ai.scriptTextures[id] = texture;
 }
 

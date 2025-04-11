@@ -29,6 +29,21 @@ struct ScriptAddonInfo
         scriptTextures.clear();
     }
 
+    inline void* GetScriptTexture(int id)
+    {
+        auto it = scriptTextures.find(id);
+        if(it != scriptTextures.end())
+        {
+            return it->second;
+        }
+        return NULL;
+    }
+
+    inline bool HasParent()
+    {
+        return (parentThread != NULL);
+    }
+
     // GetInterfaceVersion() == 1
     std::string workDir;
     std::list<void*> childThreads;
@@ -104,6 +119,7 @@ struct cleo_addon_ifs_t
     uint32_t&       (*GetWakeTime)(void* handle);
     void*           (*GetScriptTextureByID)(void* handle, int id);
     void            (*SetScriptTextureByID)(void* handle, int id, void* texture);
+    bool            (*IsScriptCustom)(void* handle);
 };
 
 #endif // _CLEO_ADDON_H

@@ -12,8 +12,8 @@ CLEOLocalVarSave localVarsSave[40];
 
 extern uintptr_t nCLEOAddr;
 extern int lastStorageItem;
-extern void (*SetSprite2dTexture)(void*, const char*);
-extern void** ScriptSprites, **ScriptSpritesOrg;
+extern void (*SetSprite2dTexture)(GTASprite2D&, const char*);
+extern GTASprite2D *ScriptSprites, *ScriptSpritesOrg;
 
 CLEO_Fn(GET_LABEL_ADDR)
 {
@@ -365,28 +365,28 @@ CLEO_Fn(LOAD_SPRITE)
     SetCurrentTxd(slot, NULL);
     if(GetAddonInfo(handle).isCustom)
     {
-        void* bak = ScriptSprites[id];
-        ScriptSprites[id] = NULL;
+        void* bak = ScriptSprites[id].texture;
+        ScriptSprites[id].texture = NULL;
 
         char log[256];
         snprintf(log, sizeof(log), "Loading sprite \"%s\" (%d) for custom script", strLower, id);
         cleo->PrintToCleoLog(log);
         
-        SetSprite2dTexture((void*)(&ScriptSprites[id]), strLower);
-        if(!ScriptSprites[id])
+        SetSprite2dTexture(ScriptSprites[id], strLower);
+        if(!ScriptSprites[id].texture)
         {
-            SetSprite2dTexture((void*)(&ScriptSprites[id]), str);
+            SetSprite2dTexture(ScriptSprites[id], str);
         }
-        SetCLEOSpriteTexture(handle, id, ScriptSprites[id]);
+        SetCLEOSpriteTexture(handle, id, ScriptSprites[id].texture);
 
-        ScriptSprites[id] = bak;
+        ScriptSprites[id].texture = bak;
     }
     else
     {
-        SetSprite2dTexture((void*)(&ScriptSprites[id]), strLower);
-        if(!ScriptSprites[id])
+        SetSprite2dTexture(ScriptSprites[id], strLower);
+        if(!ScriptSprites[id].texture)
         {
-            SetSprite2dTexture((void*)(&ScriptSprites[id]), str);
+            SetSprite2dTexture(ScriptSprites[id], str);
         }
     }
     PopCurrentTxd();

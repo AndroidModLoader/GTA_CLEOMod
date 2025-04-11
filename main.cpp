@@ -88,12 +88,12 @@ void** ppActiveScripts, **ppIdleScripts;
 void (*RemoveScriptFromList)(void* handle, void** list);
 void (*AddScriptToList)(void* handle, void** list);
 void (*ShutdownThisScript)(void* handle);
-void (*SetSprite2dTexture)(void*, const char*);
+void (*SetSprite2dTexture)(GTASprite2D&, const char*);
 int (*FindTxdSlot)(const char*);
 void (*PushCurrentTxd)();
 void (*SetCurrentTxd)(int, const char*);
 void (*PopCurrentTxd)();
-void** ScriptSprites, **ScriptSpritesOrg;
+GTASprite2D *ScriptSprites, *ScriptSpritesOrg;
 
 // CLEO itself
 extern unsigned char cleoData[100160];
@@ -130,6 +130,8 @@ void OnRedArrowChanged(int oldVal, int newVal, void* userdata)
 }
 void RemoveScript(void* handle)
 {
+    if(!handle) return;
+
     RemoveScriptFromList(handle, ppActiveScripts);
     if(GetAddonInfo(handle).parentThread)
     {
@@ -498,6 +500,7 @@ extern "C" void OnModPreLoad()
     cleo_addon_ifs.GetWakeTime =            GetWakeTime;
     cleo_addon_ifs.GetScriptTextureByID =   GetCLEOSpriteTexture;
     cleo_addon_ifs.SetScriptTextureByID =   SetCLEOSpriteTexture;
+    cleo_addon_ifs.IsScriptCustom =         IsScriptCustom;
 
     // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
@@ -629,6 +632,12 @@ CLEO_Fn(AML_DO_OPCODE_EXIST)
     void** fn = LookupForOpcodeFunc(CLEOOpcodesStorage, op);
     UpdateCompareFlag(handle, fn != NULL && *fn != NULL);
 }
+CLEO_Fn(AML_PUSH_STRING_TO_VAR)
+{
+    char buf[128];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    CLEO_WriteStringEx(handle, buf);
+}
 
 void Init201Opcodes();
 void Init4Opcodes();
@@ -662,6 +671,7 @@ extern "C" void OnAllModsLoaded()
     CLEO_RegisterOpcode(0x3A0C, AML_MLS_GET_FLOAT); // 3A0C=3,%3d% = aml_mls_get_float %1s% default %2d%
     CLEO_RegisterOpcode(0x3A0D, AML_MLS_GET_STRING); // 3A0D=3,%3s% = aml_mls_get_string %1s% default %2s%
     CLEO_RegisterOpcode(0x3A0E, AML_DO_OPCODE_EXIST); // 3A0E=1,do_opcode_exist %1d% // IF and SET
+    CLEO_RegisterOpcode(0x3A0F, AML_PUSH_STRING_TO_VAR); // 3A0F=2,push_string %1d% to_var %2d%
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;

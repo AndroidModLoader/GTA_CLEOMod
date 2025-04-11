@@ -33,7 +33,13 @@ Here is how to do this:
 0AAB=1,file_exists %1d%
 0AB1=-1,call_scm_func %1p%
 0AB2=-1,ret
-0AC6=2,push_string %1d% var %2d% // This one is custom to be used with 0AC8
+0AB7=2,get_vehicle %1d% number_of_gears_to %2d%
+0AB8=2,get_vehicle %1d% current_gear_to %2d%
+0ABA=1,terminate_all_custom_scripts_with_this_name %1d%
+0ABD=1,vehicle %1d% siren_on
+0ABE=1,vehicle %1d% engine_on
+0ABF=2,set_vehicle %1d% engine_state_to %2d%
+0AC6=2,get_label_pointer %1d% store_to %2d%
 0AC7=2,%2d% = var %1d% offset
 0AC8=2,%2d% = allocate_memory_size %1d%
 0AC9=1,free_allocated_memory %1d%
@@ -86,17 +92,13 @@ Here is how to do this:
 3A0C=3,%3d% = aml_mls_get_float %1s% default %2d%
 3A0D=3,%3s% = aml_mls_get_string %1s% default %2s%
 3A0E=1,do_opcode_exist %1d% // IF and SET
+3A0F=2,push_string %1d% to_var %2d%
 ```
 
 There is an additional opcodes for GTA:SA Android:
 ```
 0AB5=3,store_actor %1d% closest_vehicle_to %2d% closest_ped_to %3d%
 0AB6=3,store_target_marker_coords_to %1d% %2d% %3d% // IF and SET
-0AB7=2,get_vehicle %1d% number_of_gears_to %2d%
-0AB8=2,get_vehicle %1d% current_gear_to %2d%
-0ABD=1,vehicle %1d% siren_on
-0ABE=1,vehicle %1d% engine_on
-0ABF=2,set_vehicle %1d% engine_state_to %2d%
 0AE1=7,%7d% = find_actor_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_deads %6h% //IF and SET
 0AE2=7,%7d% = find_vehicle_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_wrecked %6h% //IF and SET
 0AE3=6,%6d% = find_object_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% //IF and SET

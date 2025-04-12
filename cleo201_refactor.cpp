@@ -367,17 +367,13 @@ CLEO_Fn(LOAD_SPRITE)
     {
         void* bak = ScriptSprites[id].texture;
         ScriptSprites[id].texture = NULL;
-
-        char log[256];
-        snprintf(log, sizeof(log), "Loading sprite \"%s\" (%d) for custom script", strLower, id);
-        cleo->PrintToCleoLog(log);
         
         SetSprite2dTexture(ScriptSprites[id], strLower);
         if(!ScriptSprites[id].texture)
         {
             SetSprite2dTexture(ScriptSprites[id], str);
         }
-        SetCLEOSpriteTexture(handle, id, ScriptSprites[id].texture);
+        SetCLEOSpriteTexture(handle, id + 1, ScriptSprites[id].texture);
 
         ScriptSprites[id].texture = bak;
     }

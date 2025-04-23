@@ -62,11 +62,25 @@ enum eScriptParameterType : int8_t
 extern std::set<void*> gAllocationsMap;
 extern std::set<FILE*> gFilesMap;
 
-// Game Structs
-struct GTAVector3D
+// CLEO Structs
+struct CLEO201Script
 {
-    float x, y, z;
-    float SqrMagnitude() { return x*x + y*y + z*z; }
+    char pad[20]; // std::string header
+    const char* name;
+    int index;
+    void* handle; // CRunningScript*
+    uint8_t** baseScriptPC;
+    char pad2[4];
+    uint8_t** scriptPC;
+    bool launched;
+};
+
+// Game Structs
+struct GTAVector3D : GTAVector2D
+{
+    float z;
+    
+    inline float SqrMagnitude() { return x*x + y*y + z*z; }
     inline GTAVector3D operator-(const GTAVector3D& v) { return { x - v.x, y - v.y, z - v.z }; }
     inline float GetDistance(GTAVector3D* a)
     {
@@ -138,6 +152,23 @@ union GXTChar
 struct GTASprite2D
 {
     void* texture;
+};
+struct GTAScriptHandler
+{
+    int8_t (*func)(void* handler, uint16_t opcode);
+    void* null_ptr;
+};
+extern GTAScriptHandler* m_aDefaultOpcodeFuncs;
+union GTARGBA
+{
+    GTARGBA(int _r, int _g, int _b, int _a)
+    {
+        r = _r; g = _g; b = _b; a = _a;
+    }
+    struct {
+        uint8_t r, g, b, a;
+    };
+    uint32_t intColor;
 };
 
 // Custom Funcs
@@ -1095,7 +1126,14 @@ inline void SetCLEOSpriteTexture(void* handle, int id, void* texture)
     GTASprite2D tmpSprite;
     tmpSprite.texture = ai.GetScriptTexture(id);
     if(tmpSprite.texture) SetSprite2dTexture(tmpSprite, NULL);
-    ai.scriptTextures[id] = texture;
+    if(texture)
+    {
+        ai.scriptTextures[id] = texture;
+    }
+    else
+    {
+        ai.scriptTextures.erase(id);
+    }
 }
 
 inline char* GetScriptName(void* handle)
@@ -1103,14 +1141,9 @@ inline char* GetScriptName(void* handle)
     return (char*)((uintptr_t)handle + ValueForGame(0x8, 0x8, 0x8, 0x8, 0x8));
 }
 
-struct CLEO201Script
+inline int8_t CallDefaultOpcode(void* handle, uint16_t opcode)
 {
-    char pad[20]; // std::string header
-    const char* name;
-    int index;
-    void* handle; // CRunningScript*
-    uint8_t** baseScriptPC;
-    char pad2[4];
-    uint8_t** scriptPC;
-    bool launched;
-};
+    GetNotFlag(handle) = (opcode & 0x8000);
+    opcode &= 0x7FFF;
+    return (m_aDefaultOpcodeFuncs[opcode / 0x100].func)(handle, opcode);
+}

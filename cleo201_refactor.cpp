@@ -10,7 +10,7 @@ struct CLEOLocalVarSave
 };
 CLEOLocalVarSave localVarsSave[40];
 
-extern uintptr_t nCLEOAddr;
+extern uintptr_t nCLEOAddr, nGameAddr;
 extern int lastStorageItem;
 extern void (*SetSprite2dTexture)(GTASprite2D&, const char*);
 extern GTASprite2D *ScriptSprites, *ScriptSpritesOrg;
@@ -344,6 +344,44 @@ CLEO_Fn(FIND_CUSTOM_SCRIPT_WITH_NAME)
     UpdateCompareFlag(handle, *scriptRet != NULL);
 }
 
+// Default scripting funcs
+
+void (*CorrectAspect)(float*,float*,float*,float*);
+CLEO_Fn(DRAW_SPRITE)
+{
+    if(IsScriptCustom(handle))
+    {
+        int textureId = cleo->ReadParam(handle)->i;
+        float pX = cleo->ReadParam(handle)->f;
+        float pY = cleo->ReadParam(handle)->f;
+        float sX = 0.5f * cleo->ReadParam(handle)->f;
+        float sY = 0.5f * cleo->ReadParam(handle)->f;
+        int r = cleo->ReadParam(handle)->i;
+        int g = cleo->ReadParam(handle)->i;
+        int b = cleo->ReadParam(handle)->i;
+        int a = cleo->ReadParam(handle)->i;
+
+        CorrectAspect(&pX, &pY, &sX, &sY);
+        CustomScriptRect& rt = GetAddonInfo(handle).scriptRects[ ( GetAddonInfo(handle).scriptRectsThisFrame )++ ];
+
+        rt.type = 4;
+        rt.spriteIndex = textureId;
+        rt.rotation = 0.0f;
+        rt.color = GTARGBA(r, g, b, a).intColor;
+
+        rt.rectMin.x = pX - sX;
+        rt.rectMin.y = pY - sY;
+        rt.rectMax.x = pX + sX;
+        rt.rectMax.y = pY + sY;
+
+        // TODO: cant find it in original code??????
+        rt.beforeFade = true;
+    }
+    else
+    {
+        CallDefaultOpcode(handle, 0x038D);
+    }
+}
 extern int (*FindTxdSlot)(const char*);
 extern void (*PushCurrentTxd)();
 extern void (*SetCurrentTxd)(int, const char*);
@@ -409,5 +447,13 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0AFD, DELETE_VARS_SAVE); // 0AFD=1,delete_script_vars_save %1d% //IF and SET
 
     CLEO_RegisterOpcode(0x0AFE, FIND_CUSTOM_SCRIPT_WITH_NAME); // 0AFE=4,%1d% = find_custom_script_named %2d% case %3d% partial %4d% check_filename %5d% //IF and SET
-    CLEO_RegisterOpcode(0x038F, LOAD_SPRITE); // 038F=2,load_texture %2h% as %1d%
+
+    // Regular opcodes rewriting (for GTA:SA only)
+    if(*nGameIdent == GTASA)
+    {
+        CLEO_RegisterOpcode(0x038D, DRAW_SPRITE); // 038D=9,draw_texture %1h% position %2d% %3d% size %4d% %5d% RGBA %6d% %7d% %8d% %9d%
+        CLEO_RegisterOpcode(0x038F, LOAD_SPRITE); // 038F=2,load_texture %2h% as %1d%
+
+        SET_TO(CorrectAspect, cleo->GetMainLibrarySymbol("_Z13CorrectAspectRfS_S_S_"));
+    }
 }

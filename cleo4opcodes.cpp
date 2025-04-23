@@ -608,7 +608,7 @@ CLEO_Fn(TERMINATE_ALL_CUSTOM_SCRIPTS_WITH_THIS_NAME)
         {
             int storageItem = *(int*)(*pScriptsStorage + i * 4);
             foundHandle = *(void**)(storageItem + 28);
-            if(foundHandle && IsScriptCustom(foundHandle) && GetActiveFlag(foundHandle))
+            if(foundHandle && GetActiveFlag(foundHandle))
             {
                 RemoveScript(foundHandle);
                 continue;

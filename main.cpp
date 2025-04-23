@@ -94,6 +94,7 @@ void (*PushCurrentTxd)();
 void (*SetCurrentTxd)(int, const char*);
 void (*PopCurrentTxd)();
 GTASprite2D *ScriptSprites, *ScriptSpritesOrg;
+GTAScriptHandler* m_aDefaultOpcodeFuncs = NULL;
 
 // CLEO itself
 extern unsigned char cleoData[100160];
@@ -305,6 +306,56 @@ DECL_HOOK(void*, CLEO_StartSingleCustomScript, uint8_t* pc)
     return g_pLastScriptHandleStarted;
 }
 
+static bool bDontCallDefaultThisFrame = false;
+DECL_HOOKv(DrawScriptStuff, uint8_t bBeforeFade)
+{
+    if(!bDontCallDefaultThisFrame)
+    {
+        DrawScriptStuff(bBeforeFade);
+    }
+    bDontCallDefaultThisFrame = false;
+
+    void* foundHandle;
+    int size = GetScriptsStorageSize();
+    for(int i = 0; i < size; ++i)
+    {
+        int storageItem = *(int*)(*pScriptsStorage + i * 4);
+        foundHandle = *(void**)(storageItem + 28);
+        if(foundHandle && GetActiveFlag(foundHandle))
+        {
+            auto& ai = GetAddonInfo(foundHandle);
+            for(int i = ai.scriptRectsThisFrame - 1; i >= 0; --i)
+            {
+                CustomScriptRect& rt = ai.scriptRects[i];
+                if(rt.beforeFade == bBeforeFade)
+                {
+                    
+                }
+            }
+        }
+    }
+}
+DECL_HOOKv(GTAVC_DrawBeforeFade)
+{
+    GTAVC_DrawBeforeFade();
+    
+    bDontCallDefaultThisFrame = true;
+    HookOf_DrawScriptStuff(true);
+}
+DECL_HOOKv(GTAVC_DrawAfterFade, void* a, void* b)
+{
+    GTAVC_DrawAfterFade(a, b);
+    
+    bDontCallDefaultThisFrame = true;
+    HookOf_DrawScriptStuff(false);
+}
+
+DECL_HOOKi(ProcessScript, void* handle)
+{
+    GetAddonInfo(handle).OnScriptProcess();
+    return ProcessScript(handle);
+}
+
 void AddGXTLabel(const char* gxtLabel, const char* text);
 extern "C" void OnModPreLoad()
 {
@@ -352,18 +403,7 @@ extern "C" void OnModPreLoad()
         
       SET_LOAD_DIRECTLY:
         aml->Write8(nCLEOAddr + 0x146A9 + 3, 0x00);
-        /*aml->Unprot(nCLEOAddr + 0x146A9, 11);
-        uintptr_t cleoDir = nCLEOAddr + 0x146A9;
-        *(char*)(cleoDir + 3) = '\0';*/
-
         aml->Write(nCLEOAddr + 0x14C2C + 7, ".log", 5);
-        /*aml->Unprot(nCLEOAddr + 0x14C2C, 16);
-        uintptr_t cleoLog = nCLEOAddr + 0x14C2C;
-        *(char*)(cleoLog + 7) = '.';
-        *(char*)(cleoLog + 8) = 'l';
-        *(char*)(cleoLog + 9) = 'o';
-        *(char*)(cleoLog + 10) = 'g';
-        *(char*)(cleoLog + 11) = '\0';*/
     }
     else if(pCfgCLEOLocation->GetInt() == 2)
     {
@@ -375,9 +415,6 @@ extern "C" void OnModPreLoad()
         mkdir(tmp, 0777);
         
         aml->Write8(nCLEOAddr + 0x146A9 + 8, 0x00);
-        /*aml->Unprot(nCLEOAddr + 0x146A9, 11);
-        uintptr_t cleoDir = nCLEOAddr + 0x146A9;
-        *(char*)(cleoDir + 8) = '\0';*/
     }
     else if(pCfgCLEOLocation->GetInt() == 3)
     {
@@ -470,7 +507,7 @@ extern "C" void OnModPreLoad()
     };
     cleo_addon_ifs.IsOpcodeAlreadyExists =  [](uint16_t opcode) -> bool
     {
-        opcode &= 0x7FFF; // need to do that, using __reference__ below (pointer under the hood)
+        opcode &= 0x7FFF; // need to do that cuz using var __reference__ below (pointer under the hood)
         void** fn = LookupForOpcodeFunc(CLEOOpcodesStorage, opcode);
         return (fn != NULL && *fn != NULL);
     };
@@ -501,6 +538,7 @@ extern "C" void OnModPreLoad()
     cleo_addon_ifs.GetScriptTextureByID =   GetCLEOSpriteTexture;
     cleo_addon_ifs.SetScriptTextureByID =   SetCLEOSpriteTexture;
     cleo_addon_ifs.IsScriptCustom =         IsScriptCustom;
+    cleo_addon_ifs.CallDefaultOpcode =      CallDefaultOpcode;
 
     // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
@@ -724,6 +762,37 @@ extern "C" void OnAllModsLoaded()
     SET_TO(ppIdleScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts12pIdleScriptsE"));
     SET_TO(ScriptSprites, *(void**)(nGameAddr + (*nGameIdent == GTASA ? 0x678EAC : 0x3945A4)));
     ScriptSpritesOrg = ScriptSprites;
+    if(*nGameIdent == GTASA)
+    {
+        SET_TO(m_aDefaultOpcodeFuncs, nGameAddr + 0x665594);
+        HOOK(DrawScriptStuff, cleo->GetMainLibrarySymbol("_ZN4CHud14DrawScriptTextEh"));
+        HOOKPLT(ProcessScript, nGameAddr + 0x670A9C);
+    }
+    else if(*nGameIdent == GTAVC)
+    {
+        static GTAScriptHandler customHandler[15];
+        m_aDefaultOpcodeFuncs = &customHandler[0];
+
+        SET_TO(customHandler[0], cleo->GetMainLibrarySymbol("_ZN14CRunningScript20ProcessCommands0To99Ei"));
+        SET_TO(customHandler[1], cleo->GetMainLibrarySymbol("_ZN14CRunningScript23ProcessCommands100To199Ei"));
+        SET_TO(customHandler[2], cleo->GetMainLibrarySymbol("_ZN14CRunningScript23ProcessCommands200To299Ei"));
+        SET_TO(customHandler[3], cleo->GetMainLibrarySymbol("_ZN14CRunningScript23ProcessCommands300To399Ei"));
+        SET_TO(customHandler[4], cleo->GetMainLibrarySymbol("_ZN14CRunningScript23ProcessCommands400To499Ei"));
+        SET_TO(customHandler[5], cleo->GetMainLibrarySymbol("_ZN14CRunningScript23ProcessCommands500To599Ei"));
+        SET_TO(customHandler[6], cleo->GetMainLibrarySymbol("_ZN14CRunningScript23ProcessCommands600To699Ei"));
+        SET_TO(customHandler[7], cleo->GetMainLibrarySymbol("_ZN14CRunningScript23ProcessCommands700To799Ei"));
+        SET_TO(customHandler[8], cleo->GetMainLibrarySymbol("_ZN14CRunningScript23ProcessCommands800To899Ei"));
+        SET_TO(customHandler[9], cleo->GetMainLibrarySymbol("_ZN14CRunningScript23ProcessCommands900To999Ei"));
+        SET_TO(customHandler[10], cleo->GetMainLibrarySymbol("_ZN14CRunningScript25ProcessCommands1000To1099Ei"));
+        SET_TO(customHandler[11], cleo->GetMainLibrarySymbol("_ZN14CRunningScript25ProcessCommands1100To1199Ei"));
+        SET_TO(customHandler[12], cleo->GetMainLibrarySymbol("_ZN14CRunningScript25ProcessCommands1200To1299Ei"));
+        SET_TO(customHandler[13], cleo->GetMainLibrarySymbol("_ZN14CRunningScript25ProcessCommands1300To1399Ei"));
+        SET_TO(customHandler[14], cleo->GetMainLibrarySymbol("_ZN14CRunningScript25ProcessCommands1400To1499Ei"));
+
+        HOOKBL(GTAVC_DrawBeforeFade, nGameAddr + 0x1E9112);
+        HOOKBL(GTAVC_DrawAfterFade, nGameAddr + 0x1ECA46);
+        HOOK(ProcessScript, cleo->GetMainLibrarySymbol("_ZN14CRunningScript7ProcessEv"));
+    }
 
     // MathOperations Opcodes
     InitMathOpcodes();

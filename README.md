@@ -21,18 +21,29 @@ Here is how to do this:
 0A8F=3,%3d% = %1d% - %2d% ; int
 0A90=3,%3d% = %1d% * %2d% ; int
 0A91=3,%3d% = %1d% / %2d% ; int
+0A93=0,terminate_this_custom_script
 0A96=2,%2d% = actor %1d% struct
 0A97=2,%2d% = car %1d% struct
 0A98=2,%2d% = object %1d% struct
+0A99=1,set_current_directory %1b:userdir/rootdir%
+0A9A=3,%3d% = openfile %1d% mode %2d% // IF and SET
+0A9B=1,closefile %1d%
+0A9C=2,%2d% = file %1d% size
+0A9D=3,readfile %1d% size %2d% to %3d%
+0A9E=3,writefile %1d% size %2d% from %3d%
 0A9F=1,%1d% = current_thread_pointer
 0AA0=1,gosub_if_false %1p%
 0AA1=0,return_if_false
 0AA2=2,%2h% = load_library %1d% // IF and SET
+0AA3=1,free_library %1h%
 0AA4=3,%3d% = get_proc_address %1d% library %2d% // IF and SET
+0AA9=0,is_game_version_original // always false, use 0DD6 (GET_GAME_VERSION) for Android
 0AAA=2,%2d% = thread %1d% pointer // IF and SET
 0AAB=1,file_exists %1d%
 0AB1=-1,call_scm_func %1p%
 0AB2=-1,ret
+0AB3=2,var %1d% = %2d%
+0AB4=2,%2d% = var %1d%
 0AB7=2,get_vehicle %1d% number_of_gears_to %2d%
 0AB8=2,get_vehicle %1d% current_gear_to %2d%
 0ABA=1,terminate_all_custom_scripts_with_this_name %1d%
@@ -54,7 +65,14 @@ Here is how to do this:
 0AD2=2,%2d% = player %1d% targeted_actor //IF and SET
 0AD3=-1,string %1d% format %2d%
 0AD4=-1,%3d% = scan_string %1d% format %2d%  //IF and SET
+0AD5=3,file %1d% seek %2d% from_origin %3d% //IF and SET
+0AD6=1,end_of_file %1d% reached
+0AD7=3,read_string_from_file %1d% to %2d% size %3d% //IF and SET
+0AD8=2,write_string_to_file %1d% from %2d% //IF and SET
+0AD9=-1,write_formated_text %2d% to_file %1d%
+0ADA=-1,%3d% = scan_file %1d% format %2d% //IF and SET
 0ADB=2,%2d% = car_model %1o% name
+0ADC=1,test_cheat %1d%
 0ADD=1,spawn_car_with_model %1o% at_player_location //IF and SET // custom if-set condition
 0ADE=2,%2d% = text_by_GXT_entry %1d%
 0ADF=2,add_dynamic_GXT_entry %1d% text %2d%
@@ -64,6 +82,7 @@ Here is how to do this:
 0AE6=3,%2d% = find_first_file %1d% get_filename_to %3d% //IF and SET
 0AE7=2,%2d% = find_next_file %1d% //IF and SET
 0AE8=1,find_close %1d%
+0AE9=1,pop_float store_to %1d% // returns 0, ARMv7 differs from x86
 0AEA=2,%2d% = actor_struct %1d% handle
 0AEB=2,%2d% = car_struct %1d% handle
 0AEC=2,%2d% = object_struct %1d% handle

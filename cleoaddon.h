@@ -9,6 +9,29 @@
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
 #define CLEO_Fn(h) void h (void *handle, uint32_t *ip, uint16_t opcode, const char *name)
 
+struct GTAVector2D
+{
+    float x, y;
+    inline float GetDistance2D(GTAVector2D* a)
+    {
+        GTAVector2D b = { x - a->x, y - a->y };
+        return sqrt(b.x * b.x + b.y * b.y);
+    }
+};
+struct CustomScriptRect
+{
+    uint8_t type;
+    bool beforeFade;
+    bool align;
+    uint8_t zIndex;
+    GTAVector2D rectMin;
+    GTAVector2D rectMax;
+    float rotation;
+    uint32_t color;
+    char title[10];
+    char msg[10];
+    int spriteIndex;
+};
 struct ScriptAddonInfo
 {
     static const int allocSize = 0x400;
@@ -27,6 +50,7 @@ struct ScriptAddonInfo
         debugMode = false;
         enableThreadSaving = false;
         scriptTextures.clear();
+        scriptRectsThisFrame = 0;
     }
 
     inline void* GetScriptTexture(int id)
@@ -44,6 +68,11 @@ struct ScriptAddonInfo
         return (parentThread != NULL);
     }
 
+    inline void OnScriptProcess()
+    {
+        scriptRectsThisFrame = 0;
+    }
+
     // GetInterfaceVersion() == 1
     std::string workDir;
     std::list<void*> childThreads;
@@ -57,6 +86,9 @@ struct ScriptAddonInfo
     bool debugMode;
     bool enableThreadSaving;
     std::map<int, void*> scriptTextures;
+
+    uint8_t scriptRectsThisFrame;
+    CustomScriptRect scriptRects[64];
 };
 
 
@@ -120,6 +152,7 @@ struct cleo_addon_ifs_t
     void*           (*GetScriptTextureByID)(void* handle, int id);
     void            (*SetScriptTextureByID)(void* handle, int id, void* texture);
     bool            (*IsScriptCustom)(void* handle);
+    int8_t          (*CallDefaultOpcode)(void* handle, uint16_t opcode);
 };
 
 #endif // _CLEO_ADDON_H

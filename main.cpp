@@ -89,6 +89,9 @@ void (*RemoveScriptFromList)(void* handle, void** list);
 void (*AddScriptToList)(void* handle, void** list);
 void (*ShutdownThisScript)(void* handle);
 void (*SetSprite2dTexture)(GTASprite2D&, const char*);
+void (*DrawSprite2d)(GTASprite2D&,float*,uint32_t*);
+void (*DrawRectSprite2d)(GTASprite2D&,float*,uint32_t*);
+void (*DrawRotatedSprite2d)(GTASprite2D&,float,float,float,float,float,float,float,float,uint32_t*);
 int (*FindTxdSlot)(const char*);
 void (*PushCurrentTxd)();
 void (*SetCurrentTxd)(int, const char*);
@@ -307,6 +310,7 @@ DECL_HOOK(void*, CLEO_StartSingleCustomScript, uint8_t* pc)
 }
 
 static bool bDontCallDefaultThisFrame = false;
+extern void DrawSingleRect(void* handle, CustomScriptRect& rt);
 DECL_HOOKv(DrawScriptStuff, uint8_t bBeforeFade)
 {
     if(!bDontCallDefaultThisFrame)
@@ -327,10 +331,7 @@ DECL_HOOKv(DrawScriptStuff, uint8_t bBeforeFade)
             for(int i = ai.scriptRectsThisFrame - 1; i >= 0; --i)
             {
                 CustomScriptRect& rt = ai.scriptRects[i];
-                if(rt.beforeFade == bBeforeFade)
-                {
-                    
-                }
+                if(rt.beforeFade == bBeforeFade) DrawSingleRect(foundHandle, rt);
             }
         }
     }
@@ -752,6 +753,9 @@ extern "C" void OnAllModsLoaded()
     SET_TO(AddScriptToList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript15AddScriptToListEPPS_"));
     SET_TO(ShutdownThisScript, cleo->GetMainLibrarySymbol("_ZN14CRunningScript18ShutdownThisScriptEv"));
     SET_TO(SetSprite2dTexture, cleo->GetMainLibrarySymbol("_ZN9CSprite2d10SetTextureEPc"));
+    SET_TO(DrawSprite2d, cleo->GetMainLibrarySymbol("_ZN9CSprite2d4DrawERK5CRectRK5CRGBA"));
+    SET_TO(DrawRectSprite2d, cleo->GetMainLibrarySymbol("_ZN9CSprite2d8DrawRectERK5CRectRK5CRGBA"));
+    SET_TO(DrawRotatedSprite2d, cleo->GetMainLibrarySymbol("_ZN9CSprite2d4DrawEffffffffRK5CRGBA"));
     SET_TO(FindTxdSlot, cleo->GetMainLibrarySymbol("_ZN9CTxdStore11FindTxdSlotEPKc"));
     SET_TO(PushCurrentTxd, cleo->GetMainLibrarySymbol("_ZN9CTxdStore14PushCurrentTxdEv"));
     SET_TO(SetCurrentTxd, cleo->GetMainLibrarySymbol("_ZN9CTxdStore13SetCurrentTxdEiPKc"));

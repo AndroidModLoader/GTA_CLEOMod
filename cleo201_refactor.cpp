@@ -426,6 +426,76 @@ CLEO_Fn(LOAD_SPRITE)
     PopCurrentTxd();
 }
 
+extern void (*DrawSprite2d)(GTASprite2D&, float*, uint32_t*);
+extern void (*DrawRectSprite2d)(GTASprite2D&, float*, uint32_t*);
+extern void (*DrawRotatedSprite2d)(GTASprite2D&,float,float,float,float,float,float,float,float,uint32_t*);
+void DrawSingleRect(void* handle, CustomScriptRect& rt)
+{
+    float fakeRect[4];
+    GTASprite2D tmpSprite;
+
+    switch(rt.type)
+    {
+        case 1: // WINDOW_HEADER_AND_TEXT
+        {
+
+            break;
+        }
+        
+        case 2: // WINDOW_HEADER_NO_TEXT
+        {
+
+            break;
+        }
+
+        case 3: // WINDOW_SOLID_COLOUR
+        {
+            tmpSprite.texture = GetCLEOSpriteTexture(handle, rt.spriteIndex);
+            fakeRect[0] = rt.rectMin.x;
+            fakeRect[1] = rt.rectMax.y;
+            fakeRect[2] = rt.rectMax.x;
+            fakeRect[3] = rt.rectMin.y;
+            DrawRectSprite2d(tmpSprite, fakeRect, &rt.color);
+            break;
+        }
+
+        case 4: // WINDOW_SPRITE_NO_ROTATION
+        {
+            tmpSprite.texture = GetCLEOSpriteTexture(handle, rt.spriteIndex);
+            fakeRect[0] = rt.rectMin.x;
+            fakeRect[1] = rt.rectMax.y;
+            fakeRect[2] = rt.rectMax.x;
+            fakeRect[3] = rt.rectMin.y;
+            DrawSprite2d(tmpSprite, fakeRect, &rt.color);
+            break;
+        }
+        
+        case 5: // WINDOW_SPRITE_WITH_ROTATION
+        {
+            float centerX = 0.5f * (rt.rectMax.x + rt.rectMin.x); float diffX = centerX - rt.rectMin.x;
+            float centerY = 0.5f * (rt.rectMax.y + rt.rectMin.y); float diffY = centerY - rt.rectMin.y;
+            float csin, ccos; sincosf(rt.rotation, &csin, &ccos);
+
+            tmpSprite.texture = GetCLEOSpriteTexture(handle, rt.spriteIndex);
+            // https://github.com/gta-reversed/gta-reversed/blob/1887338b0d4c12facccaf8505b6946a346c965a5/source/game_sa/Scripts/TheScripts.cpp#L1777
+            DrawRotatedSprite2d(tmpSprite, 
+                -ccos * diffX + csin * diffY + centerX,
+                -csin * diffX - ccos * diffY + centerY,
+                 csin * diffY + ccos * diffX + centerX,
+                 csin * diffX - ccos * diffY + centerY,
+                -ccos * diffX - csin * diffY + centerX,
+                 ccos * diffY - csin * diffX + centerY,
+                 ccos * diffX - csin * diffY + centerX,
+                 csin * diffX + ccos * diffY + centerY,
+                &rt.color
+            );
+            break;
+        }
+
+        default: return;
+    }
+}
+
 void Init201Opcodes()
 {
     // Disable switch-case labels for default opcodes

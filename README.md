@@ -112,6 +112,7 @@ Here is how to do this:
 3A0D=3,%3s% = aml_mls_get_string %1s% default %2s%
 3A0E=1,do_opcode_exist %1d% // IF and SET
 3A0F=2,push_string %1d% to_var %2d%
+3A10=3,write_float %1d% to %2d% add_ib %3d%
 ```
 
 There is an additional opcodes for GTA:SA Android:

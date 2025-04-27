@@ -373,13 +373,10 @@ CLEO_Fn(DRAW_SPRITE)
         rt.rectMin.y = pY - sY;
         rt.rectMax.x = pX + sX;
         rt.rectMax.y = pY + sY;
-
-        // TODO: cant find it in original code??????
-        rt.beforeFade = true;
     }
     else
     {
-        CallDefaultOpcode(handle, 0x038D);
+        CallDefaultOpcode(handle, opcode);
     }
 }
 extern int (*FindTxdSlot)(const char*);
@@ -424,6 +421,31 @@ CLEO_Fn(LOAD_SPRITE)
         }
     }
     PopCurrentTxd();
+}
+
+CLEO_Fn(SET_SPRITES_DRAW_BEFORE_FADE)
+{
+    if(GetAddonInfo(handle).isCustom)
+    {
+        CustomScriptRect& rt = GetAddonInfo(handle).scriptRects[GetAddonInfo(handle).scriptRectsThisFrame];
+        rt.beforeFade = cleo->ReadParam(handle)->i != 0;
+    }
+    else
+    {
+        CallDefaultOpcode(handle, opcode);
+    }
+}
+
+CLEO_Fn(DRAW_SPRITE_WITH_ROTATION)
+{
+    if(GetAddonInfo(handle).isCustom)
+    {
+        
+    }
+    else
+    {
+        CallDefaultOpcode(handle, opcode);
+    }
 }
 
 extern void (*DrawSprite2d)(GTASprite2D&, float*, uint32_t*);
@@ -519,11 +541,15 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0AFE, FIND_CUSTOM_SCRIPT_WITH_NAME); // 0AFE=4,%1d% = find_custom_script_named %2d% case %3d% partial %4d% check_filename %5d% //IF and SET
 
     // Regular opcodes rewriting (for GTA:SA only)
+#ifdef SCRIPTS_UNIQUE_SPRITE_IDS
     if(*nGameIdent == GTASA)
     {
         CLEO_RegisterOpcode(0x038D, DRAW_SPRITE); // 038D=9,draw_texture %1h% position %2d% %3d% size %4d% %5d% RGBA %6d% %7d% %8d% %9d%
         CLEO_RegisterOpcode(0x038F, LOAD_SPRITE); // 038F=2,load_texture %2h% as %1d%
+        CLEO_RegisterOpcode(0x03E3, SET_SPRITES_DRAW_BEFORE_FADE); // 03E3=1,set_texture_to_be_drawn_antialiased %1h%
+        CLEO_RegisterOpcode(0x074B, DRAW_SPRITE_WITH_ROTATION); // 074B=10,draw_texture %1h% position %2d% %3d% scale %4d% %5d% angle %6d% color_RGBA %7d% %8d% %9d% %10d%
 
         SET_TO(CorrectAspect, cleo->GetMainLibrarySymbol("_Z13CorrectAspectRfS_S_S_"));
     }
+#endif
 }

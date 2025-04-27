@@ -1,3 +1,5 @@
+#define CLEOADDON_INTERFACE_VER 2
+
 #define MAX_STR_LEN 0xFF
 #define MAX_SCRIPT_VARS_TO_SAVE 32
 #define CHEAT_STRING_SIZE 30
@@ -1122,6 +1124,7 @@ inline void SetCLEOSpriteTexture(void* handle, int id, void* texture)
 {
     id -= 1;
 
+#ifdef SCRIPTS_UNIQUE_SPRITE_IDS
     ScriptAddonInfo& ai = GetAddonInfo(handle);
     GTASprite2D tmpSprite;
     tmpSprite.texture = ai.GetScriptTexture(id);
@@ -1134,6 +1137,9 @@ inline void SetCLEOSpriteTexture(void* handle, int id, void* texture)
     {
         ai.scriptTextures.erase(id);
     }
+#else
+    ScriptSprites[id].texture = texture;
+#endif
 }
 
 inline char* GetScriptName(void* handle)
@@ -1146,4 +1152,9 @@ inline int8_t CallDefaultOpcode(void* handle, uint16_t opcode)
     GetNotFlag(handle) = (opcode & 0x8000);
     opcode &= 0x7FFF;
     return (m_aDefaultOpcodeFuncs[opcode / 0x100].func)(handle, opcode);
+}
+
+inline uint32_t GetAddonIncludeInterfaceVersion()
+{
+    return CLEOADDON_INTERFACE_VER;
 }

@@ -6,6 +6,8 @@
 #include <list>
 #include <map>
 
+//#define SCRIPTS_UNIQUE_SPRITE_IDS
+
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
 #define CLEO_Fn(h) void h (void *handle, uint32_t *ip, uint16_t opcode, const char *name)
 

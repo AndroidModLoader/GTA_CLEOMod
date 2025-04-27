@@ -463,10 +463,7 @@ extern "C" void OnModPreLoad()
     logger->Info("CLEO Initialized!");
 
     // CleoAddon interface == 1
-    cleo_addon_ifs.GetInterfaceVersion = []() -> uint32_t
-    {
-        return 2;
-    };
+    cleo_addon_ifs.GetInterfaceVersion =    GetAddonIncludeInterfaceVersion;
     cleo_addon_ifs.ReadString =             CLEO_ReadStringEx;
     cleo_addon_ifs.WriteString =            CLEO_WriteStringEx;
     cleo_addon_ifs.GetStringMaxSize =       CLEO_GetStringPtrMaxSize;
@@ -508,8 +505,8 @@ extern "C" void OnModPreLoad()
     };
     cleo_addon_ifs.IsOpcodeAlreadyExists =  [](uint16_t opcode) -> bool
     {
-        opcode &= 0x7FFF; // need to do that cuz using var __reference__ below (pointer under the hood)
-        void** fn = LookupForOpcodeFunc(CLEOOpcodesStorage, opcode);
+        uint16_t clamped_opcode = (opcode & 0x7FFF);
+        void** fn = LookupForOpcodeFunc(CLEOOpcodesStorage, clamped_opcode);
         return (fn != NULL && *fn != NULL);
     };
     cleo_addon_ifs.IsValidScriptHandle =    IsValidScriptHandle;
@@ -667,7 +664,7 @@ CLEO_Fn(AML_MLS_GET_STRING)
 }
 CLEO_Fn(AML_DO_OPCODE_EXIST)
 {
-    uint16_t op = (uint16_t)cleo->ReadParam(handle)->i;
+    uint16_t op = ((uint16_t)cleo->ReadParam(handle)->i) & 0x7FFF;
     void** fn = LookupForOpcodeFunc(CLEOOpcodesStorage, op);
     UpdateCompareFlag(handle, fn != NULL && *fn != NULL);
 }
@@ -676,6 +673,13 @@ CLEO_Fn(AML_PUSH_STRING_TO_VAR)
     char buf[128];
     CLEO_ReadStringEx(handle, buf, sizeof(buf));
     CLEO_WriteStringEx(handle, buf);
+}
+CLEO_Fn(AML_WRITE_FLOAT)
+{
+    float val = cleo->ReadParam(handle)->f;
+    uintptr_t addr = cleo->ReadParam(handle)->u;
+    if(cleo->ReadParam(handle)->i != 0) addr += nGameAddr;
+    aml->WriteFloat(addr, val);
 }
 
 void Init201Opcodes();
@@ -711,6 +715,7 @@ extern "C" void OnAllModsLoaded()
     CLEO_RegisterOpcode(0x3A0D, AML_MLS_GET_STRING); // 3A0D=3,%3s% = aml_mls_get_string %1s% default %2s%
     CLEO_RegisterOpcode(0x3A0E, AML_DO_OPCODE_EXIST); // 3A0E=1,do_opcode_exist %1d% // IF and SET
     CLEO_RegisterOpcode(0x3A0F, AML_PUSH_STRING_TO_VAR); // 3A0F=2,push_string %1d% to_var %2d%
+    CLEO_RegisterOpcode(0x3A10, AML_WRITE_FLOAT); // 3A10=3,write_float %1d% to %2d% add_ib %3d%
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;
@@ -769,7 +774,9 @@ extern "C" void OnAllModsLoaded()
     if(*nGameIdent == GTASA)
     {
         SET_TO(m_aDefaultOpcodeFuncs, nGameAddr + 0x665594);
+      #ifdef SCRIPTS_UNIQUE_SPRITE_IDS
         HOOK(DrawScriptStuff, cleo->GetMainLibrarySymbol("_ZN4CHud14DrawScriptTextEh"));
+      #endif
         HOOKPLT(ProcessScript, nGameAddr + 0x670A9C);
     }
     else if(*nGameIdent == GTAVC)
@@ -793,8 +800,10 @@ extern "C" void OnAllModsLoaded()
         SET_TO(customHandler[13], cleo->GetMainLibrarySymbol("_ZN14CRunningScript25ProcessCommands1300To1399Ei"));
         SET_TO(customHandler[14], cleo->GetMainLibrarySymbol("_ZN14CRunningScript25ProcessCommands1400To1499Ei"));
 
+      #ifdef SCRIPTS_UNIQUE_SPRITE_IDS
         HOOKBL(GTAVC_DrawBeforeFade, nGameAddr + 0x1E9112);
         HOOKBL(GTAVC_DrawAfterFade, nGameAddr + 0x1ECA46);
+      #endif
         HOOK(ProcessScript, cleo->GetMainLibrarySymbol("_ZN14CRunningScript7ProcessEv"));
     }
 

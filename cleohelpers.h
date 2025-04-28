@@ -760,7 +760,6 @@ inline bool IsCLEORelatedGXTKey(char* gxtLabel)
            (gxtLabel[2] == 'D' && gxtLabel[3] == 'S' && gxtLabel[4] == 'C'))
             return true; // nuh-uh
     }
-    //else if(gxtLabel[0] == 'C' && gxtLabel[1] == 'S' && gxtLabel[2] == 'I' && gxtLabel[3] == '_') return true; // nuh-uh
     else if(*(uint32_t*)(&gxtLabel[0]) == 0x5F495343) return true; // nuh-uh, CSI_
     else if(gxtLabel[0] == 'S' && gxtLabel[1] == 'P' && gxtLabel[2] == 'L' &&
             gxtLabel[3] == 'A' && gxtLabel[4] == 'S' && gxtLabel[5] == 'H') return true; // nuh-uh

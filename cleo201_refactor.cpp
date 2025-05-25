@@ -2,6 +2,7 @@
 #include <mod/logger.h>
 #include <cleohelpers.h>
 #include <cleo4scmfunc.h>
+#include <sys/stat.h>
 
 struct CLEOLocalVarSave
 {
@@ -9,6 +10,8 @@ struct CLEOLocalVarSave
     char strvalue[MAX_STR_LEN];
 };
 CLEOLocalVarSave localVarsSave[40];
+
+extern char g_szSavesPath[256];
 
 extern uintptr_t nCLEOAddr, nGameAddr;
 extern int lastStorageItem;
@@ -65,7 +68,8 @@ CLEO_Fn(SAVE_LOCAL_VARS)
     char savename[32], savepath[256];
     int maxParams = ValueForSA(40, 16);
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    snprintf(savepath, sizeof(savepath), "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/%s.lvar", g_szSavesPath, savename);
+    mkdir(g_szSavesPath, 0777);
     //logger->Info("SAVE_LOCAL_VARS: %s", savepath);
 
     FILE* savefile = fopen(savepath, "w+b");
@@ -99,7 +103,7 @@ CLEO_Fn(LOAD_LOCAL_VARS)
     char savename[32], savepath[256];
     int maxParams = ValueForSA(40, 16);
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    snprintf(savepath, sizeof(savepath), "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/%s.lvar", g_szSavesPath, savename);
     FILE* savefile = fopen(savepath, "r+b");
     if(!savefile)
     {
@@ -144,7 +148,7 @@ CLEO_Fn(DELETE_LOCAL_VARS_SAVE)
 {
     char savename[32], savepath[256];
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    snprintf(savepath, sizeof(savepath), "%s/sav/%s.lvar", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/%s.lvar", g_szSavesPath, savename);
     UpdateCompareFlag(handle, remove(savepath) == 0);
 }
 CLEO_Fn(SAVE_VARS)
@@ -152,7 +156,8 @@ CLEO_Fn(SAVE_VARS)
     static int* varsPointers[MAX_SCRIPT_VARS_TO_SAVE];
     char savename[32], savepath[256];
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    snprintf(savepath, sizeof(savepath), "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/%s.var", g_szSavesPath, savename);
+    mkdir(g_szSavesPath, 0777);
 
     FILE* savefile = fopen(savepath, "w+b");
     if(!savefile)
@@ -195,7 +200,7 @@ CLEO_Fn(LOAD_VARS)
     static int* varsPointers[MAX_SCRIPT_VARS_TO_SAVE];
     char savename[32], savepath[256];
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    snprintf(savepath, sizeof(savepath), "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/%s.var", g_szSavesPath, savename);
     FILE* savefile = fopen(savepath, "r+b");
     if(!savefile)
     {
@@ -256,7 +261,7 @@ CLEO_Fn(DELETE_VARS_SAVE)
 {
     char savename[32], savepath[256];
     CLEO_ReadStringEx(handle, savename, sizeof(savename));
-    snprintf(savepath, sizeof(savepath), "%s/sav/%s.var", cleo->GetCleoStorageDir(), savename);
+    snprintf(savepath, sizeof(savepath), "%s/%s.var", g_szSavesPath, savename);
     UpdateCompareFlag(handle, remove(savepath) == 0);
 }
 

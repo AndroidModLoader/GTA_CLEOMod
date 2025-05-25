@@ -19,6 +19,8 @@ cleo_addon_ifs_t cleo_addon_ifs;
 uint16_t FreeScriptAddonInfoId = 1; // 0 is "not assigned" (used for dumbo scripts without that info)
 ScriptAddonInfo ScriptAddonInfosStorage[ScriptAddonInfo::allocSize];
 
+char g_szSavesPath[256] { 0 };
+
 // SAUtils
 #include "isautils.h"
 ISAUtils* sautils = nullptr;
@@ -744,9 +746,7 @@ extern "C" void OnAllModsLoaded()
     }
 
     // CLEO4+5 Opcodes
-    char savpath[256];
-    sprintf(savpath, "%s/sav", cleo->GetCleoStorageDir());
-    mkdir(savpath, 0777);
+    sprintf(g_szSavesPath, "%s/sav", cleo->GetCleoStorageDir());
     Init201Opcodes();
     Init4Opcodes();
     Init5Opcodes();

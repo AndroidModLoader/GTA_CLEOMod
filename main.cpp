@@ -28,7 +28,7 @@ ISAUtils* sautils = nullptr;
 // Size of array
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
-MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.8, Alexander Blade & RusJJ & XMDS)
+MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.9, Alexander Blade & RusJJ & XMDS)
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.2.3)
 END_DEPLIST()
@@ -224,6 +224,9 @@ extern int* ScriptParams;
 void ScmCleanup();
 DECL_HOOKv(CLEO_StartScripts)
 {
+    // Reset a number of addons.
+    FreeScriptAddonInfoId = 1;
+
     uintptr_t basicScriptHandles = *(uintptr_t*)(nGameAddr + ValueForGame(0, 0x395C48, 0x679658));
     for(int i = 0; i < g_nMaxScriptsCount; ++i)
     {

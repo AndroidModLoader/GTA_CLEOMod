@@ -91,6 +91,9 @@ struct ScriptAddonInfo
 
     uint8_t scriptRectsThisFrame;
     CustomScriptRect scriptRects[64];
+
+    // GetInterfaceVersion() == 3
+    // To Be Added (c)
 };
 
 
@@ -155,6 +158,9 @@ struct cleo_addon_ifs_t
     void            (*SetScriptTextureByID)(void* handle, int id, void* texture);
     bool            (*IsScriptCustom)(void* handle);
     int8_t          (*CallDefaultOpcode)(void* handle, uint16_t opcode);
+
+    // Interface ver 3
+    // To Be Added (c)
 };
 
 #endif // _CLEO_ADDON_H

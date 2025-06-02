@@ -28,7 +28,7 @@ ISAUtils* sautils = nullptr;
 // Size of array
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
-MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.7, Alexander Blade & RusJJ & XMDS)
+MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.8, Alexander Blade & RusJJ & XMDS)
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.2.3)
 END_DEPLIST()
@@ -100,6 +100,7 @@ void (*SetCurrentTxd)(int, const char*);
 void (*PopCurrentTxd)();
 GTASprite2D *ScriptSprites, *ScriptSpritesOrg;
 GTAScriptHandler* m_aDefaultOpcodeFuncs = NULL;
+int g_nMaxScriptsCount = 96;
 
 // CLEO itself
 extern unsigned char cleoData[100160];
@@ -223,8 +224,8 @@ extern int* ScriptParams;
 void ScmCleanup();
 DECL_HOOKv(CLEO_StartScripts)
 {
-    uintptr_t basicScriptHandles = *(uintptr_t*)(nGameAddr + ValueForGame(0, 0x58F018, 0x679658));
-    for(int i = 0; i < 96; ++i)
+    uintptr_t basicScriptHandles = *(uintptr_t*)(nGameAddr + ValueForGame(0, 0x395C48, 0x679658));
+    for(int i = 0; i < g_nMaxScriptsCount; ++i)
     {
         void* handle = (void*)(basicScriptHandles + i * ValueForGame(0x88, 0x88, 0x100));
         AssignAddonInfo(handle);
@@ -727,21 +728,25 @@ extern "C" void OnAllModsLoaded()
     if(*nGameIdent == GTASA)
     {
         // 96 to 256
+        g_nMaxScriptsCount = 96;
         if(cfg->GetBool("BumpScriptsLimit", true) &&
            *(uintptr_t*)(nGameAddr + 0x679658) == (nGameAddr + 0x7B778C))
         {
             aml->WriteAddr(nGameAddr + 0x679658, &g_szScriptStore[0]);
-            aml->Write32(nGameAddr + 0x329F88, 0xE3550903);
+            aml->Write32(nGameAddr + 0x329F88, 0x3F80F5B5);
+            g_nMaxScriptsCount = 256;
         }
     }
     else if(*nGameIdent == GTAVC)
     {
         // 128 to 256
+        g_nMaxScriptsCount = 128;
         if(cfg->GetBool("BumpScriptsLimit", true) &&
            *(uintptr_t*)(nGameAddr + 0x395C48) == (nGameAddr + 0x58F018))
         {
             aml->WriteAddr(nGameAddr + 0x395C48, &g_szScriptStore[0]);
             aml->Write32(nGameAddr + 0x10B658, 0x4708F504);
+            g_nMaxScriptsCount = 256;
         }
     }
 

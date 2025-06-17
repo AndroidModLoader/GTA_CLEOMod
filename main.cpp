@@ -30,7 +30,7 @@ ISAUtils* sautils = nullptr;
 
 MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.9, Alexander Blade & RusJJ & XMDS)
 BEGIN_DEPLIST()
-    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.2.3)
+    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.3.0)
 END_DEPLIST()
 
 inline size_t __strlen(const char *str)
@@ -687,6 +687,30 @@ CLEO_Fn(AML_WRITE_FLOAT)
     if(cleo->ReadParam(handle)->i != 0) addr += nGameAddr;
     aml->WriteFloat(addr, val);
 }
+CLEO_Fn(AML_VIBRATE)
+{
+    int ms = cleo->ReadParam(handle)->i;
+    aml->DoVibro(ms);
+}
+CLEO_Fn(AML_VIBRATE_STOP)
+{
+    aml->CancelVibro();
+}
+CLEO_Fn(AML_SHOW_TOAST)
+{
+    bool longerDur = cleo->ReadParam(handle)->i;
+    char buf[128];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    aml->ShowToast(longerDur, "%s", buf);
+}
+CLEO_Fn(AML_BATTERY_LEVEL)
+{
+    cleo->GetPointerToScriptVar(handle)->f = aml->GetBatteryLevel();
+}
+CLEO_Fn(AML_ANDROID_SDK_INT)
+{
+    cleo->GetPointerToScriptVar(handle)->i = aml->GetAndroidVersion();
+}
 
 void SAUtilsStarted()
 {
@@ -725,6 +749,11 @@ extern "C" void OnAllModsLoaded()
     CLEO_RegisterOpcode(0x3A0E, AML_DO_OPCODE_EXIST); // 3A0E=1,do_opcode_exist %1d% // IF and SET
     CLEO_RegisterOpcode(0x3A0F, AML_PUSH_STRING_TO_VAR); // 3A0F=2,push_string %1d% to_var %2d%
     CLEO_RegisterOpcode(0x3A10, AML_WRITE_FLOAT); // 3A10=3,write_float %1d% to %2d% add_ib %3d%
+    CLEO_RegisterOpcode(0x3A11, AML_VIBRATE); // 3A11=1,aml_vibrate %1d% ms
+    CLEO_RegisterOpcode(0x3A12, AML_VIBRATE_STOP); // 3A12=0,aml_stop_vibro
+    CLEO_RegisterOpcode(0x3A13, AML_SHOW_TOAST); // 3A13=2,aml_show_toast %2s% longer %1d%
+    CLEO_RegisterOpcode(0x3A14, AML_BATTERY_LEVEL); // 3A14=1,%1d% = aml_get_battery_percentage // float
+    CLEO_RegisterOpcode(0x3A15, AML_ANDROID_SDK_INT); // 3A15=1,%1d% = aml_get_android_ver
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;
@@ -911,7 +940,7 @@ extern "C" void OnInterfaceAdded(const char* name, const void* ptr)
 {
     if(!strcmp(name, "SAUtils"))
     {
-        sautils = (ISAUtils*)GetInterface("SAUtils");
+        sautils = (ISAUtils*)ptr;
         SAUtilsStarted();
     }
 }

@@ -688,6 +688,14 @@ CLEO_Fn(AML_WRITE_FLOAT)
     aml->WriteFloat(addr, val);
 }
 
+void SAUtilsStarted()
+{
+    sautils->AddClickableItem(SetType_Game, "CLEO Location", pCfgCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
+    sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCfgCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
+
+    
+}
+
 void Init201Opcodes();
 void Init4Opcodes();
 void Init5Opcodes();
@@ -699,12 +707,7 @@ extern "C" void OnAllModsLoaded()
     if(!cleo) return;
 
     nGameAddr = (uintptr_t)cleo->GetMainLibraryLoadAddress();
-    sautils = (ISAUtils*)GetInterface("SAUtils");
-    if(sautils)
-    {
-        sautils->AddClickableItem(SetType_Game, "CLEO Location", pCfgCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
-        sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCfgCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
-    }
+    
     CLEO_RegisterOpcode(0x3A00, AML_HAS_MOD_LOADED); // 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
     CLEO_RegisterOpcode(0x3A01, AML_HAS_MODVER_LOADED); // 3A01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
     CLEO_RegisterOpcode(0x3A02, AML_REDIRECT_CODE); // 3A02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%
@@ -901,5 +904,14 @@ extern "C" void OnGameCrash(const char* szLibName, int sig, int code, uintptr_t 
     else
     {
         cleo->PrintToCleoLog("[ Script debugging was not enabled ]");
+    }
+}
+
+extern "C" void OnInterfaceAdded(const char* name, const void* ptr)
+{
+    if(!strcmp(name, "SAUtils"))
+    {
+        sautils = (ISAUtils*)GetInterface("SAUtils");
+        SAUtilsStarted();
     }
 }

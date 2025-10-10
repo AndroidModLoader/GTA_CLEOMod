@@ -278,10 +278,10 @@ CLEO_Fn(READ_FROM_FILE)
     int size = cleo->ReadParam(handle)->i;
     if(file)
     {
-        char *str = new char[size];
+        char *str = new char[size+1];
         fread(str, size, 1, file);
         CLEO_WriteStringEx(handle, str);
-        free(str);
+        delete[](str);
     }
     else CLEO_WriteStringEx(handle, "");
 }

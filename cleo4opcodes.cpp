@@ -276,14 +276,16 @@ CLEO_Fn(READ_FROM_FILE)
 {
     FILE* file = (FILE*)cleo->ReadParam(handle)->i;
     int size = cleo->ReadParam(handle)->i;
+    void* dst = (void*)(&cleo->GetPointerToScriptVar(handle)->i);
+    
     if(file)
     {
-        char *str = new char[size+1];
-        fread(str, size, 1, file);
-        CLEO_WriteStringEx(handle, str);
-        delete[](str);
+        fread(dst, size, 1, file);
     }
-    else CLEO_WriteStringEx(handle, "");
+    else
+    {
+        *(int*)dst = 0;
+    }
 }
 
 CLEO_Fn(WRITE_TO_FILE)

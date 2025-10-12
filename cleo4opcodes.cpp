@@ -119,7 +119,7 @@ CLEO_Fn(INT_ADD)
 
 CLEO_Fn(INT_SUB)
 {
-    if(GetVarArgCount(handle) > 2)
+    if(GetVarArgCount(handle) > 1)
     {
         int a = cleo->ReadParam(handle)->i;
         int b = cleo->ReadParam(handle)->i;
@@ -134,7 +134,7 @@ CLEO_Fn(INT_SUB)
 
 CLEO_Fn(INT_MUL)
 {
-    if(GetVarArgCount(handle) > 2)
+    if(GetVarArgCount(handle) > 1)
     {
         int a = cleo->ReadParam(handle)->i;
         int b = cleo->ReadParam(handle)->i;
@@ -1420,7 +1420,7 @@ void Init4Opcodes()
     SET_TO(TextGet,             cleo->GetMainLibrarySymbol("_ZN5CText3GetEPKc"));
     SET_TO(m_CheatString,       cleo->GetMainLibrarySymbol("_ZN6CCheat13m_CheatStringE"));
     SET_TO(keys,                cleo->GetMainLibrarySymbol("keys"));
-    SET_TO(ms_modelInfoPtrs, *(uintptr_t*)(nGameAddr + (*nGameIdent == GTASA ? 0x6796D4 : 0x394D94)));
+    SET_TO(ms_modelInfoPtrs,    *(uintptr_t*)(nGameAddr + (*nGameIdent == GTASA ? 0x6796D4 : 0x394D94)));
     if(*nGameIdent == GTASA)
     {
         SET_TO(gMobileMenu,                     cleo->GetMainLibrarySymbol("gMobileMenu"));
@@ -1441,7 +1441,7 @@ void Init4Opcodes()
         SET_TO(ClearAllCrosshairs,              cleo->GetMainLibrarySymbol("_ZN14CWeaponEffects18ClearAllCrosshairsEv"));
         SET_TO(SetWeaponLockOnTarget,           cleo->GetMainLibrarySymbol("_ZN4CPed21SetWeaponLockOnTargetEP7CEntity"));
     }
-    else
+    else if(*nGameIdent == GTAVC)
     {
         SET_TO(CollectParameters_VC,            cleo->GetMainLibrarySymbol("_ZN14CRunningScript17CollectParametersEPjs"));
         SET_TO(StoreParameters_VC,              cleo->GetMainLibrarySymbol("_ZN14CRunningScript15StoreParametersEPjs"));

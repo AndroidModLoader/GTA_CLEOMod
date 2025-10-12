@@ -615,15 +615,15 @@ void Init5Opcodes()
     CLEO_RegisterOpcode(0x0B05, COPY_DIRECTORY); // 0B05=2, copy_directory %1d% to %2d% //IF and SET
 
     // Math plugin
-    CLEO_RegisterOpcode(0x2300, IS_BIT_SET); // 2700=2, is_bit_set value %1d% bit_index %2d%
-    CLEO_RegisterOpcode(0x2301, SET_BIT); // 2701=2, set_bit value %1d% bit_index %2d%
-    CLEO_RegisterOpcode(0x2302, CLEAR_BIT); // 2702=2, clear_bit value %1d% bit_index %2d%
-    CLEO_RegisterOpcode(0x2303, TOGGLE_BIT); // 2703=3, toggle_bit value %1d% bit_index %2d% state %3d%
-    CLEO_RegisterOpcode(0x2304, IS_TRUTHY); // 2704=1, is_truthy value %1d%
-    CLEO_RegisterOpcode(0x2305, PICK_RANDOM_INT); // 2705=-1, pick_random_int values %d% store_to %d%
-    CLEO_RegisterOpcode(0x2306, PICK_RANDOM_FLOAT); // 2706=-1, pick_random_float values %d% store_to %d%
-    CLEO_RegisterOpcode(0x2307, PICK_RANDOM_TEXT); // 2707=-1, pick_random_text values %d% store_to %d%
-    CLEO_RegisterOpcode(0x2308, RANDOM_CHANCE); // 2708=1, random_chance %1d%
+    CLEO_RegisterOpcode(0x2700, IS_BIT_SET); // 2700=2, is_bit_set value %1d% bit_index %2d%
+    CLEO_RegisterOpcode(0x2701, SET_BIT); // 2701=2, set_bit value %1d% bit_index %2d%
+    CLEO_RegisterOpcode(0x2702, CLEAR_BIT); // 2702=2, clear_bit value %1d% bit_index %2d%
+    CLEO_RegisterOpcode(0x2703, TOGGLE_BIT); // 2703=3, toggle_bit value %1d% bit_index %2d% state %3d%
+    CLEO_RegisterOpcode(0x2704, IS_TRUTHY); // 2704=1, is_truthy value %1d%
+    CLEO_RegisterOpcode(0x2705, PICK_RANDOM_INT); // 2705=-1, pick_random_int values %d% store_to %d%
+    CLEO_RegisterOpcode(0x2706, PICK_RANDOM_FLOAT); // 2706=-1, pick_random_float values %d% store_to %d%
+    CLEO_RegisterOpcode(0x2707, PICK_RANDOM_TEXT); // 2707=-1, pick_random_text values %d% store_to %d%
+    CLEO_RegisterOpcode(0x2708, RANDOM_CHANCE); // 2708=1, random_chance %1d%
 
     // CLEO 5
     CLEO_RegisterOpcode(0x2000, GET_CLEO_ARG_COUNT); // 2000=1, %1d% = get_cleo_arg_count

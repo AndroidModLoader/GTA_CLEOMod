@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <vector>
 #include <deque>
 #include <filesystem>
 #include "cleo.h"

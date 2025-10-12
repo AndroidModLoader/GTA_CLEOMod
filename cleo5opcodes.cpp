@@ -528,11 +528,39 @@ CLEO_Fn(IS_TRUTHY)
 }
 CLEO_Fn(PICK_RANDOM_INT)
 {
-    
+    int args = GetVarArgCount(handle);
+    if(args < 2)
+    {
+        // suspend?
+        cleo->GetPointerToScriptVar(handle)->i = 0;
+        return;
+    }
+
+    --args;
+    std::vector<int> values;
+    for(int i = 0; i < args; ++i)
+    {
+        values.push_back(cleo->ReadParam(handle)->i);
+    }
+    cleo->GetPointerToScriptVar(handle)->i = values[rand() % args];
 }
 CLEO_Fn(PICK_RANDOM_FLOAT)
 {
-    
+    int args = GetVarArgCount(handle);
+    if(args < 2)
+    {
+        // suspend?
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        return;
+    }
+
+    --args;
+    std::vector<float> values;
+    for(int i = 0; i < args; ++i)
+    {
+        values.push_back(cleo->ReadParam(handle)->f);
+    }
+    cleo->GetPointerToScriptVar(handle)->f = values[rand() % args];
 }
 CLEO_Fn(PICK_RANDOM_TEXT)
 {
@@ -540,7 +568,9 @@ CLEO_Fn(PICK_RANDOM_TEXT)
 }
 CLEO_Fn(RANDOM_CHANCE)
 {
-    
+    float chance = cleo->ReadParam(handle)->f;
+    float random = (double)(rand()) / ((double)RAND_MAX / 100.0);
+    UpdateCompareFlag(handle, random < chance);
 }
 
 // CLEO 5
@@ -586,7 +616,7 @@ void Init5Opcodes()
     CLEO_RegisterOpcode(0x2405, IS_SCRIPT_RUNNING); // 2405=1, is_script_running %1d%
     CLEO_RegisterOpcode(0x2406, GET_SCRIPT_STRUCT_FROM_FILENAME); // 2406=1, get_script_struct_from_filename %1s%
     CLEO_RegisterOpcode(0x2407, IS_MEMORY_EQUAL); // 2407=3, is_memory_equal address_a %1d% address_b %2d% size %d3%
-    CLEO_RegisterOpcode(0x2408, TERMINATE_SCRIPT); // 2408=1,terminate_script %1d%
+    CLEO_RegisterOpcode(0x2408, TERMINATE_SCRIPT); // 2408=1, terminate_script %1d%
 
     // Text plugin
     // Literally brainless move... #2
@@ -596,6 +626,8 @@ void Init5Opcodes()
     CLEO_RegisterOpcode(0x2603, IS_TEXT_PREFIX); // 2603=3, is_text_prefix %1s% prefix %2s% ignore_case %3d%
     CLEO_RegisterOpcode(0x2604, IS_TEXT_SUFFIX); // 2604=3, is_text_suffix %1s% suffix %2s% ignore_case %3d% // originally it's sufix *facepalm*
     CLEO_RegisterOpcode(0x2605, DISPLAY_TEXT_FORMATTED); // 2605=-1, display_text_formatted offset_left %1d% offset_top %2d% format %3d% args
+    //CLEO_RegisterOpcode(0x2606, LOAD_FXT); // 2606=1, load_fxt %1d%
+    //CLEO_RegisterOpcode(0x2607, UNLOAD_FXT); // 2607=1, unload_fxt %1d%
     CLEO_RegisterOpcode(0x2608, GET_TEXT_LENGTH); // 2608=3, get_text_length %1d% store_to %2d%
     CLEO_RegisterOpcode(0x2609, ADD_TEXT_LABEL_FORMATTED); // 2609=-1,add_text_label_formatted %1d% args %2d%
 

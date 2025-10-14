@@ -292,6 +292,12 @@ CLEO_Fn(WRITE_TO_FILE)
 {
     FILE* file = (FILE*)cleo->ReadParam(handle)->i;
     int size = cleo->ReadParam(handle)->i;
+    if(IsParamVar(handle))
+    {
+        void* buf = (void*)(&cleo->GetPointerToScriptVar(handle)->i);
+        fwrite(buf, size, 1, file);
+        return;
+    }
     char buf[256];
     CLEO_ReadStringEx(handle, buf, sizeof(buf));
     fwrite(buf, size, 1, file);

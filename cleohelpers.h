@@ -1029,6 +1029,20 @@ inline bool IsParamVar(void* handle)
             return true;
     }
 }
+inline bool IsParamNum(void* handle)
+{
+    switch(Read1Byte_NoSkip(handle))
+    {
+        default:
+            return false;
+        
+        case SCRIPT_PARAM_STATIC_INT_32BITS:
+        case SCRIPT_PARAM_STATIC_INT_8BITS:
+        case SCRIPT_PARAM_STATIC_INT_16BITS:
+        case SCRIPT_PARAM_STATIC_FLOAT:
+            return true;
+    }
+}
 
 // CLEO5
 struct PausedScriptInfo 

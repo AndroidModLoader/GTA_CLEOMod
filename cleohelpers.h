@@ -1015,6 +1015,20 @@ inline bool IsParamString(void* handle, bool checkIfPointer = false)
     }
     return false;
 }
+inline bool IsParamVar(void* handle)
+{
+    switch(Read1Byte_NoSkip(handle))
+    {
+        default:
+            return false;
+        
+        case SCRIPT_PARAM_GLOBAL_NUMBER_VARIABLE:
+        case SCRIPT_PARAM_LOCAL_NUMBER_VARIABLE:
+        case SCRIPT_PARAM_GLOBAL_NUMBER_ARRAY:
+        case SCRIPT_PARAM_LOCAL_NUMBER_ARRAY:
+            return true;
+    }
+}
 
 // CLEO5
 struct PausedScriptInfo 

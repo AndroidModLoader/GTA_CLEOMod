@@ -292,7 +292,14 @@ CLEO_Fn(WRITE_TO_FILE)
 {
     FILE* file = (FILE*)cleo->ReadParam(handle)->i;
     int size = cleo->ReadParam(handle)->i;
-    if(IsParamVar(handle))
+    if(IsParamNum(handle))
+    {
+        int num = cleo->ReadParam(handle)->i;
+        void* buf = (void*)(&num);
+        fwrite(buf, size, 1, file);
+        return;
+    }
+    else if(IsParamVar(handle))
     {
         void* buf = (void*)(&cleo->GetPointerToScriptVar(handle)->i);
         fwrite(buf, size, 1, file);

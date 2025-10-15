@@ -71,6 +71,11 @@ bool (*IsHIDPressed)(int hidMapping, float* valOut);
 void (*ClearAllCrosshairs)();
 void (*SetWeaponLockOnTarget)(uintptr_t, void*);
 
+// By MatiDragon
+void (*TouchInterfaceWidgets)(int, float, float, float, float);
+void (*TouchInterfaceTouchDown)(bool);
+void (*TouchInterfaceCachedPos)(float*, float*);
+
 inline bool IsEndSlash(const char* str)
 {
     char *s = (char*)str;
@@ -1647,6 +1652,11 @@ void Init4Opcodes()
         SET_TO(IsHIDPressed,                    cleo->GetMainLibrarySymbol("_ZN4CHID9IsPressedE10HIDMappingPf"));
         SET_TO(ClearAllCrosshairs,              cleo->GetMainLibrarySymbol("_ZN14CWeaponEffects18ClearAllCrosshairsEv"));
         SET_TO(SetWeaponLockOnTarget,           cleo->GetMainLibrarySymbol("_ZN4CPed21SetWeaponLockOnTargetEP7CEntity"));
+
+        // By MatiDragon
+        SET_TO(TouchInterfaceWidgets,     cleo->GetMainLibrarySymbol("_ZN15CTouchInterface10m_pWidgetsE"));
+        SET_TO(TouchInterfaceTouchDown,   cleo->GetMainLibrarySymbol("_ZN15CTouchInterface12m_bTouchDownE"));
+        SET_TO(TouchInterfaceCachedPos, cleo->GetMainLibrarySymbol("_ZN15CTouchInterface14m_vecCachedPosE"));
     }
     else if(*nGameIdent == GTAVC)
     {

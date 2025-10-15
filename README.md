@@ -216,3 +216,19 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 1C37=2,%2d% = tgamma %1d%
 1C38=2,%2d% = lgamma %1d%
 ```
+
+### Opcodes by MatiDragon
+```
+7000=5,set_button_value %1d% coords %2d% %3d% scales %4d% %5d%
+7001=1,is_touch_pressed store_to %1d%
+7002=2,get_touch_xy %1d% %2d%
+7003=1,create_file_or_directory %1d%
+7004=2,%2d% = normalize_angle_degrees %1d%
+7005=2,%2d% = normalize_angle_radians %1d%
+7006=2,%2d% = toggle_boolean_var %1d%
+7007=3,%3d% = float_div %1d% / %2d%
+7008=3,%3d% = float_mul %1d% * %2d%
+7009=3,%3d% = float_sum %1d% + %2d%
+700A=3,%3d% = float_sub %1d% - %2d%
+700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
+```

@@ -1421,6 +1421,7 @@ CLEO_Fn(LOG)
 /////////// BEGIN OPCODES by MatiDragon /////////////
 /////////////////////////////////////////////////////
 
+/*
 CLEO_Fn(SET_BUTTON_VALUE)
 {
     // Widget ID
@@ -1479,7 +1480,7 @@ CLEO_Fn(GET_TOUCH_XY)
     cleo->GetPointerToScriptVar(handle)->i = (int)x; // Convert to integer
     cleo->GetPointerToScriptVar(handle)->i = (int)y; // Convert to integer
 }
-
+*/
 CLEO_Fn(CREATE_FILE_OR_DIRECTORY)
 {
     char filepath[256];
@@ -1773,9 +1774,9 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AEF, LOG); // 0AEF=3,%3d% = log %1d% base %2d% //all floats
 
     // MatiDragon opcodes
-    CLEO_RegisterOpcode(0x7000, SET_BUTTON_VALUE); // 7000=5,set_button_value %1d% coords %2d% %3d% scales %4d% %5d%
-    CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
-    CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
+    //CLEO_RegisterOpcode(0x7000, SET_BUTTON_VALUE); // 7000=5,set_button_value %1d% coords %2d% %3d% scales %4d% %5d%
+    //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
+    //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
     CLEO_RegisterOpcode(0x7003, CREATE_FILE_OR_DIRECTORY); // 7003=1,create_file_or_directory %1d%
     CLEO_RegisterOpcode(0x7004, NORMALIZE_ANGLE_DEGREES); // 7004=2,%2d% = normalize_angle_degrees %1d%
     CLEO_RegisterOpcode(0x7005, NORMALIZE_ANGLE_RADIANS); // 7005=2,%2d% = normalize_angle_radians %1d%

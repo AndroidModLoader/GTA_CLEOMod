@@ -1412,6 +1412,200 @@ CLEO_Fn(LOG)
     cleo->GetPointerToScriptVar(handle)->f = (float)(logf(arg) / logf(base));
 }
 
+/////////////////////////////////////////////////////
+/////////// BEGIN OPCODES by MatiDragon /////////////
+/////////////////////////////////////////////////////
+
+CLEO_Fn(SET_BUTTON_VALUE)
+{
+    // Widget ID
+    int buttonId = cleo->ReadParam(handle)->i;
+
+    // Transform
+    float x = cleo->ReadParam(handle)->f;      // Coord X
+    float y = cleo->ReadParam(handle)->f;      // Coord Y
+    float width = cleo->ReadParam(handle)->f;  // Width
+    float height = cleo->ReadParam(handle)->f; // Height
+
+    uintptr_t widgetsAddr = cleo->GetLabelAddress("_ZN15CTouchInterface10m_pWidgetsE");
+
+    // Calculate button address
+    widgetsAddr += buttonId * 4;
+    uintptr_t buttonPtr = *(uintptr_t*)widgetsAddr;
+
+    if (buttonPtr)
+    {
+        buttonPtr += 12; // Offset to access position
+        *(float*)buttonPtr = x;      // Write X position
+        buttonPtr += 4;
+        *(float*)buttonPtr = y;      // Write Y position
+        buttonPtr += 4;
+        *(float*)buttonPtr = width;  // Write width
+        buttonPtr += 4;
+        *(float*)buttonPtr = height; // Write height
+    }
+
+    UpdateCompareFlag(handle, buttonPtr != 0); // Update compare flag
+}
+
+CLEO_Fn(IS_TOUCH_PRESSED)
+{
+    uintptr_t touchDownAddr = cleo->GetLabelAddress("_ZN15CTouchInterface12m_bTouchDownE");
+
+    uint8_t isPressed = *(uint8_t*)touchDownAddr; // Read touch state
+
+    // Update compare flag
+    UpdateCompareFlag(handle, isPressed != 0);
+
+    // Optional return: if the script requests to store the value
+    if (GetVarArgCount(handle) > 0)
+    {
+        cleo->GetPointerToScriptVar(handle)->i = isPressed;
+    }
+}
+
+CLEO_Fn(GET_TOUCH_XY)
+{
+    uintptr_t touchPosAddr = cleo->GetLabelAddress("_ZN15CTouchInterface14m_vecCachedPosE");
+
+    float x = *(float*)touchPosAddr;       // X
+    float y = *(float*)(touchPosAddr + 4); // Y
+
+    cleo->GetPointerToScriptVar(handle)->i = (int)x; // Convert to integer
+    cleo->GetPointerToScriptVar(handle)->i = (int)y; // Convert to integer
+}
+
+CLEO_Fn(CREATE_FILE_OR_DIRECTORY)
+{
+    char filepath[256];
+    CLEO_ReadStringEx(handle, filepath, sizeof(filepath));
+
+    // Resolver ruta
+    std::string path = ResolvePath(handle, filepath);
+
+    // Verificar si ya existe
+    struct stat info;
+    if (stat(path.c_str(), &info) == 0)
+    {
+        UpdateCompareFlag(handle, true); // Ya existe
+        return;
+    }
+
+    // Crear archivo o carpeta
+    if (filepath[strlen(filepath) - 1] == '/') // Si termina en '/', es una carpeta
+    {
+        int result = mkdir(path.c_str(), 0777);
+        UpdateCompareFlag(handle, result == 0);
+    }
+    else // Si no, es un archivo
+    {
+        FILE* file = fopen(path.c_str(), "w");
+        if (file)
+        {
+            fclose(file);
+            UpdateCompareFlag(handle, true);
+        }
+        else
+        {
+            UpdateCompareFlag(handle, false);
+        }
+    }
+}
+
+CLEO_Fn(NORMALIZE_ANGLE_DEGREES)
+{
+    float* angle = &cleo->GetPointerToScriptVar(handle)->f;
+    while (*angle >= 360.0f) *angle -= 360.0f;
+    while (*angle < 0.0f)    *angle += 360.0f;
+}
+
+CLEO_Fn(NORMALIZE_ANGLE_RADIANS)
+{
+    float* rad = &cleo->GetPointerToScriptVar(handle)->f;
+    const float TWO_PI = 6.2831853072f;
+    while (*rad >= TWO_PI) *rad -= TWO_PI;
+    while (*rad < 0.0f)     *rad += TWO_PI;
+}
+
+CLEO_Fn(TOGGLE_BOOLEAN_VAR)
+{
+    int* var = &cleo->GetPointerToScriptVar(handle)->i;
+    *var = (*var == 0) ? 1 : 0;
+}
+
+CLEO_Fn(FLOAT_DIV)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = a / b;
+}
+
+CLEO_Fn(FLOAT_MUL)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = a * b;
+}
+
+CLEO_Fn(FLOAT_SUM)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = a + b;
+}
+
+CLEO_Fn(FLOAT_SUB)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = a - b;
+}
+
+CLEO_Fn(SPLIT_FLOAT_TO_SIGNED_PARTS)
+{
+    float v = cleo->ReadParam(handle)->f;
+    int decimals = cleo->ReadParam(handle)->i;
+
+    // Clamp decimals to [0,9] to avoid overflow on large multipliers
+    if (decimals < 0) decimals = 0;
+    if (decimals > 9) decimals = 9;
+
+    // Sign and absolute value
+    int sign = (v < 0.0f) ? -1 : 1;
+    float absv = fabsf(v);
+
+    // Integer part (trunc toward zero)
+    int intPart = (int)absv;
+    intPart *= sign; // restore sign for integer part
+
+    // Fractional part: take absolute fractional, scale, then truncate (no rounding)
+    float frac = absv - (float)((int)absv);
+    int multiplier = 1;
+    for (int i = 0; i < decimals; ++i) multiplier *= 10;
+
+    int fracPart = 0;
+    if (multiplier > 1)
+    {
+        fracPart = (int)(frac * (float)multiplier); // truncates toward zero
+    }
+    else
+    {
+        fracPart = 0;
+    }
+
+    fracPart *= sign; // make fraction share the sign of original value
+
+    // Return values: first int (integer part), second int (fractional scaled)
+    cleo->GetPointerToScriptVar(handle)->i = intPart;
+    cleo->GetPointerToScriptVar(handle)->i = fracPart;
+
+    UpdateCompareFlag(handle, true);
+}
+
+///////////////////////////////////////////////////
+//////////// END OPCODES by MatiDragon ////////////
+///////////////////////////////////////////////////
+
 void Init4Opcodes()
 {
     SET_TO(ScriptSpace,         cleo->GetMainLibrarySymbol("_ZN11CTheScripts11ScriptSpaceE"));
@@ -1567,6 +1761,20 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AED, STRING_FLOAT_FORMAT); // 0AED=3,%3d% = float %1d% to_string_format %2d%
     CLEO_RegisterOpcode(0x0AEE, POW); // 0AEE=3,%3d% = %1d% exp %2d% //all floats
     CLEO_RegisterOpcode(0x0AEF, LOG); // 0AEF=3,%3d% = log %1d% base %2d% //all floats
+
+    // MatiDragon opcodes
+    CLEO_RegisterOpcode(0x7000, SET_BUTTON_VALUE); // 7000=5,set_button_value %1d% coords %2d% %3d% scales %4d% %5d%
+    CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
+    CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
+    CLEO_RegisterOpcode(0x7003, CREATE_FILE_OR_DIRECTORY); // 7003=1,create_file_or_directory %1d%
+    CLEO_RegisterOpcode(0x7004, NORMALIZE_ANGLE_DEGREES); // 7004=2,%2d% = normalize_angle_degrees %1d%
+    CLEO_RegisterOpcode(0x7005, NORMALIZE_ANGLE_RADIANS); // 7005=2,%2d% = normalize_angle_radians %1d%
+    CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = toggle_boolean_var %1d%
+    CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = float_div %1d% / %2d%
+    CLEO_RegisterOpcode(0x7008, FLOAT_MUL); // 7008=3,%3d% = float_mul %1d% * %2d%
+    CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = float_sum %1d% + %2d%
+    CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = float_sub %1d% - %2d%
+    CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
 }
 
 ScmFunction* ScmFunction::Store[store_size] = { NULL };

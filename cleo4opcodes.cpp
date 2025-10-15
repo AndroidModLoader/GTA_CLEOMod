@@ -1432,7 +1432,7 @@ CLEO_Fn(SET_BUTTON_VALUE)
     float width = cleo->ReadParam(handle)->f;  // Width
     float height = cleo->ReadParam(handle)->f; // Height
 
-    uintptr_t widgetsAddr = cleo->GetLabelAddress("_ZN15CTouchInterface10m_pWidgetsE");
+    uintptr_t widgetsAddr = cleo->TouchInterfaceWidgets();
 
     // Calculate button address
     widgetsAddr += buttonId * 4;
@@ -1455,7 +1455,7 @@ CLEO_Fn(SET_BUTTON_VALUE)
 
 CLEO_Fn(IS_TOUCH_PRESSED)
 {
-    uintptr_t touchDownAddr = cleo->GetLabelAddress("_ZN15CTouchInterface12m_bTouchDownE");
+    uintptr_t touchDownAddr = cleo->TouchInterfaceTouchDown();
 
     uint8_t isPressed = *(uint8_t*)touchDownAddr; // Read touch state
 
@@ -1471,7 +1471,7 @@ CLEO_Fn(IS_TOUCH_PRESSED)
 
 CLEO_Fn(GET_TOUCH_XY)
 {
-    uintptr_t touchPosAddr = cleo->GetLabelAddress("_ZN15CTouchInterface14m_vecCachedPosE");
+    uintptr_t touchPosAddr = cleo->TouchInterfaceCachedPos();
 
     float x = *(float*)touchPosAddr;       // X
     float y = *(float*)(touchPosAddr + 4); // Y
@@ -1780,10 +1780,10 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x7004, NORMALIZE_ANGLE_DEGREES); // 7004=2,%2d% = normalize_angle_degrees %1d%
     CLEO_RegisterOpcode(0x7005, NORMALIZE_ANGLE_RADIANS); // 7005=2,%2d% = normalize_angle_radians %1d%
     CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = toggle_boolean_var %1d%
-    CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = float_div %1d% / %2d%
-    CLEO_RegisterOpcode(0x7008, FLOAT_MUL); // 7008=3,%3d% = float_mul %1d% * %2d%
-    CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = float_sum %1d% + %2d%
-    CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = float_sub %1d% - %2d%
+    CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
+    CLEO_RegisterOpcode(0x7008, FLOAT_MUL); // 7008=3,%3d% = %1d% * %2d% ; float
+    CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = %1d% + %2d% ; float
+    CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
 }
 

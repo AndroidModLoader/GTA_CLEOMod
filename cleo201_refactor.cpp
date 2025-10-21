@@ -579,11 +579,11 @@ void DrawSingleRect(void* handle, CustomScriptRect& rt)
 void Init201Opcodes()
 {
     // Disable switch-case labels for default opcodes
-    aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x00, 0x0466); // 0DD0
+    //aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x00, 0x0466); // 0DD0
     aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x01, 0x0466); // 0DD1
 
     // Reimplement opcodes
-    CLEO_RegisterOpcode(0x0DD0, GET_LABEL_ADDR); // 0DD0=2,%1d% = get_label_addr %2p% ; android
+    //CLEO_RegisterOpcode(0x0DD0, GET_LABEL_ADDR); // 0DD0=2,%1d% = get_label_addr %2p% ; android
     CLEO_RegisterOpcode(0x0DD1, GET_FUNC_ADDR_BY_NAME); // 0DD1=2,%1d% = get_func_addr_by_cstr_name %2d% ; android
 
     // Fully custom opcodes for Android

@@ -20,6 +20,7 @@ uint16_t FreeScriptAddonInfoId = 1; // 0 is "not assigned" (used for dumbo scrip
 ScriptAddonInfo ScriptAddonInfosStorage[ScriptAddonInfo::allocSize];
 
 char g_szSavesPath[256] { 0 };
+char szCLEOVer[64] { 0 };
 
 // SAUtils
 #include "isautils.h"
@@ -180,6 +181,7 @@ void RemoveScript(void* handle)
         }
     }
 }
+void NoneFunctionLogic(uintptr_t) { return; }
 
 extern "C" __attribute__((target("thumb-mode"))) __attribute__((naked)) void Opcode0DD2_inject()
 {
@@ -565,7 +567,7 @@ const char* GetCLEODir()
 
 CLEO_Fn(AML_HAS_MOD_LOADED)
 {
-    char modname[128];
+    char modname[92];
     CLEO_ReadStringEx(handle, modname, sizeof(modname));
 
     bool hasMod = aml->HasMod(modname);
@@ -574,7 +576,7 @@ CLEO_Fn(AML_HAS_MOD_LOADED)
 }
 CLEO_Fn(AML_HAS_MODVER_LOADED)
 {
-    char modname[128], modver[24];
+    char modname[92], modver[24];
     CLEO_ReadStringEx(handle, modname, sizeof(modname));
     CLEO_ReadStringEx(handle, modver, sizeof(modver));
 
@@ -676,7 +678,7 @@ CLEO_Fn(AML_DO_OPCODE_EXIST)
 }
 CLEO_Fn(AML_PUSH_STRING_TO_VAR)
 {
-    char buf[128];
+    char buf[MAX_STR_LEN];
     CLEO_ReadStringEx(handle, buf, sizeof(buf));
     CLEO_WriteStringEx(handle, buf);
 }
@@ -699,7 +701,7 @@ CLEO_Fn(AML_VIBRATE_STOP)
 CLEO_Fn(AML_SHOW_TOAST)
 {
     bool longerDur = cleo->ReadParam(handle)->i;
-    char buf[128];
+    char buf[MAX_STR_LEN];
     CLEO_ReadStringEx(handle, buf, sizeof(buf));
     aml->ShowToast(longerDur, "%s", buf);
 }
@@ -714,10 +716,9 @@ CLEO_Fn(AML_ANDROID_SDK_INT)
 
 void SAUtilsStarted()
 {
+    sautils->AddButton(SetType_Mods, szCLEOVer, NoneFunctionLogic);
     sautils->AddClickableItem(SetType_Game, "CLEO Location", pCfgCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
     sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCfgCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
-
-    
 }
 
 void Init201Opcodes();
@@ -730,6 +731,7 @@ extern "C" void OnAllModsLoaded()
 {
     if(!cleo) return;
 
+    snprintf(szCLEOVer, sizeof(szCLEOVer), "CLEOMod v%s", modinfo->VersionString());
     nGameAddr = (uintptr_t)cleo->GetMainLibraryLoadAddress();
     
     CLEO_RegisterOpcode(0x3A00, AML_HAS_MOD_LOADED); // 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET

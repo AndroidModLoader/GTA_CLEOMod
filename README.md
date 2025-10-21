@@ -96,6 +96,10 @@ Here is how to do this:
 0AFB=-1,save_script_vars_named %1d% //IF and SET
 0AFC=-1,load_script_vars_named %1d% //IF and SET
 0AFD=1,delete_script_vars_save %1d% //IF and SET
+0AFE=4,%1d% = find_custom_script_named %2d% case %3d% partial %4d% check_filename %5d% //IF and SET
+0AFF=1,set_compare_flag %1d%
+0CB0=1,%1d% = get_language_code
+0CB1=1,%1d% = get_country_code
 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
 3A01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
 3A02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%

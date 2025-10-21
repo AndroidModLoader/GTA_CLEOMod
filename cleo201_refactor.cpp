@@ -348,6 +348,71 @@ CLEO_Fn(FIND_CUSTOM_SCRIPT_WITH_NAME)
     }
     UpdateCompareFlag(handle, *scriptRet != NULL);
 }
+CLEO_Fn(SET_COMPARE_FLAG)
+{
+    UpdateCompareFlag(handle, (cleo->ReadParam(handle)->i != 0) );
+}
+static char m_szDeviceLanguageCode[16] { 0 };
+static char m_szDeviceCountryCode[16] { 0 };
+static bool m_bAlreadyDidReadProps = false;
+inline void InitLanguageProps()
+{
+    if(!m_bAlreadyDidReadProps)
+    {
+        JNIEnv* env = aml->GetJNIEnvironment();
+        strcpy(m_szDeviceLanguageCode, "en");
+        strcpy(m_szDeviceCountryCode, "US");
+
+        if(!env) return;
+
+        jclass localeClass = env->FindClass("java/util/Locale");
+        if(!localeClass) return;
+
+        jmethodID getDefaultMethod = env->GetStaticMethodID(localeClass, "getDefault", "()Ljava/util/Locale;");
+        if(!getDefaultMethod) return;
+
+        jobject defaultLocaleObject = env->CallStaticObjectMethod(localeClass, getDefaultMethod);
+        if(!defaultLocaleObject) return;
+
+        jmethodID getLanguageMethod = env->GetMethodID(localeClass, "getLanguage", "()Ljava/lang/String;");
+        if(getLanguageMethod)
+        {
+            jstring languageString = (jstring)env->CallObjectMethod(defaultLocaleObject, getLanguageMethod);
+            if(languageString)
+            {
+                const char* cstr = env->GetStringUTFChars(languageString, NULL);
+                strncpy(m_szDeviceLanguageCode, cstr, sizeof(cstr)-1);
+                m_szDeviceLanguageCode[sizeof(m_szDeviceLanguageCode)-1] = 0;
+                env->ReleaseStringUTFChars(languageString, cstr);
+            }
+        }
+
+        jmethodID getCountryMethod = env->GetMethodID(localeClass, "getCountry", "()Ljava/lang/String;");
+        if(getCountryMethod)
+        {
+            jstring countryString = (jstring)env->CallObjectMethod(defaultLocaleObject, getCountryMethod);
+            if(countryString)
+            {
+                const char* cstr = env->GetStringUTFChars(countryString, NULL);
+                strncpy(m_szDeviceCountryCode, cstr, sizeof(cstr)-1);
+                m_szDeviceCountryCode[sizeof(m_szDeviceCountryCode)-1] = 0;
+                env->ReleaseStringUTFChars(countryString, cstr);
+            }
+        }
+
+        m_bAlreadyDidReadProps = true;
+    }
+}
+CLEO_Fn(GET_LANGUAGE_CODE)
+{
+    InitLanguageProps();
+    CLEO_WriteStringEx(handle, m_szDeviceLanguageCode);
+}
+CLEO_Fn(GET_COUNTRY_CODE)
+{
+    InitLanguageProps();
+    CLEO_WriteStringEx(handle, m_szDeviceCountryCode);
+}
 
 // Default scripting funcs
 
@@ -579,12 +644,12 @@ void DrawSingleRect(void* handle, CustomScriptRect& rt)
 void Init201Opcodes()
 {
     // Disable switch-case labels for default opcodes
-    //aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x00, 0x0466); // 0DD0
-    aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x01, 0x0466); // 0DD1
+    aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x00, 0x0466); // 0DD0
+    //aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x01, 0x0466); // 0DD1
 
     // Reimplement opcodes
-    //CLEO_RegisterOpcode(0x0DD0, GET_LABEL_ADDR); // 0DD0=2,%1d% = get_label_addr %2p% ; android
-    CLEO_RegisterOpcode(0x0DD1, GET_FUNC_ADDR_BY_NAME); // 0DD1=2,%1d% = get_func_addr_by_cstr_name %2d% ; android
+    CLEO_RegisterOpcode(0x0DD0, GET_LABEL_ADDR); // 0DD0=2,%1d% = get_label_addr %2p% ; android
+    //CLEO_RegisterOpcode(0x0DD1, GET_FUNC_ADDR_BY_NAME); // 0DD1=2,%1d% = get_func_addr_by_cstr_name %2d% ; android
 
     // Fully custom opcodes for Android
     CLEO_RegisterOpcode(0x0AF6, CLEO_RETURN_IF_FALSE); // 0AF6=-1,ret_if_false
@@ -597,6 +662,9 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0AFD, DELETE_VARS_SAVE); // 0AFD=1,delete_script_vars_save %1d% //IF and SET
 
     CLEO_RegisterOpcode(0x0AFE, FIND_CUSTOM_SCRIPT_WITH_NAME); // 0AFE=4,%1d% = find_custom_script_named %2d% case %3d% partial %4d% check_filename %5d% //IF and SET
+    CLEO_RegisterOpcode(0x0AFF, SET_COMPARE_FLAG); // 0AFF=1,set_compare_flag %1d%
+    CLEO_RegisterOpcode(0x0CB0, GET_LANGUAGE_CODE); // 0CB0=1,%1d% = get_language_code
+    CLEO_RegisterOpcode(0x0CB1, GET_COUNTRY_CODE); // 0CB1=1,%1d% = get_country_code
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS

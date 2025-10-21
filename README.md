@@ -175,6 +175,10 @@ Opcodes from CLEO5 in this mod (except debugging ones!!!):
 2702=2, clear_bit value %1d% bit_index %2d%
 2703=3, toggle_bit value %1d% bit_index %2d% state %3d%
 2704=1, is_truthy value %1d%
+2705=-1, pick_random_int values %d% store_to %d%
+2706=-1, pick_random_float values %d% store_to %d%
+2707=-1, pick_random_text values %d% store_to %d%
+2708=1, random_chance %1d%
 ```
 
 ### Another opcodes

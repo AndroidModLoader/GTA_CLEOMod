@@ -227,16 +227,18 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 
 ### Opcodes by MatiDragon
 ```
-7000=5,set_button_value %1d% coords %2d% %3d% scales %4d% %5d%
-7001=1,is_touch_pressed store_to %1d%
-7002=2,get_touch_xy %1d% %2d%
 7003=1,create_file_or_directory %1d%
 7004=2,%2d% = normalize_angle_degrees %1d%
 7005=2,%2d% = normalize_angle_radians %1d%
 7006=2,%2d% = toggle_boolean_var %1d%
-7007=3,%3d% = float_div %1d% / %2d%
-7008=3,%3d% = float_mul %1d% * %2d%
-7009=3,%3d% = float_sum %1d% + %2d%
-700A=3,%3d% = float_sub %1d% - %2d%
+7007=3,%3d% = %1d% / %2d% ; float
+7008=3,%3d% = %1d% * %2d% ; float
+7009=3,%3d% = %1d% + %2d% ; float
+700A=3,%3d% = %1d% - %2d% ; float
 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
+700C=2,file_rename %1d% to %2d%
+700D=4,%1d% %2d% %3d% %4d% = CONV_RGB_TO_HSV_INT r g b a
+700E=4,%1d% %2d% %3d% %4d% = CONV_HSV_TO_RGB_INT H S V A
+700F=4,%1d% %2d% %3d% %4d% = CONV_RGB_TO_HSL_INT r g b a
+7010=4,%1d% %2d% %3d% %4d% = CONV_HSL_TO_RGB_INT H S L A
 ```

@@ -1608,30 +1608,299 @@ CLEO_Fn(SPLIT_FLOAT_TO_SIGNED_PARTS)
     UpdateCompareFlag(handle, true);
 }
 
-// FS_REMOVE
-CLEO_Fn(FS_REMOVE)
+CLEO_Fn(FILE_RENAME)
 {
-    char filepath[256];
-    CLEO_ReadStringEx(handle, filepath, sizeof(filepath));
-    filepath[sizeof(filepath)-1] = 0;
+    char srcPathBuf[256];
+    char dstPathBuf[256];
+    CLEO_ReadStringEx(handle, srcPathBuf, sizeof(srcPathBuf));
+    CLEO_ReadStringEx(handle, dstPathBuf, sizeof(dstPathBuf));
+    srcPathBuf[sizeof(srcPathBuf)-1] = 0;
+    dstPathBuf[sizeof(dstPathBuf)-1] = 0;
 
-    for (int i = 0; filepath[i]; ++i) if (filepath[i] == '\\') filepath[i] = '/';
+    // normalizar slashes
+    for (int i = 0; srcPathBuf[i]; ++i) if (srcPathBuf[i] == '\\') srcPathBuf[i] = '/';
+    for (int i = 0; dstPathBuf[i]; ++i) if (dstPathBuf[i] == '\\') dstPathBuf[i] = '/';
 
-    std::string path = ResolvePath(handle, filepath);
+    std::string src = ResolvePath(handle, srcPathBuf);
+    std::string dst = ResolvePath(handle, dstPathBuf);
 
-    // Try remove file first
-    int result = remove(path.c_str());
-    if (result == 0)
+    // Intentar rename directo (mover/renombrar)
+    int res = rename(src.c_str(), dst.c_str());
+    if (res == 0)
     {
         UpdateCompareFlag(handle, true);
         return;
     }
 
-    // Try rmdir for empty directory
-    result = rmdir(path.c_str());
-    UpdateCompareFlag(handle, result == 0);
+    // Si falla el rename, intentar fallback copy + remove (útil entre dispositivos/FS distintos)
+    FILE* fin = fopen(src.c_str(), "rb");
+    if (!fin)
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+    FILE* fout = fopen(dst.c_str(), "wb");
+    if (!fout)
+    {
+        fclose(fin);
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    const size_t BUF_SIZE = 8192;
+    char *buffer = (char*)malloc(BUF_SIZE);
+    if (!buffer)
+    {
+        fclose(fin);
+        fclose(fout);
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    bool ok = true;
+    size_t n;
+    while ((n = fread(buffer, 1, BUF_SIZE, fin)) > 0)
+    {
+        if (fwrite(buffer, 1, n, fout) != n)
+        {
+            ok = false;
+            break;
+        }
+    }
+
+    free(buffer);
+    fclose(fin);
+    fflush(fout);
+    fclose(fout);
+
+    if (!ok)
+    {
+        // intento fallido: borrar destino parcial
+        remove(dst.c_str());
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    // borrar origen original si la copia fue exitosa
+    if (remove(src.c_str()) != 0)
+    {
+        // copia exitosa pero no se pudo borrar origen => consideramos fallo
+        // opcional: podríamos retornar true y dejar origen; aquí devolvemos false
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    UpdateCompareFlag(handle, true);
 }
 
+// --- helpers: conversions (simple, comentadas) ------------------------
+
+// Helpers clamp
+static float clampf(float v, float a, float b) { if (v < a) return a; if (v > b) return b; return v; }
+static int clampi(int v, int a, int b) { if (v < a) return a; if (v > b) return b; return v; }
+
+// RGB(0..255) -> HSV(H:0..360 int, S:0..100 int, V:0..100 int)
+static void RGB_to_HSV_int_scale(int r, int g, int b, int &outH, int &outS, int &outV)
+{
+    float rf = r / 255.0f;
+    float gf = g / 255.0f;
+    float bf = b / 255.0f;
+
+    float maxv = rf; if (gf > maxv) maxv = gf; if (bf > maxv) maxv = bf;
+    float minv = rf; if (gf < minv) minv = gf; if (bf < minv) minv = bf;
+    float delta = maxv - minv;
+
+    float h = 0.0f;
+    if (delta <= 1e-6f) h = 0.0f;
+    else if (maxv == rf) h = 60.0f * fmodf(((gf - bf) / delta), 6.0f);
+    else if (maxv == gf) h = 60.0f * (((bf - rf) / delta) + 2.0f);
+    else h = 60.0f * (((rf - gf) / delta) + 4.0f);
+    if (h < 0.0f) h += 360.0f;
+
+    float s = (maxv <= 1e-6f) ? 0.0f : (delta / maxv);
+    float v = maxv;
+
+    outH = clampi((int)roundf(h), 0, 360);
+    outS = clampi((int)roundf(s * 100.0f), 0, 100);
+    outV = clampi((int)roundf(v * 100.0f), 0, 100);
+}
+
+// HSV(H:0..360, S:0..100, V:0..100) -> RGB(0..255)
+static void HSV_to_RGB_int_scale(int H, int S, int V, int &outR, int &outG, int &outB)
+{
+    float h = (float)H;
+    float s = (float)S / 100.0f;
+    float v = (float)V / 100.0f;
+
+    if (s <= 0.0f) {
+        int val = clampi((int)roundf(v * 255.0f), 0, 255);
+        outR = outG = outB = val;
+        return;
+    }
+
+    float hh = fmodf(h, 360.0f) / 60.0f;
+    if (hh < 0.0f) hh += 6.0f;
+    int i = (int)floorf(hh);
+    float f = hh - i;
+    float p = v * (1.0f - s);
+    float q = v * (1.0f - s * f);
+    float t = v * (1.0f - s * (1.0f - f));
+
+    float rf=0, gf=0, bf=0;
+    switch(i) {
+        case 0: rf = v; gf = t; bf = p; break;
+        case 1: rf = q; gf = v; bf = p; break;
+        case 2: rf = p; gf = v; bf = t; break;
+        case 3: rf = p; gf = q; bf = v; break;
+        case 4: rf = t; gf = p; bf = v; break;
+        default: rf = v; gf = p; bf = q; break;
+    }
+
+    outR = clampi((int)roundf(rf * 255.0f), 0, 255);
+    outG = clampi((int)roundf(gf * 255.0f), 0, 255);
+    outB = clampi((int)roundf(bf * 255.0f), 0, 255);
+}
+
+// RGB -> HSL (H:0..360, S:0..100, L:0..100)
+static void RGB_to_HSL_int_scale(int r, int g, int b, int &outH, int &outS, int &outL)
+{
+    float rf = r / 255.0f;
+    float gf = g / 255.0f;
+    float bf = b / 255.0f;
+
+    float maxv = rf; if (gf > maxv) maxv = gf; if (bf > maxv) maxv = bf;
+    float minv = rf; if (gf < minv) minv = gf; if (bf < minv) minv = bf;
+    float l = (maxv + minv) * 0.5f;
+    float delta = maxv - minv;
+
+    float h = 0.0f;
+    float s = 0.0f;
+
+    if (delta <= 1e-6f) {
+        h = 0.0f; s = 0.0f;
+    } else {
+        if (l < 0.5f) s = delta / (maxv + minv);
+        else s = delta / (2.0f - maxv - minv);
+
+        if (maxv == rf) h = 60.0f * fmodf(((gf - bf) / delta), 6.0f);
+        else if (maxv == gf) h = 60.0f * (((bf - rf) / delta) + 2.0f);
+        else h = 60.0f * (((rf - gf) / delta) + 4.0f);
+        if (h < 0.0f) h += 360.0f;
+    }
+
+    outH = clampi((int)roundf(h), 0, 360);
+    outS = clampi((int)roundf(s * 100.0f), 0, 100);
+    outL = clampi((int)roundf(l * 100.0f), 0, 100);
+}
+
+// HSL -> RGB
+static void HSL_to_RGB_int_scale(int H, int S, int L, int &outR, int &outG, int &outB)
+{
+    float h = fmodf((float)H, 360.0f);
+    if (h < 0.0f) h += 360.0f;
+    float s = (float)S / 100.0f;
+    float l = (float)L / 100.0f;
+
+    float rf, gf, bf;
+    if (s <= 0.0f) {
+        rf = gf = bf = l;
+    } else {
+        float q = (l < 0.5f) ? (l * (1.0f + s)) : (l + s - l * s);
+        float p = 2.0f * l - q;
+        float hk = h / 360.0f;
+        auto hue_to_rgb_local = [](float p, float q, float t)->float {
+            if (t < 0.0f) t += 1.0f;
+            if (t > 1.0f) t -= 1.0f;
+            if (t < 1.0f/6.0f) return p + (q - p) * 6.0f * t;
+            if (t < 1.0f/2.0f) return q;
+            if (t < 2.0f/3.0f) return p + (q - p) * (2.0f/3.0f - t) * 6.0f;
+            return p;
+        };
+        rf = hue_to_rgb_local(p, q, hk + 1.0f/3.0f);
+        gf = hue_to_rgb_local(p, q, hk);
+        bf = hue_to_rgb_local(p, q, hk - 1.0f/3.0f);
+    }
+
+    outR = clampi((int)roundf(rf * 255.0f), 0, 255);
+    outG = clampi((int)roundf(gf * 255.0f), 0, 255);
+    outB = clampi((int)roundf(bf * 255.0f), 0, 255);
+}
+
+// ---------------- CLEO opcodes: ALPHA OBLIGATORIA --------------------
+
+// Firma obligatoria: todos reciben y devuelven A (0..255).
+
+// 0x7020: RGB(A) -> HSV (H:0..360 int, S:0..100 int, V:0..100 int, A kept)
+// r g b a = CONV_RGB_TO_HSV_INT r g b a
+CLEO_Fn(CONV_RGB_TO_HSV_INT)
+{
+    int r = cleo->ReadParam(handle)->i;
+    int g = cleo->ReadParam(handle)->i;
+    int b = cleo->ReadParam(handle)->i;
+    int a = cleo->ReadParam(handle)->i; // OBLIGATORIO
+
+    int H,S,V;
+    RGB_to_HSV_int_scale(r,g,b,H,S,V);
+
+    cleo->GetPointerToScriptVar(handle)->i = H;
+    cleo->GetPointerToScriptVar(handle)->i = S;
+    cleo->GetPointerToScriptVar(handle)->i = V;
+    cleo->GetPointerToScriptVar(handle)->i = a;
+}
+
+// 0x7021: HSV(A) -> RGB(A)
+// r g b a = CONV_HSV_TO_RGB_INT H S V A
+CLEO_Fn(CONV_HSV_TO_RGB_INT)
+{
+    int H = cleo->ReadParam(handle)->i;
+    int S = cleo->ReadParam(handle)->i;
+    int V = cleo->ReadParam(handle)->i;
+    int a = cleo->ReadParam(handle)->i; // OBLIGATORIO
+
+    int r,g,b;
+    HSV_to_RGB_int_scale(H,S,V,r,g,b);
+
+    cleo->GetPointerToScriptVar(handle)->i = r;
+    cleo->GetPointerToScriptVar(handle)->i = g;
+    cleo->GetPointerToScriptVar(handle)->i = b;
+    cleo->GetPointerToScriptVar(handle)->i = a;
+}
+
+// 0x7022: RGB(A) -> HSL(A)
+// H S L a = CONV_RGB_TO_HSL_INT r g b a
+CLEO_Fn(CONV_RGB_TO_HSL_INT)
+{
+    int r = cleo->ReadParam(handle)->i;
+    int g = cleo->ReadParam(handle)->i;
+    int b = cleo->ReadParam(handle)->i;
+    int a = cleo->ReadParam(handle)->i; // OBLIGATORIO
+
+    int H,S,L;
+    RGB_to_HSL_int_scale(r,g,b,H,S,L);
+
+    cleo->GetPointerToScriptVar(handle)->i = H;
+    cleo->GetPointerToScriptVar(handle)->i = S;
+    cleo->GetPointerToScriptVar(handle)->i = L;
+    cleo->GetPointerToScriptVar(handle)->i = a;
+}
+
+// 0x7023: HSL(A) -> RGB(A)
+// r g b a = CONV_HSL_TO_RGB_INT H S L A
+CLEO_Fn(CONV_HSL_TO_RGB_INT)
+{
+    int H = cleo->ReadParam(handle)->i;
+    int S = cleo->ReadParam(handle)->i;
+    int L = cleo->ReadParam(handle)->i;
+    int a = cleo->ReadParam(handle)->i; // OBLIGATORIO
+
+    int r,g,b;
+    HSL_to_RGB_int_scale(H,S,L,r,g,b);
+
+    cleo->GetPointerToScriptVar(handle)->i = r;
+    cleo->GetPointerToScriptVar(handle)->i = g;
+    cleo->GetPointerToScriptVar(handle)->i = b;
+    cleo->GetPointerToScriptVar(handle)->i = a;
+}
 
 ///////////////////////////////////////////////////
 //////////// END OPCODES by MatiDragon ////////////
@@ -1811,7 +2080,11 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = %1d% + %2d% ; float
     CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
-    CLEO_RegisterOpcode(0x700C, FS_REMOVE); // 700C=1,fs_remove %1d%
+    CLEO_RegisterOpcode(0x700C, FILE_RENAME); // 700C=2,file rename %1d% to %2d%
+    CLEO_RegisterOpcode(0x700D, CONV_RGB_TO_HSV_INT); // 700D=4,%1d% %2d% %3d% %4d% = CONV_RGB_TO_HSV_INT r g b a
+    CLEO_RegisterOpcode(0x700E, CONV_HSV_TO_RGB_INT); // 700E=4,%1d% %2d% %3d% %4d% = CONV_HSV_TO_RGB_INT H S V A
+    CLEO_RegisterOpcode(0x700F, CONV_RGB_TO_HSL_INT); // 700F=4,%1d% %2d% %3d% %4d% = CONV_RGB_TO_HSL_INT r g b a
+    CLEO_RegisterOpcode(0x7010, CONV_HSL_TO_RGB_INT); // 7010=4,%1d% %2d% %3d% %4d% = CONV_HSL_TO_RGB_INT H S L A
 }
 
 ScmFunction* ScmFunction::Store[store_size] = { NULL };

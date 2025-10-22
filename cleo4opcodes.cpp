@@ -1632,96 +1632,6 @@ CLEO_Fn(FS_REMOVE)
     UpdateCompareFlag(handle, result == 0);
 }
 
-// Helper: obtain lang and region from POSIX/Android environment and std::locale
-static std::pair<std::string, std::string> GetLocaleLangRegion_POSIX()
-{
-    std::string lang2;
-    std::string region2;
-
-    // 1) try environment variables commonly set on Android/linux
-    const char* envs[] = { "LC_ALL", "LC_MESSAGES", "LANG", nullptr };
-    std::string loc;
-    for (const char** e = envs; *e != nullptr; ++e)
-    {
-        const char* v = getenv(*e);
-        if (v && v[0])
-        {
-            loc = v;
-            break;
-        }
-    }
-
-    // 2) fallback to std::locale if env didn't give anything useful
-    if (loc.empty())
-    {
-        try { loc = std::locale("").name(); } catch(...) { loc = ""; }
-    }
-
-    if (!loc.empty())
-    {
-        // Normalize separators and remove encoding suffix
-        // Examples to handle: "en_US.UTF-8", "en_US", "en-US", "es_AR", "pt_BR.UTF8"
-        std::replace(loc.begin(), loc.end(), '-', '_');
-        size_t dot = loc.find('.');
-        if (dot != std::string::npos) loc.resize(dot);
-        // Now loc like "en_US" or "en" or "es_AR"
-        size_t pos = loc.find('_');
-        if (pos != std::string::npos)
-        {
-            if (pos >= 2) lang2 = loc.substr(0, 2);
-            if (pos + 1 < loc.size()) region2 = loc.substr(pos + 1, 2);
-        }
-        else
-        {
-            if (loc.size() >= 2) lang2 = loc.substr(0, 2);
-        }
-    }
-
-    // Final fallback attempts: try ANDROID_PROPERTY "persist.sys.locale" via getenv("ANDROID_LOCALE") if present
-    if (lang2.empty())
-    {
-        const char* andro = getenv("ANDROID_LOCALE");
-        if (andro && andro[0])
-        {
-            std::string al = andro;
-            std::replace(al.begin(), al.end(), '-', '_');
-            size_t p = al.find('_');
-            if (p != std::string::npos)
-            {
-                if (p >= 2) lang2 = al.substr(0,2);
-                if (p + 1 < al.size()) region2 = al.substr(p+1,2);
-            }
-            else if (al.size() >= 2) lang2 = al.substr(0,2);
-        }
-    }
-
-    // normalize to lower/upper
-    for (auto &c : lang2) c = (char)tolower((unsigned char)c);
-    for (auto &c : region2) c = (char)toupper((unsigned char)c);
-
-    // final defaults
-    if (lang2.empty()) lang2 = "en";
-    if (region2.empty()) region2 = "US";
-
-    return { lang2, region2 };
-}
-
-// GET_OS_LANG (writes 2-char language string)
-CLEO_Fn(GET_OS_LANG)
-{
-    auto lr = GetLocaleLangRegion_POSIX();
-    CLEO_WriteStringEx(handle, lr.first.c_str());
-    UpdateCompareFlag(handle, true);
-}
-
-// GET_OS_REGION (writes 2-char region string)
-CLEO_Fn(GET_OS_REGION)
-{
-    auto lr = GetLocaleLangRegion_POSIX();
-    CLEO_WriteStringEx(handle, lr.second.c_str());
-    UpdateCompareFlag(handle, true);
-}
-
 
 ///////////////////////////////////////////////////
 //////////// END OPCODES by MatiDragon ////////////
@@ -1902,8 +1812,6 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
     CLEO_RegisterOpcode(0x700C, FS_REMOVE); // 700C=1,fs_remove %1d%
-    CLEO_RegisterOpcode(0x700D, GET_OS_LANG); // 700D=1,get_os_lang %1d%
-    CLEO_RegisterOpcode(0x700E, GET_OS_REGION); // 700E=1,get_os_region %1d%
 }
 
 ScmFunction* ScmFunction::Store[store_size] = { NULL };

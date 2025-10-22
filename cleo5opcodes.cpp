@@ -564,7 +564,29 @@ CLEO_Fn(PICK_RANDOM_FLOAT)
 }
 CLEO_Fn(PICK_RANDOM_TEXT)
 {
-    
+    int args = GetVarArgCount(handle);
+    if(args < 2)
+    {
+        // suspend?
+        CLEO_WriteStringEx(handle, "");
+        return;
+    }
+
+    --args;
+    char text[MAX_STR_LEN], trashtext[MAX_STR_LEN];
+    int target = rand() % args;
+    for(int i = 0; i < args; ++i)
+    {
+        if(i == target)
+        {
+            CLEO_ReadStringEx(handle, text, sizeof(text));
+        }
+        else
+        {
+            CLEO_ReadStringEx(handle, trashtext, sizeof(trashtext)); // im lazy to make it look good
+        }
+    }
+    CLEO_WriteStringEx(handle, text);
 }
 CLEO_Fn(RANDOM_CHANCE)
 {

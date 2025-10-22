@@ -85,6 +85,7 @@ int* pScriptsStorage; // 192E0
 int* pScriptsStorageEnd; // 192E4
 void* CLEOOpcodesStorage; // 219B20
 void** (*LookupForOpcodeFunc)(void* storage, uint16_t& opcode); // CE88
+void AddGXTLabel(const char* gxtLabel, const char* text);
 
 // Game pointers
 void** ppActiveScripts, **ppIdleScripts;
@@ -174,7 +175,10 @@ void RemoveScript(void* handle)
     else
     {
         AddScriptToList(handle, ppIdleScripts);
-        if(*nGameIdent == GTASA) ShutdownThisScript(handle);
+        if(*nGameIdent == GTASA)
+        {
+            ShutdownThisScript(handle);
+        }
         else
         {
             GetActiveFlag(handle) = false;
@@ -365,8 +369,15 @@ DECL_HOOKi(ProcessScript, void* handle)
     return ProcessScript(handle);
 }
 
-void AddGXTLabel(const char* gxtLabel, const char* text);
-extern "C" void OnModPreLoad()
+void SAUtilsStarted()
+{
+    snprintf(szCLEOVer, sizeof(szCLEOVer), "CLEOMod v%s", modinfo->VersionString());
+    sautils->AddButton(SetType_Mods, szCLEOVer, NoneFunctionLogic);
+    sautils->AddClickableItem(SetType_Game, "CLEO Location", pCfgCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
+    sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCfgCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
+}
+
+ON_MOD_PRELOAD()
 {
     logger->SetTag("CLEO Mod");
     pCfgCLEOLocation = cfg->Bind("CLEO_Location", 1);
@@ -551,6 +562,12 @@ extern "C" void OnModPreLoad()
     logger->Info("CLEO Addon Initialized!");
 }
 
+ON_MOD_LOAD()
+{
+    sautils = (ISAUtils*)GetInterface("SAUtils");
+    if(sautils) SAUtilsStarted();
+}
+
 static char sCleoDir[512] { 0 };
 const char* GetCLEODir()
 {
@@ -714,24 +731,16 @@ CLEO_Fn(AML_ANDROID_SDK_INT)
     cleo->GetPointerToScriptVar(handle)->i = aml->GetAndroidVersion();
 }
 
-void SAUtilsStarted()
-{
-    sautils->AddButton(SetType_Mods, szCLEOVer, NoneFunctionLogic);
-    sautils->AddClickableItem(SetType_Game, "CLEO Location", pCfgCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
-    sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCfgCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);
-}
-
 void Init201Opcodes();
 void Init4Opcodes();
 void Init5Opcodes();
 void InitMathOpcodes();
 char g_szScriptStore[256 * 0x100]; // 0x100 is the size of script in GTA:SA
                                    // (VC has smaller size=0x88 so it's fine to use BIGGER static value)
-extern "C" void OnAllModsLoaded()
+ON_ALL_MODS_LOAD()
 {
     if(!cleo) return;
 
-    snprintf(szCLEOVer, sizeof(szCLEOVer), "CLEOMod v%s", modinfo->VersionString());
     nGameAddr = (uintptr_t)cleo->GetMainLibraryLoadAddress();
     
     CLEO_RegisterOpcode(0x3A00, AML_HAS_MOD_LOADED); // 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
@@ -859,7 +868,7 @@ extern "C" void OnAllModsLoaded()
     }
 }
 
-extern "C" void OnModUnload()
+ON_MOD_UNLOAD()
 {
     delete pCfgCLEOLocation;
     delete pCfgCLEORedArrow;
@@ -868,7 +877,7 @@ extern "C" void OnModUnload()
     delete pCfgCLEOMenuArrowPressedAlpha;
 }
 
-extern "C" void OnGameCrash(const char* szLibName, int sig, int code, uintptr_t libaddr, mcontext_t* mcontext)
+ON_GAME_CRASH()
 {
     // Print lastScript* data to the cleo logging!
     if(!cleo) return;
@@ -938,11 +947,11 @@ extern "C" void OnGameCrash(const char* szLibName, int sig, int code, uintptr_t 
     }
 }
 
-extern "C" void OnInterfaceAdded(const char* name, const void* ptr)
-{
-    if(!strcmp(name, "SAUtils"))
-    {
-        sautils = (ISAUtils*)ptr;
-        SAUtilsStarted();
-    }
-}
+//ON_NEW_INTERFACE()
+//{
+//    if(!strcmp(name, "SAUtils"))
+//    {
+//        sautils = (ISAUtils*)ptr;
+//        SAUtilsStarted();
+//    }
+//}

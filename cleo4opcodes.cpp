@@ -1830,7 +1830,6 @@ static void HSL_to_RGB_int_scale(int H, int S, int L, int &outR, int &outG, int 
 
 // Firma obligatoria: todos reciben y devuelven A (0..255).
 
-// 0x7020: RGB(A) -> HSV (H:0..360 int, S:0..100 int, V:0..100 int, A kept)
 // r g b a = CONV_RGB_TO_HSV_INT r g b a
 CLEO_Fn(CONV_RGB_TO_HSV_INT)
 {
@@ -1848,7 +1847,6 @@ CLEO_Fn(CONV_RGB_TO_HSV_INT)
     cleo->GetPointerToScriptVar(handle)->i = a;
 }
 
-// 0x7021: HSV(A) -> RGB(A)
 // r g b a = CONV_HSV_TO_RGB_INT H S V A
 CLEO_Fn(CONV_HSV_TO_RGB_INT)
 {
@@ -1866,7 +1864,6 @@ CLEO_Fn(CONV_HSV_TO_RGB_INT)
     cleo->GetPointerToScriptVar(handle)->i = a;
 }
 
-// 0x7022: RGB(A) -> HSL(A)
 // H S L a = CONV_RGB_TO_HSL_INT r g b a
 CLEO_Fn(CONV_RGB_TO_HSL_INT)
 {
@@ -1884,7 +1881,6 @@ CLEO_Fn(CONV_RGB_TO_HSL_INT)
     cleo->GetPointerToScriptVar(handle)->i = a;
 }
 
-// 0x7023: HSL(A) -> RGB(A)
 // r g b a = CONV_HSL_TO_RGB_INT H S L A
 CLEO_Fn(CONV_HSL_TO_RGB_INT)
 {
@@ -1900,6 +1896,196 @@ CLEO_Fn(CONV_HSL_TO_RGB_INT)
     cleo->GetPointerToScriptVar(handle)->i = g;
     cleo->GetPointerToScriptVar(handle)->i = b;
     cleo->GetPointerToScriptVar(handle)->i = a;
+}
+
+// Helpers mínimos (asume ya tienes clampi, HSV/RGB/HSL helpers previos)
+static int lerp_int(int a, int b, int tInt) {
+    if (tInt <= 0) return a;
+    if (tInt >= 100) return b;
+    return clampi((int)roundf(a + (b - a) * (tInt / 100.0f)), 0, 255);
+}
+static int lerp_percent_int(int a, int b, int tInt, int lo, int hi) {
+    int v = clampi((int)roundf(a + (b - a) * (tInt / 100.0f)), lo, hi);
+    return v;
+}
+
+// r g b a = RGB_LERP_INT sr sg sb sa er eg eb ea tInt
+CLEO_Fn(RGB_LERP_INT)
+{
+    int sr = cleo->ReadParam(handle)->i;
+    int sg = cleo->ReadParam(handle)->i;
+    int sb = cleo->ReadParam(handle)->i;
+    int sa = cleo->ReadParam(handle)->i;
+
+    int er = cleo->ReadParam(handle)->i;
+    int eg = cleo->ReadParam(handle)->i;
+    int eb = cleo->ReadParam(handle)->i;
+    int ea = cleo->ReadParam(handle)->i;
+
+    int tInt = cleo->ReadParam(handle)->i; // 0..100
+    if (tInt < 0) tInt = 0; if (tInt > 100) tInt = 100;
+
+    int r = lerp_int(sr, er, tInt);
+    int g = lerp_int(sg, eg, tInt);
+    int b = lerp_int(sb, eb, tInt);
+    int a = lerp_int(sa, ea, tInt);
+
+    cleo->GetPointerToScriptVar(handle)->i = r;
+    cleo->GetPointerToScriptVar(handle)->i = g;
+    cleo->GetPointerToScriptVar(handle)->i = b;
+    cleo->GetPointerToScriptVar(handle)->i = a;
+}
+
+// r g b a = HSV_LERP_INT sr sg sb sa er eg eb ea tInt mode
+CLEO_Fn(HSV_LERP_INT)
+{
+    int sr = cleo->ReadParam(handle)->i;
+    int sg = cleo->ReadParam(handle)->i;
+    int sb = cleo->ReadParam(handle)->i;
+    int sa = cleo->ReadParam(handle)->i;
+
+    int er = cleo->ReadParam(handle)->i;
+    int eg = cleo->ReadParam(handle)->i;
+    int eb = cleo->ReadParam(handle)->i;
+    int ea = cleo->ReadParam(handle)->i;
+
+    int tInt = cleo->ReadParam(handle)->i;
+    int mode = cleo->ReadParam(handle)->i; // 0 short-arc, 1 direct
+    if (tInt < 0) tInt = 0; if (tInt > 100) tInt = 100;
+    float t = tInt / 100.0f;
+
+    int sH,sS,sV;
+    int eH,eS,eV;
+    RGB_to_HSV_int_scale(sr,sg,sb,sH,sS,sV);
+    RGB_to_HSV_int_scale(er,eg,eb,eH,eS,eV);
+
+    float outHf;
+    if (mode == 0) {
+        float diff = (float)eH - (float)sH;
+        if (diff > 180.0f) diff -= 360.0f;
+        else if (diff < -180.0f) diff += 360.0f;
+        outHf = (float)sH + diff * t;
+    } else {
+        outHf = (float)sH + ((float)eH - (float)sH) * t;
+    }
+    int outH = ((int)roundf(fmodf(outHf, 360.0f)));
+    if (outH < 0) outH += 360;
+    int outS = clampi((int)roundf(sS + (eS - sS) * t), 0, 100);
+    int outV = clampi((int)roundf(sV + (eV - sV) * t), 0, 100);
+
+    int r,g,b;
+    HSV_to_RGB_int_scale(outH, outS, outV, r, g, b);
+    int outA = clampi((int)roundf(sa + (ea - sa) * t), 0, 255);
+
+    cleo->GetPointerToScriptVar(handle)->i = r;
+    cleo->GetPointerToScriptVar(handle)->i = g;
+    cleo->GetPointerToScriptVar(handle)->i = b;
+    cleo->GetPointerToScriptVar(handle)->i = outA;
+}
+
+// r g b a = HSL_LERP_INT sr sg sb sa er eg eb ea tInt
+CLEO_Fn(HSL_LERP_INT)
+{
+    int sr = cleo->ReadParam(handle)->i;
+    int sg = cleo->ReadParam(handle)->i;
+    int sb = cleo->ReadParam(handle)->i;
+    int sa = cleo->ReadParam(handle)->i;
+
+    int er = cleo->ReadParam(handle)->i;
+    int eg = cleo->ReadParam(handle)->i;
+    int eb = cleo->ReadParam(handle)->i;
+    int ea = cleo->ReadParam(handle)->i;
+
+    int tInt = cleo->ReadParam(handle)->i;
+    if (tInt < 0) tInt = 0; if (tInt > 100) tInt = 100;
+    float t = tInt / 100.0f;
+
+    int sH,sS,sL;
+    int eH,eS,eL;
+    RGB_to_HSL_int_scale(sr,sg,sb,sH,sS,sL);
+    RGB_to_HSL_int_scale(er,eg,eb,eH,eS,eL);
+
+    float diff = (float)eH - (float)sH;
+    if (diff > 180.0f) diff -= 360.0f;
+    else if (diff < -180.0f) diff += 360.0f;
+    float outHf = (float)sH + diff * t;
+    int outH = ((int)roundf(fmodf(outHf, 360.0f)));
+    if (outH < 0) outH += 360;
+    int outS = clampi((int)roundf(sS + (eS - sS) * t), 0, 100);
+    int outL = clampi((int)roundf(sL + (eL - sL) * t), 0, 100);
+
+    int r,g,b;
+    HSL_to_RGB_int_scale(outH, outS, outL, r, g, b);
+    int outA = clampi((int)roundf(sa + (ea - sa) * t), 0, 255);
+
+    cleo->GetPointerToScriptVar(handle)->i = r;
+    cleo->GetPointerToScriptVar(handle)->i = g;
+    cleo->GetPointerToScriptVar(handle)->i = b;
+    cleo->GetPointerToScriptVar(handle)->i = outA;
+}
+
+// r g b a = BLEND_RGBA_INT srcR srcG srcB srcA dstR dstG dstB dstA mode
+CLEO_Fn(BLEND_RGBA_INT)
+{
+    int sR = cleo->ReadParam(handle)->i;
+    int sG = cleo->ReadParam(handle)->i;
+    int sB = cleo->ReadParam(handle)->i;
+    int sA = cleo->ReadParam(handle)->i;
+
+    int dR = cleo->ReadParam(handle)->i;
+    int dG = cleo->ReadParam(handle)->i;
+    int dB = cleo->ReadParam(handle)->i;
+    int dA = cleo->ReadParam(handle)->i;
+
+    int mode = cleo->ReadParam(handle)->i;
+
+    // Convert to premultiplied floats 0..1
+    float sa = sA / 255.0f, da = dA / 255.0f;
+    float sr = (sR / 255.0f), sg = (sG / 255.0f), sb = (sB / 255.0f);
+    float dr = (dR / 255.0f), dg = (dG / 255.0f), db = (dB / 255.0f);
+
+    float outRf=0, outGf=0, outBf=0;
+    switch(mode) {
+        case 0: // add (clamped)
+            outRf = sr*sa + dr*da;
+            outGf = sg*sa + dg*da;
+            outBf = sb*sa + db*da;
+            break;
+        case 1: // multiply
+            outRf = (sr*dr);
+            outGf = (sg*dg);
+            outBf = (sb*db);
+            break;
+        case 2: // screen: 1 - (1-a)*(1-b)
+            outRf = 1.0f - (1.0f - sr)*(1.0f - dr);
+            outGf = 1.0f - (1.0f - sg)*(1.0f - dg);
+            outBf = 1.0f - (1.0f - sb)*(1.0f - db);
+            break;
+        case 3: // overlay (approx)
+            outRf = (dr <= 0.5f) ? (2.0f * sr * dr) : (1.0f - 2.0f * (1.0f - sr) * (1.0f - dr));
+            outGf = (dg <= 0.5f) ? (2.0f * sg * dg) : (1.0f - 2.0f * (1.0f - sg) * (1.0f - dg));
+            outBf = (db <= 0.5f) ? (2.0f * sb * db) : (1.0f - 2.0f * (1.0f - sb) * (1.0f - db));
+            break;
+        default:
+            // fallback simple alpha-over (src over dst)
+            outRf = sr*sa + dr*(1.0f - sa);
+            outGf = sg*sa + dg*(1.0f - sa);
+            outBf = sb*sa + db*(1.0f - sa);
+            break;
+    }
+
+    // simple alpha composite: outA = lerp(dstA, srcA, srcA) approx src-over
+    float outAf = sa + da * (1.0f - sa);
+    // convert back to 0..255 clamped
+    int orr = clampi((int)roundf(outRf * 255.0f), 0, 255);
+    int org = clampi((int)roundf(outGf * 255.0f), 0, 255);
+    int orb = clampi((int)roundf(outBf * 255.0f), 0, 255);
+    int oa = clampi((int)roundf(outAf * 255.0f), 0, 255);
+
+    cleo->GetPointerToScriptVar(handle)->i = orr;
+    cleo->GetPointerToScriptVar(handle)->i = org;
+    cleo->GetPointerToScriptVar(handle)->i = orb;
+    cleo->GetPointerToScriptVar(handle)->i = oa;
 }
 
 ///////////////////////////////////////////////////
@@ -2081,10 +2267,14 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
     CLEO_RegisterOpcode(0x700C, FILE_RENAME); // 700C=2,file rename %1d% to %2d%
-    CLEO_RegisterOpcode(0x700D, CONV_RGB_TO_HSV_INT); // 700D=4,%1d% %2d% %3d% %4d% = CONV_RGB_TO_HSV_INT r g b a
-    CLEO_RegisterOpcode(0x700E, CONV_HSV_TO_RGB_INT); // 700E=4,%1d% %2d% %3d% %4d% = CONV_HSV_TO_RGB_INT H S V A
-    CLEO_RegisterOpcode(0x700F, CONV_RGB_TO_HSL_INT); // 700F=4,%1d% %2d% %3d% %4d% = CONV_RGB_TO_HSL_INT r g b a
-    CLEO_RegisterOpcode(0x7010, CONV_HSL_TO_RGB_INT); // 7010=4,%1d% %2d% %3d% %4d% = CONV_HSL_TO_RGB_INT H S L A
+    CLEO_RegisterOpcode(0x700D, CONV_RGB_TO_HSV_INT); // 700D=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSV_INT %1d% %2d% %3d% %4d%
+    CLEO_RegisterOpcode(0x700E, CONV_HSV_TO_RGB_INT); // 700E=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_RGB_INT %1d% %2d% %3d% %4d%
+    CLEO_RegisterOpcode(0x700F, CONV_RGB_TO_HSL_INT); // 700F=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSL_INT %1d% %2d% %3d% %4d%
+    CLEO_RegisterOpcode(0x7010, CONV_HSL_TO_RGB_INT); // 7010=8,%5d% %6d% %7d% %8d% = CONV_HSL_TO_RGB_INT %1d% %2d% %3d% %4d%
+    CLEO_RegisterOpcode(0x7011, RGB_LERP_INT); // 7011=13,%10d% %11d% %12d% %13d% = RGB_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
+    CLEO_RegisterOpcode(0x7012, HSV_LERP_INT); // 7012=13,%10d% %11d% %12d% %13d% = HSV_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
+    CLEO_RegisterOpcode(0x7013, HSL_LERP_INT); // 7013=13,%10d% %11d% %12d% %13d% = HSL_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
+    CLEO_RegisterOpcode(0x7014, BLEND_RGBA_INT); // 7014=9,%5d% %6d% %7d% %8d% = BLEND_RGBA_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% mode %9d%
 }
 
 ScmFunction* ScmFunction::Store[store_size] = { NULL };

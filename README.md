@@ -227,22 +227,23 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 
 ### Opcodes by MatiDragon
 ```
+7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
 7003=1,create_file_or_directory %1d%
 7004=2,%2d% = normalize_angle_degrees %1d%
 7005=2,%2d% = normalize_angle_radians %1d%
-7006=2,%2d% = toggle_boolean_var %1d%
+7006=2,%2d% != %1d%
 7007=3,%3d% = %1d% / %2d% ; float
 7008=3,%3d% = %1d% * %2d% ; float
 7009=3,%3d% = %1d% + %2d% ; float
 700A=3,%3d% = %1d% - %2d% ; float
 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
 700C=2,file_rename %1d% to %2d%
-700D=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSV_INT %1d% %2d% %3d% %4d%
-700E=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_RGB_INT %1d% %2d% %3d% %4d%
-700F=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSL_INT %1d% %2d% %3d% %4d%
-7010=8,%5d% %6d% %7d% %8d% = CONV_HSL_TO_RGB_INT %1d% %2d% %3d% %4d%
-7011=13,%10d% %11d% %12d% %13d% = RGB_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
-7012=13,%10d% %11d% %12d% %13d% = HSV_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
-7013=13,%10d% %11d% %12d% %13d% = HSL_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
+700D=8,%5d% %6d% %7d% %8d% = CONV_RGBA_TO_HSVA_INT %1d% %2d% %3d% %4d%
+700E=8,%5d% %6d% %7d% %8d% = CONV_HSVA_TO_RGBA_INT %1d% %2d% %3d% %4d%
+700F=8,%5d% %6d% %7d% %8d% = CONV_RGBA_TO_HSLA_INT %1d% %2d% %3d% %4d%
+7010=8,%5d% %6d% %7d% %8d% = CONV_HSLA_TO_RGBA_INT %1d% %2d% %3d% %4d%
+7011=13,%10d% %11d% %12d% %13d% = RGBA_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
+7012=13,%10d% %11d% %12d% %13d% = HSVA_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
+7013=13,%10d% %11d% %12d% %13d% = HSLA_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
 7014=9,%5d% %6d% %7d% %8d% = BLEND_RGBA_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% mode %9d%
 ```

@@ -73,8 +73,8 @@ void (*SetWeaponLockOnTarget)(uintptr_t, void*);
 
 // By MatiDragon
 void (*TouchInterfaceWidgets)(int, float, float, float, float);
-void (*TouchInterfaceTouchDown)(bool);
-void (*TouchInterfaceCachedPos)(float*, float*);
+//void (*TouchInterfaceTouchDown)(bool);
+//void (*TouchInterfaceCachedPos)(float*, float*);
 
 inline bool IsEndSlash(const char* str)
 {
@@ -1421,8 +1421,7 @@ CLEO_Fn(LOG)
 /////////// BEGIN OPCODES by MatiDragon /////////////
 /////////////////////////////////////////////////////
 
-/*
-CLEO_Fn(SET_BUTTON_VALUE)
+CLEO_Fn(SET_WIDGET_TRANSFORM)
 {
     // Widget ID
     int buttonId = cleo->ReadParam(handle)->i;
@@ -1454,6 +1453,7 @@ CLEO_Fn(SET_BUTTON_VALUE)
     UpdateCompareFlag(handle, buttonPtr != 0); // Update compare flag
 }
 
+/*
 CLEO_Fn(IS_TOUCH_PRESSED)
 {
     uintptr_t touchDownAddr = cleo->TouchInterfaceTouchDown();
@@ -2088,6 +2088,34 @@ CLEO_Fn(BLEND_RGBA_INT)
     cleo->GetPointerToScriptVar(handle)->i = oa;
 }
 
+// Firm: result = INT_RULE_OF_THREE A B C
+CLEO_Fn(INT_RULE_OF_THREE)
+{
+    int A = cleo->ReadParam(handle)->i;
+    int B = cleo->ReadParam(handle)->i;
+    int C = cleo->ReadParam(handle)->i;
+
+    int result = 0;
+    if (A != 0)
+        result = (B * C) / A;
+
+    cleo->GetPointerToScriptVar(handle)->i = result;
+}
+
+// Firm: result = FLOAT_RULE_OF_THREE A B C
+CLEO_Fn(FLOAT_RULE_OF_THREE)
+{
+    float A = cleo->ReadParam(handle)->f;
+    float B = cleo->ReadParam(handle)->f;
+    float C = cleo->ReadParam(handle)->f;
+
+    float result = 0.0f;
+    if (fabsf(A) > 1e-6f)
+        result = (B * C) / A;
+
+    cleo->GetPointerToScriptVar(handle)->f = result;
+}
+
 ///////////////////////////////////////////////////
 //////////// END OPCODES by MatiDragon ////////////
 ///////////////////////////////////////////////////
@@ -2135,7 +2163,7 @@ void Init4Opcodes()
         SET_TO(SetWeaponLockOnTarget,           cleo->GetMainLibrarySymbol("_ZN4CPed21SetWeaponLockOnTargetEP7CEntity"));
 
         // By MatiDragon
-        //SET_TO(TouchInterfaceWidgets,     cleo->GetMainLibrarySymbol("_ZN15CTouchInterface10m_pWidgetsE"));
+        SET_TO(TouchInterfaceWidgets,     cleo->GetMainLibrarySymbol("_ZN15CTouchInterface10m_pWidgetsE"));
         //SET_TO(TouchInterfaceTouchDown,   cleo->GetMainLibrarySymbol("_ZN15CTouchInterface12m_bTouchDownE"));
         //SET_TO(TouchInterfaceCachedPos, cleo->GetMainLibrarySymbol("_ZN15CTouchInterface14m_vecCachedPosE"));
     }
@@ -2254,13 +2282,13 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AEF, LOG); // 0AEF=3,%3d% = log %1d% base %2d% //all floats
 
     // MatiDragon opcodes
-    //CLEO_RegisterOpcode(0x7000, SET_BUTTON_VALUE); // 7000=5,set_button_value %1d% coords %2d% %3d% scales %4d% %5d%
+    CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
     //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
     //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
     CLEO_RegisterOpcode(0x7003, CREATE_FILE_OR_DIRECTORY); // 7003=1,create_file_or_directory %1d%
     CLEO_RegisterOpcode(0x7004, NORMALIZE_ANGLE_DEGREES); // 7004=2,%2d% = normalize_angle_degrees %1d%
     CLEO_RegisterOpcode(0x7005, NORMALIZE_ANGLE_RADIANS); // 7005=2,%2d% = normalize_angle_radians %1d%
-    CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = toggle_boolean_var %1d%
+    CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% != %1d% ; boolean
     CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
     CLEO_RegisterOpcode(0x7008, FLOAT_MUL); // 7008=3,%3d% = %1d% * %2d% ; float
     CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = %1d% + %2d% ; float

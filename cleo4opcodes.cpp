@@ -72,7 +72,7 @@ void (*ClearAllCrosshairs)();
 void (*SetWeaponLockOnTarget)(uintptr_t, void*);
 
 // By MatiDragon
-void (*TouchInterfaceWidgets)(int, float, float, float, float);
+uintptr_t* TouchInterfaceWidgets;
 //void (*TouchInterfaceTouchDown)(bool);
 //void (*TouchInterfaceCachedPos)(float*, float*);
 
@@ -2288,7 +2288,7 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x7003, CREATE_FILE_OR_DIRECTORY); // 7003=1,create_file_or_directory %1d%
     CLEO_RegisterOpcode(0x7004, NORMALIZE_ANGLE_DEGREES); // 7004=2,%2d% = normalize_angle_degrees %1d%
     CLEO_RegisterOpcode(0x7005, NORMALIZE_ANGLE_RADIANS); // 7005=2,%2d% = normalize_angle_radians %1d%
-    CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% != %1d% ; boolean
+    CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = !%1d% ; boolean
     CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
     CLEO_RegisterOpcode(0x7008, FLOAT_MUL); // 7008=3,%3d% = %1d% * %2d% ; float
     CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = %1d% + %2d% ; float

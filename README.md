@@ -231,7 +231,7 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 7003=1,create_file_or_directory %1d%
 7004=2,%2d% = normalize_angle_degrees %1d%
 7005=2,%2d% = normalize_angle_radians %1d%
-7006=2,%2d% != %1d%
+7006=2,%2d% = !%1d% ; boolean
 7007=3,%3d% = %1d% / %2d% ; float
 7008=3,%3d% = %1d% * %2d% ; float
 7009=3,%3d% = %1d% + %2d% ; float

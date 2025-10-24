@@ -1432,7 +1432,7 @@ CLEO_Fn(SET_WIDGET_TRANSFORM)
     float width = cleo->ReadParam(handle)->f;  // Width
     float height = cleo->ReadParam(handle)->f; // Height
 
-    uintptr_t widgetsAddr = (*TouchInterfaceWidgets);
+    uintptr_t widgetsAddr = (*pedPool);
 
     // Calculate button address
     widgetsAddr += buttonId * 4;

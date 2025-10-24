@@ -1421,6 +1421,7 @@ CLEO_Fn(LOG)
 /////////// BEGIN OPCODES by MatiDragon /////////////
 /////////////////////////////////////////////////////
 
+/*
 CLEO_Fn(SET_WIDGET_TRANSFORM)
 {
     // Widget ID
@@ -1453,7 +1454,6 @@ CLEO_Fn(SET_WIDGET_TRANSFORM)
     UpdateCompareFlag(handle, buttonPtr != 0); // Update compare flag
 }
 
-/*
 CLEO_Fn(IS_TOUCH_PRESSED)
 {
     uintptr_t touchDownAddr = cleo->TouchInterfaceTouchDown();
@@ -2162,8 +2162,7 @@ void Init4Opcodes()
         SET_TO(ClearAllCrosshairs,              cleo->GetMainLibrarySymbol("_ZN14CWeaponEffects18ClearAllCrosshairsEv"));
         SET_TO(SetWeaponLockOnTarget,           cleo->GetMainLibrarySymbol("_ZN4CPed21SetWeaponLockOnTargetEP7CEntity"));
 
-        // By MatiDragon
-        SET_TO(TouchInterfaceWidgets,     cleo->GetMainLibrarySymbol("_ZN15CTouchInterface10m_pWidgetsE"));
+        //SET_TO(TouchInterfaceWidgets,     cleo->GetMainLibrarySymbol("_ZN15CTouchInterface10m_pWidgetsE"));
         //SET_TO(TouchInterfaceTouchDown,   cleo->GetMainLibrarySymbol("_ZN15CTouchInterface12m_bTouchDownE"));
         //SET_TO(TouchInterfaceCachedPos, cleo->GetMainLibrarySymbol("_ZN15CTouchInterface14m_vecCachedPosE"));
     }
@@ -2282,7 +2281,7 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x0AEF, LOG); // 0AEF=3,%3d% = log %1d% base %2d% //all floats
 
     // MatiDragon opcodes
-    CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
+    //CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
     //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
     //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
     CLEO_RegisterOpcode(0x7003, CREATE_FILE_OR_DIRECTORY); // 7003=1,create_file_or_directory %1d%

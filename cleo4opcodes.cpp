@@ -1486,6 +1486,13 @@ CLEO_Fn(CREATE_FILE_OR_DIRECTORY)
     char filepath[256];
     CLEO_ReadStringEx(handle, filepath, sizeof(filepath));
 
+    // Validar que la ruta no esté vacía
+    if (strlen(filepath) == 0)
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
     // Resolver ruta
     std::string path = ResolvePath(handle, filepath);
 
@@ -2116,6 +2123,74 @@ CLEO_Fn(FLOAT_RULE_OF_THREE)
     cleo->GetPointerToScriptVar(handle)->f = result;
 }
 
+// Helpers (float)
+static inline float DegToRadF(float deg) { return deg * (3.14159265358979323846f / 180.0f); }
+static inline bool IsFiniteFloat(float v) { return std::isfinite(v); }
+
+// ORBIT_2D (float)
+CLEO_Fn(ORBIT_2D)
+{
+    int angleMode = cleo->ReadParam(handle)->i;
+    float angle = cleo->ReadParam(handle)->f;
+    float radius = cleo->ReadParam(handle)->f;
+    float cx = cleo->ReadParam(handle)->f;
+    float cy = cleo->ReadParam(handle)->f;
+
+    if (angleMode == 0) angle = DegToRadF(angle);
+
+    if (!IsFiniteFloat(angle) || !IsFiniteFloat(radius) || !IsFiniteFloat(cx) || !IsFiniteFloat(cy))
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    float x = cosf(angle) * radius + cx;
+    float y = sinf(angle) * radius + cy;
+
+    cleo->GetPointerToScriptVar(handle)->f = x;
+    cleo->GetPointerToScriptVar(handle)->f = y;
+
+    UpdateCompareFlag(handle, true);
+}
+
+// ORBIT_3D (float)
+CLEO_Fn(ORBIT_3D)
+{
+    int angleMode = cleo->ReadParam(handle)->i;
+    float ax = cleo->ReadParam(handle)->f;
+    float ay = cleo->ReadParam(handle)->f;
+    float radius = cleo->ReadParam(handle)->f;
+    float cx = cleo->ReadParam(handle)->f;
+    float cy = cleo->ReadParam(handle)->f;
+    float cz = cleo->ReadParam(handle)->f;
+
+    if (angleMode == 0) { ax = DegToRadF(ax); ay = DegToRadF(ay); }
+
+    if (!IsFiniteFloat(ax) || !IsFiniteFloat(ay) || !IsFiniteFloat(radius) ||
+        !IsFiniteFloat(cx) || !IsFiniteFloat(cy) || !IsFiniteFloat(cz))
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    float sax = sinf(ax);
+    float cax = cosf(ax);
+    float say = sinf(ay);
+    float cay = cosf(ay);
+
+    float x = sax * cay * radius + cx;
+    float y = sax * say * radius + cy;
+    float z = cax * radius + cz;
+
+    cleo->GetPointerToScriptVar(handle)->f = x;
+    cleo->GetPointerToScriptVar(handle)->f = y;
+    cleo->GetPointerToScriptVar(handle)->f = z;
+
+    UpdateCompareFlag(handle, true);
+}
+
+
+
 ///////////////////////////////////////////////////
 //////////// END OPCODES by MatiDragon ////////////
 ///////////////////////////////////////////////////
@@ -2293,7 +2368,7 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = %1d% + %2d% ; float
     CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
-    CLEO_RegisterOpcode(0x700C, FILE_RENAME); // 700C=2,file rename %1d% to %2d%
+    CLEO_RegisterOpcode(0x700C, FILE_RENAME); // 700C=2,file_rename %1d% to %2d%
     CLEO_RegisterOpcode(0x700D, CONV_RGB_TO_HSV_INT); // 700D=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSV_INT %1d% %2d% %3d% %4d%
     CLEO_RegisterOpcode(0x700E, CONV_HSV_TO_RGB_INT); // 700E=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_RGB_INT %1d% %2d% %3d% %4d%
     CLEO_RegisterOpcode(0x700F, CONV_RGB_TO_HSL_INT); // 700F=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSL_INT %1d% %2d% %3d% %4d%
@@ -2302,6 +2377,10 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x7012, HSV_LERP_INT); // 7012=13,%10d% %11d% %12d% %13d% = HSV_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
     CLEO_RegisterOpcode(0x7013, HSL_LERP_INT); // 7013=13,%10d% %11d% %12d% %13d% = HSL_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
     CLEO_RegisterOpcode(0x7014, BLEND_RGBA_INT); // 7014=9,%5d% %6d% %7d% %8d% = BLEND_RGBA_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% mode %9d%
+    CLEO_RegisterOpcode(0x7015, INT_RULE_OF_THREE); // 7015=4,%4d% = %1d% * %2d% / %3d% ; int
+    CLEO_RegisterOpcode(0x7016, FLOAT_RULE_OF_THREE); // 7016=4,%4d% = %1d% * %2d% / %3d% ; float
+    CLEO_RegisterOpcode(0x7017, ORBIT_2D); // 7017=7,ORBIT_2D %6d% %7d% = angleMode %1d% angle %2d% radius %3d% cx %4d% cy %5d%
+    CLEO_RegisterOpcode(0x7018, ORBIT_3D); // 7018=10,ORBIT_3D %8d% %9d% %10d% = angleMode %1d% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
 }
 
 ScmFunction* ScmFunction::Store[store_size] = { NULL };

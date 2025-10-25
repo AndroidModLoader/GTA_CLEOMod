@@ -243,19 +243,127 @@ CLEO_Fn(DISTANCE2D_VECTOR)
 }
 CLEO_Fn(INVSQRT)
 {
-    int f = cleo->ReadParam(handle)->f;
+    float f = cleo->ReadParam(handle)->f;
     cleo->GetPointerToScriptVar(handle)->f = 1.0 / sqrt(f);
 }
 CLEO_Fn(TGAMMA)
 {
-    int f = cleo->ReadParam(handle)->f;
+    float f = cleo->ReadParam(handle)->f;
     cleo->GetPointerToScriptVar(handle)->f = tgammaf(f);
 }
 CLEO_Fn(LGAMMA)
 {
-    int f = cleo->ReadParam(handle)->f;
+    float f = cleo->ReadParam(handle)->f;
     cleo->GetPointerToScriptVar(handle)->f = lgammaf(f);
 }
+CLEO_Fn(REMQUO)
+{
+    int quo = 0;
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = remquof(x, y, &quo);
+    cleo->GetPointerToScriptVar(handle)->i = quo;
+}
+
+// ------------------------------------[1C40 - 1C49]---------------------------------------------
+
+CLEO_Fn(EXP)
+{
+    float f = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = expf(f);
+}
+CLEO_Fn(EXP2)
+{
+    float f = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = exp2f(f);
+}
+CLEO_Fn(ERRORF)
+{
+    float f = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = erf(f);
+}
+CLEO_Fn(ERRORFCOMPLEMENTARY)
+{
+    float f = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = erfc(f);
+}
+CLEO_Fn(NEXTAFTER)
+{
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = nextafterf(x, y);
+}
+CLEO_Fn(NEXTTOWARD)
+{
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = nexttowardf(x, y);
+}
+CLEO_Fn(COPYSIGN)
+{
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = copysignf(x, y);
+}
+CLEO_Fn(TOGGLEBOOL)
+{
+    int* b = &cleo->GetPointerToScriptVar(handle)->i;
+    *b = (*b == 0);
+}
+CLEO_Fn(MINMAXSHUFFLE)
+{
+    float& min = cleo->GetPointerToScriptVar(handle)->f;
+    float& max = cleo->GetPointerToScriptVar(handle)->f;
+    if(min < max)
+    {
+        UpdateCompareFlag(handle, false);
+    }
+    else
+    {
+        float shuffled = min;
+        min = max;
+        max = shuffled;
+        UpdateCompareFlag(handle, true);
+    }
+}
+CLEO_Fn(MINMAXSHUFFLE3)
+{
+    float& min = cleo->GetPointerToScriptVar(handle)->f;
+    float& mid = cleo->GetPointerToScriptVar(handle)->f;
+    float& max = cleo->GetPointerToScriptVar(handle)->f;
+    if(min < mid && mid < max)
+    {
+        UpdateCompareFlag(handle, false);
+    }
+    else
+    {
+        float t;
+        if (min > mid) { t = min; min = mid; mid = t; }
+        if (mid > max) { t = mid; mid = max; max = t; }
+        if (min > mid) { t = min; min = mid; mid = t; }
+        UpdateCompareFlag(handle, true);
+    }
+}
+
+// ------------------------------------[1C50 - 1C59]---------------------------------------------
+
+CLEO_Fn(LOGB)
+{
+    float f = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = logbf(f);
+}
+CLEO_Fn(ILOGB)
+{
+    float f = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->i = ilogbf(f);
+}
+CLEO_Fn(SIGNBIT)
+{
+    unsigned int f = (unsigned int)cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->i = (f >> 16) & 0x8000;
+}
+
+// ------------------------------------[   ~Main   ]---------------------------------------------
 
 void InitMathOpcodes()
 {
@@ -301,4 +409,20 @@ void InitMathOpcodes()
     CLEO_RegisterOpcode(0x1C36, INVSQRT); // 1C36=2,%2d% = invsqrt %1d%
     CLEO_RegisterOpcode(0x1C37, TGAMMA); // 1C37=2,%2d% = tgamma %1d%
     CLEO_RegisterOpcode(0x1C38, LGAMMA); // 1C38=2,%2d% = lgamma %1d%
+    CLEO_RegisterOpcode(0x1C39, REMQUO); // 1C39=4,%3d% quo %4d% = remquo %1d% %2d%
+    
+    CLEO_RegisterOpcode(0x1C40, EXP); // 1C40=2,%2d% = exp %1d%
+    CLEO_RegisterOpcode(0x1C41, EXP2); // 1C41=2,%2d% = exp2 %1d%
+    CLEO_RegisterOpcode(0x1C42, ERRORF); // 1C42=2,%2d% = erf %1d%
+    CLEO_RegisterOpcode(0x1C43, ERRORFCOMPLEMENTARY); // 1C43=2,%2d% = erfc %1d%
+    CLEO_RegisterOpcode(0x1C44, NEXTAFTER); // 1C44=3,%3d% = nextafter_from %1d% to %2d%
+    CLEO_RegisterOpcode(0x1C45, NEXTTOWARD); // 1C45=3,%3d% = nexttoward_from %1d% to %2d%
+    CLEO_RegisterOpcode(0x1C46, COPYSIGN); // 1C46=3,%3d% = copysign %1d% %2d%
+    CLEO_RegisterOpcode(0x1C47, TOGGLEBOOL); // 1C47=1,toggle_bool %1d%
+    CLEO_RegisterOpcode(0x1C48, MINMAXSHUFFLE); // 1C48=2,minmax_shuffle %1d% %2d% //IF and SET
+    CLEO_RegisterOpcode(0x1C49, MINMAXSHUFFLE3); // 1C49=3,minmax_shuffle3 %1d% %2d% %3d% //IF and SET
+    
+    CLEO_RegisterOpcode(0x1C50, LOGB); // 1C50=2,%2d% = logb %1d%
+    CLEO_RegisterOpcode(0x1C51, ILOGB); // 1C51=2,%2d% = ilogb %1d%
+    CLEO_RegisterOpcode(0x1C52, SIGNBIT); // 1C52=2,%2d% = signbit %1d%
 }

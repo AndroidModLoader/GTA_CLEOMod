@@ -223,4 +223,18 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 1C36=2,%2d% = invsqrt %1d%
 1C37=2,%2d% = tgamma %1d%
 1C38=2,%2d% = lgamma %1d%
+1C39=3,%3d% = remquo %1d% %2d%
+1C40=2,%2d% = exp %1d%
+1C41=2,%2d% = exp2 %1d%
+1C42=2,%2d% = erf %1d%
+1C43=2,%2d% = erfc %1d%
+1C44=3,%3d% = nextafter_from %1d% to %2d%
+1C45=3,%3d% = nexttoward_from %1d% to %2d%
+1C46=3,%3d% = copysign %1d% %2d%
+1C47=1,toggle_bool %1d%
+1C48=2,minmax_shuffle %1d% %2d% //IF and SET
+1C49=3,minmax_shuffle3 %1d% %2d% %3d% //IF and SET
+1C50=2,%2d% = logb %1d%
+1C51=2,%2d% = ilogb %1d%
+1C52=2,%2d% = signbit %1d%
 ```

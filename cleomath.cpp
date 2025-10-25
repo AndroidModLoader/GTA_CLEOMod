@@ -411,6 +411,23 @@ CLEO_Fn(INVSMOOTHSTEP)
     cleo->GetPointerToScriptVar(handle)->f = 0.5f - sinf(asinf(1.0f - 2.0f * y) / 3.0f);
 }
 
+// ------------------------------------[1C60 - 1C69]---------------------------------------------
+
+CLEO_Fn(NORMALIZE_ANGLE)
+{
+    float f = cleo->ReadParam(handle)->f;
+    f = fmodf(f + 180.0f, 360.0f);
+    if (f < 0.0f) f += 360.0f;
+    cleo->GetPointerToScriptVar(handle)->f = f - 180.0f;
+}
+CLEO_Fn(NORMALIZE_RADIANS)
+{
+    float f = cleo->ReadParam(handle)->f;
+    f = fmodf(f + M_PI, 2.0f * M_PI);
+    if (f < 0.0f) f += 2.0f * M_PI;
+    cleo->GetPointerToScriptVar(handle)->f = f - M_PI;
+}
+
 // ------------------------------------[   ~Main   ]---------------------------------------------
 
 void InitMathOpcodes()
@@ -480,4 +497,7 @@ void InitMathOpcodes()
     CLEO_RegisterOpcode(0x1C57, SMOOTHSTEP); // 1C57=4,%4d% = smoothstep %1d% %2d% x %3d%
     CLEO_RegisterOpcode(0x1C58, SMOOTHERSTEP); // 1C58=4,%4d% = smootherstep %1d% %2d% x %3d%
     CLEO_RegisterOpcode(0x1C59, INVSMOOTHSTEP); // 1C59=2,%2d% = inv_smoothstep %1d%
+
+    CLEO_RegisterOpcode(0x1C60, NORMALIZE_ANGLE); // 1C60=2,%2d% = normalize_angle %1d%
+    CLEO_RegisterOpcode(0x1C61, NORMALIZE_RADIANS); // 1C61=2,%2d% = normalize_radians %1d%
 }

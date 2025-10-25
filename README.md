@@ -246,4 +246,6 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 1C57=4,%4d% = smoothstep %1d% %2d% x %3d%
 1C58=4,%4d% = smootherstep %1d% %2d% x %3d%
 1C59=2,%2d% = inv_smoothstep %1d%
+1C60=2,%2d% = normalize_angle %1d%
+1C61=2,%2d% = normalize_radians %1d%
 ```

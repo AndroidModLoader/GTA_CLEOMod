@@ -240,4 +240,8 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 1C53=4,%4d% = lerp %1d% %2d% t %3d%
 1C54=3,%3d% = pytha %1d% %2d%
 1C55=4,%4d% = r_of_t %1d% %2d% %3d%
+1C56=4,%4d% = unlerp %1d% %2d% v %3d%
+1C57=4,%4d% = smoothstep %1d% %2d% x %3d%
+1C58=4,%4d% = smootherstep %1d% %2d% x %3d%
+1C59=2,%2d% = inv_smoothstep %1d%
 ```

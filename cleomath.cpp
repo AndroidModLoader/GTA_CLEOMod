@@ -382,6 +382,34 @@ CLEO_Fn(RULEOFTHREE)
     float c = cleo->ReadParam(handle)->f;
     cleo->GetPointerToScriptVar(handle)->f = (b * c) / a;
 }
+CLEO_Fn(UNLERP)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+    float v = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = (v - a) / (b - a);
+}
+CLEO_Fn(SMOOTHSTEP)
+{
+    float edge1 = cleo->ReadParam(handle)->f;
+    float edge2 = cleo->ReadParam(handle)->f;
+    float x = cleo->ReadParam(handle)->f;
+    x = clampfloat(0.0f, 1.0f, (x - edge1) / (edge2 - edge1)); // amlmod.h
+    cleo->GetPointerToScriptVar(handle)->f = x * x * (3.0f - 2.0f * x);
+}
+CLEO_Fn(SMOOTHERSTEP)
+{
+    float edge1 = cleo->ReadParam(handle)->f;
+    float edge2 = cleo->ReadParam(handle)->f;
+    float x = cleo->ReadParam(handle)->f;
+    x = clampfloat(0.0f, 1.0f, (x - edge1) / (edge2 - edge1)); // amlmod.h
+    cleo->GetPointerToScriptVar(handle)->f = x * x * x * (x * (x * 6.0f - 15.0f) + 10.0f);
+}
+CLEO_Fn(INVSMOOTHSTEP)
+{
+    float y = clampfloat(0.0f, 1.0f, cleo->ReadParam(handle)->f);
+    cleo->GetPointerToScriptVar(handle)->f = 0.5f - sinf(asinf(1.0f - 2.0f * y) / 3.0f);
+}
 
 // ------------------------------------[   ~Main   ]---------------------------------------------
 
@@ -448,4 +476,8 @@ void InitMathOpcodes()
     CLEO_RegisterOpcode(0x1C53, LERP); // 1C53=4,%4d% = lerp %1d% %2d% t %3d%
     CLEO_RegisterOpcode(0x1C54, PYTHA); // 1C54=3,%3d% = pytha %1d% %2d%
     CLEO_RegisterOpcode(0x1C55, RULEOFTHREE); // 1C55=4,%4d% = r_of_t %1d% %2d% %3d%
+    CLEO_RegisterOpcode(0x1C56, UNLERP); // 1C56=4,%4d% = unlerp %1d% %2d% v %3d%
+    CLEO_RegisterOpcode(0x1C57, SMOOTHSTEP); // 1C57=4,%4d% = smoothstep %1d% %2d% x %3d%
+    CLEO_RegisterOpcode(0x1C58, SMOOTHERSTEP); // 1C58=4,%4d% = smootherstep %1d% %2d% x %3d%
+    CLEO_RegisterOpcode(0x1C59, INVSMOOTHSTEP); // 1C59=2,%2d% = inv_smoothstep %1d%
 }

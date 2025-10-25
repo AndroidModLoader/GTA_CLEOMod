@@ -413,6 +413,18 @@ CLEO_Fn(GET_COUNTRY_CODE)
     InitLanguageProps();
     CLEO_WriteStringEx(handle, m_szDeviceCountryCode);
 }
+CLEO_Fn(ATOF)
+{
+    char buf[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    cleo->GetPointerToScriptVar(handle)->f = atof(buf);
+}
+CLEO_Fn(ATOI)
+{
+    char buf[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    cleo->GetPointerToScriptVar(handle)->i = atoi(buf);
+}
 
 // Default scripting funcs
 
@@ -665,6 +677,8 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0AFF, SET_COMPARE_FLAG); // 0AFF=1,set_compare_flag %1d%
     CLEO_RegisterOpcode(0x0CB0, GET_LANGUAGE_CODE); // 0CB0=1,%1d% = get_language_code
     CLEO_RegisterOpcode(0x0CB1, GET_COUNTRY_CODE); // 0CB1=1,%1d% = get_country_code
+    CLEO_RegisterOpcode(0x0CB2, ATOF); // 0CB2=2,%2d% = atof %1d%
+    CLEO_RegisterOpcode(0x0CB3, ATOI); // 0CB3=2,%2d% = atoi %1d%
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS

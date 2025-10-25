@@ -359,8 +359,28 @@ CLEO_Fn(ILOGB)
 }
 CLEO_Fn(SIGNBIT)
 {
-    unsigned int f = (unsigned int)cleo->ReadParam(handle)->f;
+    unsigned int f = cleo->ReadParam(handle)->u;
     cleo->GetPointerToScriptVar(handle)->i = (f >> 16) & 0x8000;
+}
+CLEO_Fn(LERP)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+    float t = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = a + (b - a) * t;
+}
+CLEO_Fn(PYTHA)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = sqrtf(a * a + b * b);
+}
+CLEO_Fn(RULEOFTHREE)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+    float c = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = (b * c) / a;
 }
 
 // ------------------------------------[   ~Main   ]---------------------------------------------
@@ -425,4 +445,7 @@ void InitMathOpcodes()
     CLEO_RegisterOpcode(0x1C50, LOGB); // 1C50=2,%2d% = logb %1d%
     CLEO_RegisterOpcode(0x1C51, ILOGB); // 1C51=2,%2d% = ilogb %1d%
     CLEO_RegisterOpcode(0x1C52, SIGNBIT); // 1C52=2,%2d% = signbit %1d%
+    CLEO_RegisterOpcode(0x1C53, LERP); // 1C53=4,%4d% = lerp %1d% %2d% t %3d%
+    CLEO_RegisterOpcode(0x1C54, PYTHA); // 1C54=3,%3d% = pytha %1d% %2d%
+    CLEO_RegisterOpcode(0x1C55, RULEOFTHREE); // 1C55=4,%4d% = r_of_t %1d% %2d% %3d%
 }

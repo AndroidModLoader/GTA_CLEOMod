@@ -237,4 +237,7 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 1C50=2,%2d% = logb %1d%
 1C51=2,%2d% = ilogb %1d%
 1C52=2,%2d% = signbit %1d%
+1C53=4,%4d% = lerp %1d% %2d% t %3d%
+1C54=3,%3d% = pytha %1d% %2d%
+1C55=4,%4d% = r_of_t %1d% %2d% %3d%
 ```

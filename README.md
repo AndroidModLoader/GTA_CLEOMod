@@ -105,6 +105,11 @@ Here is how to do this:
 0CB4=2,get_screen_height x %1d% y %2d%
 0CB5=0,is_any_finger_onscreen // IF and SET
 0CB6=3,is_finger_in_area %1d% %2d% radius %3d% // IF and SET
+0CB7=4,is_finger_in_area_timed %1d% %2d% radius %3d% time_ms %4d% // IF and SET
+0CB8=4,%3d% %4d% = touchxy_to_perc %1d% %2d%
+0CB9=4,%3d% %4d% = spritexy_to_perc %1d% %2d%
+0CBA=1,%1d% = get_max_points_num
+0CBB=3,%2d% %3d% = get_pointer_xy %1d%
 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
 3A01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
 3A02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%

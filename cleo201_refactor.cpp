@@ -21,6 +21,7 @@ GameFingerPoint *Points;
 int (*OS_PointerGetNumber)();
 int (*OS_ScreenGetWidth)();
 int (*OS_ScreenGetHeight)();
+double *base_time, *last_current_time;
 
 extern char g_szSavesPath[256];
 
@@ -478,6 +479,75 @@ CLEO_Fn(IS_FINGER_IN_AREA)
     }
     UpdateCompareFlag(handle, false);
 }
+CLEO_Fn(IS_FINGER_IN_AREA_TIMED)
+{
+    float tX = cleo->ReadParam(handle)->f;
+    float tY = cleo->ReadParam(handle)->f;
+    float tR = cleo->ReadParam(handle)->f;
+    double time = (double)cleo->ReadParam(handle)->i / 1000.0;
+    tR *= tR; // radius SQR
+
+    int size = OS_PointerGetNumber();
+    float xMult = 100.0f / (float)OS_ScreenGetWidth();
+    float yMult = 100.0f / (float)OS_ScreenGetHeight();
+    for(int i = 0; i < size; ++i)
+    {
+        if(Points[i].state == 2)
+        {
+            float x = xMult * Points[i].x - tX;
+            float y = yMult * Points[i].y - tY;
+            if(x*x + y*y < tR)
+            {
+                int clcIdx = (Points[i].clickIndex == 0);
+                if((Points[i].clickTime[clcIdx] + time + *base_time) < *last_current_time)
+                {
+                    return UpdateCompareFlag(handle, true);
+                }
+            }
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(TOUCH_XY_TO_PERCENTAGE)
+{
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = 100.0f * x / (float)OS_ScreenGetWidth();
+    cleo->GetPointerToScriptVar(handle)->f = 100.0f * y / (float)OS_ScreenGetHeight();
+}
+CLEO_Fn(SPRITE_XY_TO_PERCENTAGE)
+{
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    float sx = OS_ScreenGetWidth(), sy = OS_ScreenGetHeight();
+
+    const float ar = sx / sy;
+    const float ar43 = 4.0f / 3.0f;
+    const float arDiff = ar43 / ar;
+    x = (x - 0.5f * (sx - 4.0f * sy / 3.0f)) / (arDiff * sx / 640.0f);
+    y = (y / sy) * 448.0f;
+
+    cleo->GetPointerToScriptVar(handle)->f = 100.0f * x / sx;
+    cleo->GetPointerToScriptVar(handle)->f = 100.0f * y / sy;
+}
+CLEO_Fn(GET_MAX_POINTS_NUM)
+{
+    cleo->GetPointerToScriptVar(handle)->i = OS_PointerGetNumber();
+}
+CLEO_Fn(GET_POINT_XY)
+{
+    int num = cleo->ReadParam(handle)->i;
+    if(num < 0 || num >= OS_PointerGetNumber() || Points[num].state != 2)
+    {
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+    }
+    else
+    {
+        cleo->GetPointerToScriptVar(handle)->f = Points[num].x;
+        cleo->GetPointerToScriptVar(handle)->f = Points[num].y;
+    }
+}
 
 // Default scripting funcs
 
@@ -712,6 +782,8 @@ void Init201Opcodes()
     SET_TO(OS_PointerGetNumber, cleo->GetMainLibrarySymbol("_Z19OS_PointerGetNumberv"));
     SET_TO(OS_ScreenGetWidth, cleo->GetMainLibrarySymbol("_Z17OS_ScreenGetWidthv"));
     SET_TO(OS_ScreenGetHeight, cleo->GetMainLibrarySymbol("_Z18OS_ScreenGetHeightv"));
+    SET_TO(base_time, cleo->GetMainLibrarySymbol("base_time"));
+    SET_TO(last_current_time, nGameAddr + ValueForGame(0, 0x74BD68, 0x6D70D8));
 
     // Disable switch-case labels for default opcodes
     aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x00, 0x0466); // 0DD0
@@ -740,6 +812,11 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0CB4, GET_SCREEN_HEIGHT); // 0CB4=2,get_screen_height x %1d% y %2d%
     CLEO_RegisterOpcode(0x0CB5, IS_ANY_FINGER_ONSCREEN); // 0CB5=0,is_any_finger_onscreen // IF and SET
     CLEO_RegisterOpcode(0x0CB6, IS_FINGER_IN_AREA); // 0CB6=3,is_finger_in_area %1d% %2d% radius %3d% // IF and SET
+    CLEO_RegisterOpcode(0x0CB7, IS_FINGER_IN_AREA_TIMED); // 0CB7=4,is_finger_in_area_timed %1d% %2d% radius %3d% time_ms %4d% // IF and SET
+    CLEO_RegisterOpcode(0x0CB8, TOUCH_XY_TO_PERCENTAGE); // 0CB8=4,%3d% %4d% = touchxy_to_perc %1d% %2d%
+    CLEO_RegisterOpcode(0x0CB9, SPRITE_XY_TO_PERCENTAGE); // 0CB9=4,%3d% %4d% = spritexy_to_perc %1d% %2d%
+    CLEO_RegisterOpcode(0x0CBA, GET_MAX_POINTS_NUM); // 0CBA=1,%1d% = get_max_points_num
+    CLEO_RegisterOpcode(0x0CBB, GET_POINT_XY); // 0CBB=3,%2d% %3d% = get_pointer_xy %1d%
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS

@@ -119,6 +119,13 @@ Here is how to do this:
 3A0E=1,do_opcode_exist %1d% // IF and SET
 3A0F=2,push_string %1d% to_var %2d%
 3A10=3,write_float %1d% to %2d% add_ib %3d%
+3A11=1,aml_vibrate %1d% ms
+3A12=0,aml_stop_vibro
+3A13=2,aml_show_toast %2s% longer %1d%
+3A14=1,%1d% = aml_get_battery_percentage // float
+3A15=1,%1d% = aml_get_android_ver
+3A16=4,aml_write_hex_at %1d% add_ib %2d% from_label %3d% size %4d%
+3A17=4,aml_read_hex_at %1d% add_ib %2d% to_label %3d% size %4d%
 ```
 
 There is an additional opcodes for GTA:SA Android:

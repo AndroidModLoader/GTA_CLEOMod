@@ -381,7 +381,7 @@ inline void InitLanguageProps()
             if(languageString)
             {
                 const char* cstr = env->GetStringUTFChars(languageString, NULL);
-                strncpy(m_szDeviceLanguageCode, cstr, sizeof(cstr)-1);
+                strncpy(m_szDeviceLanguageCode, cstr, sizeof(m_szDeviceLanguageCode)-1);
                 m_szDeviceLanguageCode[sizeof(m_szDeviceLanguageCode)-1] = 0;
                 env->ReleaseStringUTFChars(languageString, cstr);
             }
@@ -394,12 +394,13 @@ inline void InitLanguageProps()
             if(countryString)
             {
                 const char* cstr = env->GetStringUTFChars(countryString, NULL);
-                strncpy(m_szDeviceCountryCode, cstr, sizeof(cstr)-1);
+                strncpy(m_szDeviceCountryCode, cstr, sizeof(m_szDeviceCountryCode)-1);
                 m_szDeviceCountryCode[sizeof(m_szDeviceCountryCode)-1] = 0;
                 env->ReleaseStringUTFChars(countryString, cstr);
             }
         }
 
+        env->DeleteLocalRef(defaultLocaleObject);
         m_bAlreadyDidReadProps = true;
     }
 }

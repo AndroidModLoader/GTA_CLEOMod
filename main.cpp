@@ -730,6 +730,89 @@ CLEO_Fn(AML_ANDROID_SDK_INT)
 {
     cleo->GetPointerToScriptVar(handle)->i = aml->GetAndroidVersion();
 }
+CLEO_Fn(AML_WRITE_HEX)
+{
+    uintptr_t addr = cleo->ReadParam(handle)->u;
+    if(cleo->ReadParam(handle)->i) // add_ib
+    {
+        addr += nGameAddr;
+    }
+
+    int labelOffset = cleo->ReadParam(handle)->i;
+    int size = cleo->ReadParam(handle)->i;
+    uintptr_t hexAddr = 0;
+
+    if(size > 0) // GET_LABEL_POINTER
+    {
+        int storageItem = lastStorageItem;//GetCustomHandleFromScriptHandle(handle);
+        if(storageItem && *(void**)(storageItem + 28) == handle)
+        {
+            if(labelOffset < 0) labelOffset = -labelOffset;
+            hexAddr = *(uint32_t*)(storageItem + 32) + labelOffset;
+        }
+        else
+        {
+            // sadge
+            int baseOffset = ValueForGame(0, 0, 16, 20, 20);
+            if(baseOffset)
+            {
+                uint8_t* basePtr = GetBasePC(handle);
+                hexAddr = (uint32_t)((labelOffset < 0) ? (basePtr - labelOffset) : (ScriptSpace + labelOffset));
+            }
+            else
+            {
+                hexAddr = (uint32_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x3F9A0, 0) - labelOffset) : labelOffset);
+            }
+        }
+        
+        if(hexAddr)
+        {
+            aml->Write(addr, hexAddr, size);
+        }
+    }
+}
+CLEO_Fn(AML_READ_HEX)
+{
+    uintptr_t addr = cleo->ReadParam(handle)->u;
+    if(cleo->ReadParam(handle)->i) // add_ib
+    {
+        addr += nGameAddr;
+    }
+
+    int labelOffset = cleo->ReadParam(handle)->i;
+    int size = cleo->ReadParam(handle)->i;
+    uintptr_t hexAddr = 0;
+
+    if(size > 0) // GET_LABEL_POINTER
+    {
+        int storageItem = lastStorageItem;//GetCustomHandleFromScriptHandle(handle);
+        if(storageItem && *(void**)(storageItem + 28) == handle)
+        {
+            if(labelOffset < 0) labelOffset = -labelOffset;
+            hexAddr = *(uint32_t*)(storageItem + 32) + labelOffset;
+        }
+        else
+        {
+            // sadge
+            int baseOffset = ValueForGame(0, 0, 16, 20, 20);
+            if(baseOffset)
+            {
+                uint8_t* basePtr = GetBasePC(handle);
+                hexAddr = (uint32_t)((labelOffset < 0) ? (basePtr - labelOffset) : (ScriptSpace + labelOffset));
+            }
+            else
+            {
+                hexAddr = (uint32_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x3F9A0, 0) - labelOffset) : labelOffset);
+            }
+        }
+        
+        if(hexAddr)
+        {
+            aml->Unprot(addr);
+            aml->Read(addr, hexAddr, size);
+        }
+    }
+}
 
 void Init201Opcodes();
 void Init4Opcodes();
@@ -765,6 +848,8 @@ ON_ALL_MODS_LOAD()
     CLEO_RegisterOpcode(0x3A13, AML_SHOW_TOAST); // 3A13=2,aml_show_toast %2s% longer %1d%
     CLEO_RegisterOpcode(0x3A14, AML_BATTERY_LEVEL); // 3A14=1,%1d% = aml_get_battery_percentage // float
     CLEO_RegisterOpcode(0x3A15, AML_ANDROID_SDK_INT); // 3A15=1,%1d% = aml_get_android_ver
+    CLEO_RegisterOpcode(0x3A16, AML_WRITE_HEX); // 3A16=4,aml_write_hex_at %1d% add_ib %2d% from_label %3d% size %4d%
+    CLEO_RegisterOpcode(0x3A17, AML_READ_HEX); // 3A17=4,aml_read_hex_at %1d% add_ib %2d% to_label %3d% size %4d%
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;

@@ -11,6 +11,17 @@ struct CLEOLocalVarSave
 };
 CLEOLocalVarSave localVarsSave[40];
 
+struct GameFingerPoint
+{
+    int x, y, state, clickIndex;
+    float clickTime[2];
+    int updCount;
+};
+GameFingerPoint *Points;
+int (*OS_PointerGetNumber)();
+int (*OS_ScreenGetWidth)();
+int (*OS_ScreenGetHeight)();
+
 extern char g_szSavesPath[256];
 
 extern uintptr_t nCLEOAddr, nGameAddr;
@@ -426,6 +437,47 @@ CLEO_Fn(ATOI)
     CLEO_ReadStringEx(handle, buf, sizeof(buf));
     cleo->GetPointerToScriptVar(handle)->i = atoi(buf);
 }
+CLEO_Fn(GET_SCREEN_HEIGHT)
+{
+    cleo->GetPointerToScriptVar(handle)->i = OS_ScreenGetWidth();
+    cleo->GetPointerToScriptVar(handle)->i = OS_ScreenGetHeight();
+}
+CLEO_Fn(IS_ANY_FINGER_ONSCREEN)
+{
+    int size = OS_PointerGetNumber();
+    for(int i = 0; i < size; ++i)
+    {
+        if(Points[i].state == 2)
+        {
+            return UpdateCompareFlag(handle, true);
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(IS_FINGER_IN_AREA)
+{
+    float tX = cleo->ReadParam(handle)->f;
+    float tY = cleo->ReadParam(handle)->f;
+    float tR = cleo->ReadParam(handle)->f;
+    tR *= tR; // radius SQR
+
+    int size = OS_PointerGetNumber();
+    float xMult = 100.0f / (float)OS_ScreenGetWidth();
+    float yMult = 100.0f / (float)OS_ScreenGetHeight();
+    for(int i = 0; i < size; ++i)
+    {
+        if(Points[i].state == 2)
+        {
+            float x = xMult * Points[i].x - tX;
+            float y = yMult * Points[i].y - tY;
+            if(x*x + y*y < tR)
+            {
+                return UpdateCompareFlag(handle, true);
+            }
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
 
 // Default scripting funcs
 
@@ -656,6 +708,11 @@ void DrawSingleRect(void* handle, CustomScriptRect& rt)
 
 void Init201Opcodes()
 {
+    SET_TO(Points, *(void**)(nGameAddr + ValueForGame(0, 0x394C78, 0x679E94)));
+    SET_TO(OS_PointerGetNumber, cleo->GetMainLibrarySymbol("_Z19OS_PointerGetNumberv"));
+    SET_TO(OS_ScreenGetWidth, cleo->GetMainLibrarySymbol("_Z17OS_ScreenGetWidthv"));
+    SET_TO(OS_ScreenGetHeight, cleo->GetMainLibrarySymbol("_Z18OS_ScreenGetHeightv"));
+
     // Disable switch-case labels for default opcodes
     aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x00, 0x0466); // 0DD0
     //aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x01, 0x0466); // 0DD1
@@ -680,6 +737,9 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0CB1, GET_COUNTRY_CODE); // 0CB1=1,%1d% = get_country_code
     CLEO_RegisterOpcode(0x0CB2, ATOF); // 0CB2=2,%2d% = atof %1d%
     CLEO_RegisterOpcode(0x0CB3, ATOI); // 0CB3=2,%2d% = atoi %1d%
+    CLEO_RegisterOpcode(0x0CB4, GET_SCREEN_HEIGHT); // 0CB4=2,get_screen_height x %1d% y %2d%
+    CLEO_RegisterOpcode(0x0CB5, IS_ANY_FINGER_ONSCREEN); // 0CB5=0,is_any_finger_onscreen // IF and SET
+    CLEO_RegisterOpcode(0x0CB6, IS_FINGER_IN_AREA); // 0CB6=3,is_finger_in_area %1d% %2d% radius %3d% // IF and SET
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS

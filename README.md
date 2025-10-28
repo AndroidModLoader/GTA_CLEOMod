@@ -62,25 +62,25 @@ Here is how to do this:
 0ACF=-1,show_formatted_styled_text %1d% time %2d% style %3d%
 0AD0=-1,show_formatted_text_lowpriority %1d% time %2d%
 0AD1=-1,show_formatted_text_highpriority %1d% time %2d%
-0AD2=2,%2d% = player %1d% targeted_actor //IF and SET
+0AD2=2,%2d% = player %1d% targeted_actor // IF and SET
 0AD3=-1,string %1d% format %2d%
-0AD4=-1,%3d% = scan_string %1d% format %2d%  //IF and SET
-0AD5=3,file %1d% seek %2d% from_origin %3d% //IF and SET
+0AD4=-1,%3d% = scan_string %1d% format %2d%  // IF and SET
+0AD5=3,file %1d% seek %2d% from_origin %3d% // IF and SET
 0AD6=1,end_of_file %1d% reached
-0AD7=3,read_string_from_file %1d% to %2d% size %3d% //IF and SET
-0AD8=2,write_string_to_file %1d% from %2d% //IF and SET
+0AD7=3,read_string_from_file %1d% to %2d% size %3d% // IF and SET
+0AD8=2,write_string_to_file %1d% from %2d% // IF and SET
 0AD9=-1,write_formated_text %2d% to_file %1d%
-0ADA=-1,%3d% = scan_file %1d% format %2d% //IF and SET
+0ADA=-1,%3d% = scan_file %1d% format %2d% // IF and SET
 0ADB=2,%2d% = car_model %1o% name
 0ADC=1,test_cheat %1d%
-0ADD=1,spawn_car_with_model %1o% at_player_location //IF and SET // custom if-set condition
+0ADD=1,spawn_car_with_model %1o% at_player_location // IF and SET // custom if-set condition
 0ADE=2,%2d% = text_by_GXT_entry %1d%
 0ADF=2,add_dynamic_GXT_entry %1d% text %2d%
 0AE0=1,remove_dynamic_GXT_entry %1d%
 0AE4=1,directory_exist %1d%
-0AE5=1,create_directory %1d% //IF and SET
-0AE6=3,%2d% = find_first_file %1d% get_filename_to %3d% //IF and SET
-0AE7=2,%2d% = find_next_file %1d% //IF and SET
+0AE5=1,create_directory %1d% // IF and SET
+0AE6=3,%2d% = find_first_file %1d% get_filename_to %3d% // IF and SET
+0AE7=2,%2d% = find_next_file %1d% // IF and SET
 0AE8=1,find_close %1d%
 0AE9=1,pop_float store_to %1d% // returns 0, ARMv7 differs from x86
 0AEA=2,%2d% = actor_struct %1d% handle
@@ -90,18 +90,21 @@ Here is how to do this:
 0AEF=3,%3d% = log %1d% base %2d% // all floats
 0AF6=-1,ret_if_false // custom 0AB2
 0AF7=-1,ret_if_true // custom 0AB2
-0AF8=1,save_local_vars_named %1d% //IF and SET
-0AF9=1,load_local_vars_named %1d% //IF and SET
-0AFA=1,delete_local_vars_save %1d% //IF and SET
-0AFB=-1,save_script_vars_named %1d% //IF and SET
-0AFC=-1,load_script_vars_named %1d% //IF and SET
-0AFD=1,delete_script_vars_save %1d% //IF and SET
-0AFE=4,%1d% = find_custom_script_named %2d% case %3d% partial %4d% check_filename %5d% //IF and SET
+0AF8=1,save_local_vars_named %1d% // IF and SET
+0AF9=1,load_local_vars_named %1d% // IF and SET
+0AFA=1,delete_local_vars_save %1d% // IF and SET
+0AFB=-1,save_script_vars_named %1d% // IF and SET
+0AFC=-1,load_script_vars_named %1d% // IF and SET
+0AFD=1,delete_script_vars_save %1d% // IF and SET
+0AFE=4,%1d% = find_custom_script_named %2d% case %3d% partial %4d% check_filename %5d% // IF and SET
 0AFF=1,set_compare_flag %1d%
 0CB0=1,%1d% = get_language_code
 0CB1=1,%1d% = get_country_code
 0CB2=2,%2d% = atof %1d%
 0CB3=2,%2d% = atoi %1d%
+0CB4=2,get_screen_height x %1d% y %2d%
+0CB5=0,is_any_finger_onscreen // IF and SET
+0CB6=3,is_finger_in_area %1d% %2d% radius %3d% // IF and SET
 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
 3A01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
 3A02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%
@@ -132,9 +135,9 @@ There is an additional opcodes for GTA:SA Android:
 ```
 0AB5=3,store_actor %1d% closest_vehicle_to %2d% closest_ped_to %3d%
 0AB6=3,store_target_marker_coords_to %1d% %2d% %3d% // IF and SET
-0AE1=7,%7d% = find_actor_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_deads %6h% //IF and SET
-0AE2=7,%7d% = find_vehicle_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_wrecked %6h% //IF and SET
-0AE3=6,%6d% = find_object_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% //IF and SET
+0AE1=7,%7d% = find_actor_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_deads %6h% // IF and SET
+0AE2=7,%7d% = find_vehicle_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_wrecked %6h% // IF and SET
+0AE3=6,%6d% = find_object_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% // IF and SET
 ```
 
 If you need extensions such as IniFiles or IntOperations, they are already available! You can find them in our project's Discord (https://discord.gg/2MY7W39kBg) or get them here:
@@ -170,12 +173,12 @@ Opcodes from CLEO5 in this mod (except debugging ones!!!):
 2303=2, %2s% = resolve_filepath %1s%
 2304=3, %3s% = get_script_filename %1d% full_path %2d% // IF and SET
 2305=8, get_file_write_time %1s% year %2d% month %3d% day %3d% hour %4d% minute %5d% second %6d% milisecond %7d% // IF and SET
-0B00=1, delete_file %1s% //IF and SET
-0B01=1, delete_directory %1s% with_all_files_and_subdirectories %2d% //IF and SET
-0B02=2, move_file %1s% to %2s% //IF and SET
-0B03=2, move_directory %1s% to %2s% //IF and SET
-0B04=2, copy_file %1s% to %2s% //IF and SET
-0B05=2, copy_directory %1d% to %2d% //IF and SET
+0B00=1, delete_file %1s% // IF and SET
+0B01=1, delete_directory %1s% with_all_files_and_subdirectories %2d% // IF and SET
+0B02=2, move_file %1s% to %2s% // IF and SET
+0B03=2, move_directory %1s% to %2s% // IF and SET
+0B04=2, copy_file %1s% to %2s% // IF and SET
+0B05=2, copy_directory %1d% to %2d% // IF and SET
 2000=1, %1d% = get_cleo_arg_count
 2002=-1, cleo_return_with ...
 2003=-1, cleo_return_fail
@@ -241,8 +244,8 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 1C45=3,%3d% = nexttoward_from %1d% to %2d%
 1C46=3,%3d% = copysign %1d% %2d%
 1C47=1,toggle_bool %1d%
-1C48=2,minmax_shuffle %1d% %2d% //IF and SET
-1C49=3,minmax_shuffle3 %1d% %2d% %3d% //IF and SET
+1C48=2,minmax_shuffle %1d% %2d% // IF and SET
+1C49=3,minmax_shuffle3 %1d% %2d% %3d% // IF and SET
 1C50=2,%2d% = logb %1d%
 1C51=2,%2d% = ilogb %1d%
 1C52=2,%2d% = signbit %1d%

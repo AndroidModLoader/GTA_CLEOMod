@@ -387,13 +387,14 @@ inline void InitLanguageProps()
             {
                 if(pLocale[i] == '-')
                 {
-                    strncpy(m_szDeviceLanguageCode, pLocale, i);
-                    strcpy(m_szDeviceCountryCode, &pLocale[i+1]);
+                    strncpy(m_szDeviceLanguageCode, pLocale, ( (i > sizeof(m_szDeviceLanguageCode)-1) ? sizeof(m_szDeviceLanguageCode)-1 : i ));
+                    m_szDeviceLanguageCode[sizeof(m_szDeviceLanguageCode)-1] = 0;
+                    strncpy(m_szDeviceCountryCode, &pLocale[i+1], sizeof(m_szDeviceCountryCode)-1);
+                    m_szDeviceCountryCode[sizeof(m_szDeviceCountryCode)-1] = 0;
                     break;
                 }
             }
         }
-
         m_bAlreadyDidReadProps = true;
     }
 }

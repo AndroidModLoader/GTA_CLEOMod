@@ -21,6 +21,7 @@ GameFingerPoint *Points;
 int (*OS_PointerGetNumber)();
 int (*OS_ScreenGetWidth)();
 int (*OS_ScreenGetHeight)();
+void (*CorrectAspect)(float*,float*,float*,float*);
 double *base_time, *last_current_time;
 
 extern char g_szSavesPath[256];
@@ -517,16 +518,12 @@ CLEO_Fn(TOUCH_XY_TO_PERCENTAGE)
 }
 CLEO_Fn(SPRITE_XY_TO_PERCENTAGE)
 {
+    float trashVar;
     float x = cleo->ReadParam(handle)->f;
     float y = cleo->ReadParam(handle)->f;
     float sx = OS_ScreenGetWidth(), sy = OS_ScreenGetHeight();
 
-    const float ar = sx / sy;
-    const float ar43 = 4.0f / 3.0f;
-    const float arDiff = ar43 / ar;
-    x = (x - 0.5f * (sx - 4.0f * sy / 3.0f)) / (arDiff * sx / 640.0f);
-    y = (y / sy) * 448.0f;
-
+    CorrectAspect(&x, &y, &trashVar, &trashVar);
     cleo->GetPointerToScriptVar(handle)->f = 100.0f * x / sx;
     cleo->GetPointerToScriptVar(handle)->f = 100.0f * y / sy;
 }
@@ -548,10 +545,63 @@ CLEO_Fn(GET_POINT_XY)
         cleo->GetPointerToScriptVar(handle)->f = Points[num].y;
     }
 }
+CLEO_Fn(IS_FINGER_NUM_IN_AREA)
+{
+    int i = cleo->ReadParam(handle)->i;
+    float tX = cleo->ReadParam(handle)->f;
+    float tY = cleo->ReadParam(handle)->f;
+    float tR = cleo->ReadParam(handle)->f;
+    tR *= tR; // radius SQR
+
+    int size = OS_PointerGetNumber();
+    if(i >= 0 && i < OS_PointerGetNumber())
+    {
+        if(Points[i].state == 2)
+        {
+            float xMult = 100.0f / (float)OS_ScreenGetWidth();
+            float yMult = 100.0f / (float)OS_ScreenGetHeight();
+            float x = xMult * Points[i].x - tX;
+            float y = yMult * Points[i].y - tY;
+            if(x*x + y*y < tR)
+            {
+                return UpdateCompareFlag(handle, true);
+            }
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(IS_FINGER_NUM_IN_AREA_TIMED)
+{
+    int i = cleo->ReadParam(handle)->i;
+    float tX = cleo->ReadParam(handle)->f;
+    float tY = cleo->ReadParam(handle)->f;
+    float tR = cleo->ReadParam(handle)->f;
+    double time = (double)cleo->ReadParam(handle)->i / 1000.0;
+    tR *= tR; // radius SQR
+
+    if(i >= 0 && i < OS_PointerGetNumber())
+    {
+        if(Points[i].state == 2)
+        {
+            float xMult = 100.0f / (float)OS_ScreenGetWidth();
+            float yMult = 100.0f / (float)OS_ScreenGetHeight();
+            float x = xMult * Points[i].x - tX;
+            float y = yMult * Points[i].y - tY;
+            if(x*x + y*y < tR)
+            {
+                int clcIdx = (Points[i].clickIndex == 0);
+                if((Points[i].clickTime[clcIdx] + time + *base_time) < *last_current_time)
+                {
+                    return UpdateCompareFlag(handle, true);
+                }
+            }
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
 
 // Default scripting funcs
 
-void (*CorrectAspect)(float*,float*,float*,float*);
 CLEO_Fn(DRAW_SPRITE)
 {
     if(IsScriptCustom(handle))
@@ -782,6 +832,7 @@ void Init201Opcodes()
     SET_TO(OS_PointerGetNumber, cleo->GetMainLibrarySymbol("_Z19OS_PointerGetNumberv"));
     SET_TO(OS_ScreenGetWidth, cleo->GetMainLibrarySymbol("_Z17OS_ScreenGetWidthv"));
     SET_TO(OS_ScreenGetHeight, cleo->GetMainLibrarySymbol("_Z18OS_ScreenGetHeightv"));
+    SET_TO(CorrectAspect, cleo->GetMainLibrarySymbol("_Z13CorrectAspectRfS_S_S_"));
     SET_TO(base_time, cleo->GetMainLibrarySymbol("base_time"));
     SET_TO(last_current_time, nGameAddr + ValueForGame(0, 0x74BD68, 0x6D70D8));
 
@@ -817,6 +868,8 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0CB9, SPRITE_XY_TO_PERCENTAGE); // 0CB9=4,%3d% %4d% = spritexy_to_perc %1d% %2d%
     CLEO_RegisterOpcode(0x0CBA, GET_MAX_POINTS_NUM); // 0CBA=1,%1d% = get_max_points_num
     CLEO_RegisterOpcode(0x0CBB, GET_POINT_XY); // 0CBB=3,%2d% %3d% = get_pointer_xy %1d%
+    CLEO_RegisterOpcode(0x0CBC, IS_FINGER_NUM_IN_AREA); // 0CBC=4,is_finger %1d% in_area %2d% %3d% radius %4d% // IF and SET
+    CLEO_RegisterOpcode(0x0CBD, IS_FINGER_NUM_IN_AREA_TIMED); // 0CBD=5,is_finger %1d% in_area_timed %2d% %3d% radius %4d% time_ms %5d% // IF and SET
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS
@@ -827,8 +880,6 @@ void Init201Opcodes()
         CLEO_RegisterOpcode(0x038F, LOAD_SPRITE); // 038F=2,load_texture %2h% as %1d%
         CLEO_RegisterOpcode(0x03E3, SET_SPRITES_DRAW_BEFORE_FADE); // 03E3=1,set_texture_to_be_drawn_antialiased %1h%
         CLEO_RegisterOpcode(0x074B, DRAW_SPRITE_WITH_ROTATION); // 074B=10,draw_texture %1h% position %2d% %3d% scale %4d% %5d% angle %6d% color_RGBA %7d% %8d% %9d% %10d%
-
-        SET_TO(CorrectAspect, cleo->GetMainLibrarySymbol("_Z13CorrectAspectRfS_S_S_"));
     }
 #endif
 }

@@ -29,8 +29,9 @@ extern char g_szSavesPath[256];
 
 extern uintptr_t nCLEOAddr, nGameAddr;
 extern int lastStorageItem;
-extern void (*SetSprite2dTexture)(GTASprite2D&, const char*);
 extern GTASprite2D *ScriptSprites, *ScriptSpritesOrg;
+extern void (*SetSprite2dTexture)(GTASprite2D&, const char*);
+extern int (*GetVehicleFromRef)(int);
 
 CLEO_Fn(GET_LABEL_ADDR)
 {
@@ -580,6 +581,38 @@ CLEO_Fn(IS_FINGER_NUM_IN_AREA_TIMED)
     }
     UpdateCompareFlag(handle, false);
 }
+CLEO_Fn(HAS_VEHICLE_RADIO)
+{
+    int vehiclePtr = GetVehicleFromRef(cleo->ReadParam(handle)->i);
+    if(vehiclePtr)
+    {
+        if(*nGameIdent == GTASA)
+        {
+            return UpdateCompareFlag(handle, *(char*)(vehiclePtr + 0x1D7) == 0 );
+        }
+        else if(*nGameIdent == GTAVC)
+        {
+            return UpdateCompareFlag(handle, *(uint8_t*)(vehiclePtr + 0x240) < 10 );
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(HAS_VEHICLE_STRUCT_RADIO)
+{
+    int vehiclePtr = cleo->ReadParam(handle)->i;
+    if(vehiclePtr)
+    {
+        if(*nGameIdent == GTASA)
+        {
+            return UpdateCompareFlag(handle, *(char*)(vehiclePtr + 0x1D7) == 0 );
+        }
+        else if(*nGameIdent == GTAVC)
+        {
+            return UpdateCompareFlag(handle, *(uint8_t*)(vehiclePtr + 0x240) < 10 );
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
 
 // Default scripting funcs
 
@@ -851,6 +884,8 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0CBB, GET_POINT_XY); // 0CBB=3,%2d% %3d% = get_pointer_xy %1d%
     CLEO_RegisterOpcode(0x0CBC, IS_FINGER_NUM_IN_AREA); // 0CBC=4,is_finger %1d% in_area %2d% %3d% radius %4d% // IF and SET
     CLEO_RegisterOpcode(0x0CBD, IS_FINGER_NUM_IN_AREA_TIMED); // 0CBD=5,is_finger %1d% in_area_timed %2d% %3d% radius %4d% time_ms %5d% // IF and SET
+    CLEO_RegisterOpcode(0x0CD0, HAS_VEHICLE_RADIO); // 0CD0=1,has_vehicle_radio %1d% // IF and SET
+    CLEO_RegisterOpcode(0x0CD1, HAS_VEHICLE_STRUCT_RADIO); // 0CD1=1,has_vehicle_struct_radio %1d% // IF and SET
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS

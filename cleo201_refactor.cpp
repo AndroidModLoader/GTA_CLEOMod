@@ -3,6 +3,7 @@
 #include <cleohelpers.h>
 #include <cleo4scmfunc.h>
 #include <sys/stat.h>
+#include <sys/system_properties.h>
 
 struct CLEOLocalVarSave
 {
@@ -372,48 +373,27 @@ inline void InitLanguageProps()
 {
     if(!m_bAlreadyDidReadProps)
     {
-        JNIEnv* env = aml->GetJNIEnvironment();
         strcpy(m_szDeviceLanguageCode, "en");
         strcpy(m_szDeviceCountryCode, "US");
 
-        if(!env) return;
+        char localeProp[PROP_VALUE_MAX];
+        int len = __system_property_get("persist.sys.locale", localeProp);
+        const char* pLocale = ( (len > 0) ? &localeProp[0] : getenv("ANDROID_LOCALE") );
 
-        jclass localeClass = env->FindClass("java/util/Locale");
-        if(!localeClass) return;
-
-        jmethodID getDefaultMethod = env->GetStaticMethodID(localeClass, "getDefault", "()Ljava/util/Locale;");
-        if(!getDefaultMethod) return;
-
-        jobject defaultLocaleObject = env->CallStaticObjectMethod(localeClass, getDefaultMethod);
-        if(!defaultLocaleObject) return;
-
-        jmethodID getLanguageMethod = env->GetMethodID(localeClass, "getLanguage", "()Ljava/lang/String;");
-        if(getLanguageMethod)
+        if(pLocale)
         {
-            jstring languageString = (jstring)env->CallObjectMethod(defaultLocaleObject, getLanguageMethod);
-            if(languageString)
+            len = strlen(pLocale);
+            for(int i = len-1; i >= 0; --i)
             {
-                const char* cstr = env->GetStringUTFChars(languageString, NULL);
-                strncpy(m_szDeviceLanguageCode, cstr, sizeof(m_szDeviceLanguageCode)-1);
-                m_szDeviceLanguageCode[sizeof(m_szDeviceLanguageCode)-1] = 0;
-                env->ReleaseStringUTFChars(languageString, cstr);
+                if(pLocale[i] == '-')
+                {
+                    strncpy(m_szDeviceLanguageCode, pLocale, i);
+                    strcpy(m_szDeviceCountryCode, &pLocale[i+1]);
+                    break;
+                }
             }
         }
 
-        jmethodID getCountryMethod = env->GetMethodID(localeClass, "getCountry", "()Ljava/lang/String;");
-        if(getCountryMethod)
-        {
-            jstring countryString = (jstring)env->CallObjectMethod(defaultLocaleObject, getCountryMethod);
-            if(countryString)
-            {
-                const char* cstr = env->GetStringUTFChars(countryString, NULL);
-                strncpy(m_szDeviceCountryCode, cstr, sizeof(m_szDeviceCountryCode)-1);
-                m_szDeviceCountryCode[sizeof(m_szDeviceCountryCode)-1] = 0;
-                env->ReleaseStringUTFChars(countryString, cstr);
-            }
-        }
-
-        env->DeleteLocalRef(defaultLocaleObject);
         m_bAlreadyDidReadProps = true;
     }
 }

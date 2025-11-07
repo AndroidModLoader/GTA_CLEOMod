@@ -2360,8 +2360,8 @@ void Init4Opcodes()
     //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
     //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
     CLEO_RegisterOpcode(0x7003, CREATE_FILE_OR_DIRECTORY); // 7003=1,create_file_or_directory %1d%
-    CLEO_RegisterOpcode(0x7004, NORMALIZE_ANGLE_DEGREES); // 7004=2,%2d% = normalize_angle_degrees %1d%
-    CLEO_RegisterOpcode(0x7005, NORMALIZE_ANGLE_RADIANS); // 7005=2,%2d% = normalize_angle_radians %1d%
+    // CLEO_RegisterOpcode(0x7004, NORMALIZE_ANGLE_DEGREES); // 7004=2,%2d% = normalize_angle_degrees %1d% (commit by implementation of KillMan :c)
+    // CLEO_RegisterOpcode(0x7005, NORMALIZE_ANGLE_RADIANS); // 7005=2,%2d% = normalize_angle_radians %1d% (commit by implementation of KillMan :c)
     CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = !%1d% ; boolean
     CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
     CLEO_RegisterOpcode(0x7008, FLOAT_MUL); // 7008=3,%3d% = %1d% * %2d% ; float
@@ -2377,8 +2377,8 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x7012, HSV_LERP_INT); // 7012=13,%10d% %11d% %12d% %13d% = HSV_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
     CLEO_RegisterOpcode(0x7013, HSL_LERP_INT); // 7013=13,%10d% %11d% %12d% %13d% = HSL_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
     CLEO_RegisterOpcode(0x7014, BLEND_RGBA_INT); // 7014=9,%5d% %6d% %7d% %8d% = BLEND_RGBA_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% mode %9d%
-    CLEO_RegisterOpcode(0x7015, INT_RULE_OF_THREE); // 7015=4,%4d% = %1d% * %2d% / %3d% ; int
-    CLEO_RegisterOpcode(0x7016, FLOAT_RULE_OF_THREE); // 7016=4,%4d% = %1d% * %2d% / %3d% ; float
+    //CLEO_RegisterOpcode(0x7015, INT_RULE_OF_THREE); // 7015=4,%4d% = %1d% * %2d% / %3d% ; int (commit by implementation of KillMan :c)
+    //CLEO_RegisterOpcode(0x7016, FLOAT_RULE_OF_THREE); // 7016=4,%4d% = %1d% * %2d% / %3d% ; float (commit by implementation of KillMan :c)
     CLEO_RegisterOpcode(0x7017, ORBIT_2D); // 7017=7,ORBIT_2D %6d% %7d% = angleMode %1d% angle %2d% radius %3d% cx %4d% cy %5d%
     CLEO_RegisterOpcode(0x7018, ORBIT_3D); // 7018=10,ORBIT_3D %8d% %9d% %10d% = angleMode %1d% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
 }

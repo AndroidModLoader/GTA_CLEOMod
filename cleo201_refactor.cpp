@@ -3,6 +3,7 @@
 #include <cleohelpers.h>
 #include <cleo4scmfunc.h>
 #include <sys/stat.h>
+#include <sys/system_properties.h>
 
 struct CLEOLocalVarSave
 {
@@ -11,12 +12,26 @@ struct CLEOLocalVarSave
 };
 CLEOLocalVarSave localVarsSave[40];
 
+struct GameFingerPoint
+{
+    int x, y, state, clickIndex;
+    float clickTime[2];
+    int updCount;
+};
+GameFingerPoint *Points;
+int (*OS_PointerGetNumber)();
+int (*OS_ScreenGetWidth)();
+int (*OS_ScreenGetHeight)();
+void (*CorrectAspect)(float*,float*,float*,float*);
+double *base_time, *last_current_time;
+
 extern char g_szSavesPath[256];
 
 extern uintptr_t nCLEOAddr, nGameAddr;
 extern int lastStorageItem;
-extern void (*SetSprite2dTexture)(GTASprite2D&, const char*);
 extern GTASprite2D *ScriptSprites, *ScriptSpritesOrg;
+extern void (*SetSprite2dTexture)(GTASprite2D&, const char*);
+extern int (*GetVehicleFromRef)(int);
 
 CLEO_Fn(GET_LABEL_ADDR)
 {
@@ -359,47 +374,28 @@ inline void InitLanguageProps()
 {
     if(!m_bAlreadyDidReadProps)
     {
-        JNIEnv* env = aml->GetJNIEnvironment();
         strcpy(m_szDeviceLanguageCode, "en");
         strcpy(m_szDeviceCountryCode, "US");
 
-        if(!env) return;
+        char localeProp[PROP_VALUE_MAX];
+        int len = __system_property_get("persist.sys.locale", localeProp);
+        const char* pLocale = ( (len > 0) ? &localeProp[0] : getenv("ANDROID_LOCALE") );
 
-        jclass localeClass = env->FindClass("java/util/Locale");
-        if(!localeClass) return;
-
-        jmethodID getDefaultMethod = env->GetStaticMethodID(localeClass, "getDefault", "()Ljava/util/Locale;");
-        if(!getDefaultMethod) return;
-
-        jobject defaultLocaleObject = env->CallStaticObjectMethod(localeClass, getDefaultMethod);
-        if(!defaultLocaleObject) return;
-
-        jmethodID getLanguageMethod = env->GetMethodID(localeClass, "getLanguage", "()Ljava/lang/String;");
-        if(getLanguageMethod)
+        if(pLocale)
         {
-            jstring languageString = (jstring)env->CallObjectMethod(defaultLocaleObject, getLanguageMethod);
-            if(languageString)
+            len = strlen(pLocale);
+            for(int i = len-1; i >= 0; --i)
             {
-                const char* cstr = env->GetStringUTFChars(languageString, NULL);
-                strncpy(m_szDeviceLanguageCode, cstr, sizeof(cstr)-1);
-                m_szDeviceLanguageCode[sizeof(m_szDeviceLanguageCode)-1] = 0;
-                env->ReleaseStringUTFChars(languageString, cstr);
+                if(pLocale[i] == '-')
+                {
+                    strncpy(m_szDeviceLanguageCode, pLocale, ( (i > sizeof(m_szDeviceLanguageCode)-1) ? sizeof(m_szDeviceLanguageCode)-1 : i ));
+                    m_szDeviceLanguageCode[sizeof(m_szDeviceLanguageCode)-1] = 0;
+                    strncpy(m_szDeviceCountryCode, &pLocale[i+1], sizeof(m_szDeviceCountryCode)-1);
+                    m_szDeviceCountryCode[sizeof(m_szDeviceCountryCode)-1] = 0;
+                    break;
+                }
             }
         }
-
-        jmethodID getCountryMethod = env->GetMethodID(localeClass, "getCountry", "()Ljava/lang/String;");
-        if(getCountryMethod)
-        {
-            jstring countryString = (jstring)env->CallObjectMethod(defaultLocaleObject, getCountryMethod);
-            if(countryString)
-            {
-                const char* cstr = env->GetStringUTFChars(countryString, NULL);
-                strncpy(m_szDeviceCountryCode, cstr, sizeof(cstr)-1);
-                m_szDeviceCountryCode[sizeof(m_szDeviceCountryCode)-1] = 0;
-                env->ReleaseStringUTFChars(countryString, cstr);
-            }
-        }
-
         m_bAlreadyDidReadProps = true;
     }
 }
@@ -413,10 +409,213 @@ CLEO_Fn(GET_COUNTRY_CODE)
     InitLanguageProps();
     CLEO_WriteStringEx(handle, m_szDeviceCountryCode);
 }
+CLEO_Fn(ATOF)
+{
+    char buf[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    cleo->GetPointerToScriptVar(handle)->f = atof(buf);
+}
+CLEO_Fn(ATOI)
+{
+    char buf[MAX_STR_LEN];
+    CLEO_ReadStringEx(handle, buf, sizeof(buf));
+    cleo->GetPointerToScriptVar(handle)->i = atoi(buf);
+}
+CLEO_Fn(GET_SCREEN_HEIGHT)
+{
+    cleo->GetPointerToScriptVar(handle)->i = OS_ScreenGetWidth();
+    cleo->GetPointerToScriptVar(handle)->i = OS_ScreenGetHeight();
+}
+CLEO_Fn(IS_ANY_FINGER_ONSCREEN)
+{
+    int size = OS_PointerGetNumber();
+    for(int i = 0; i < size; ++i)
+    {
+        if(Points[i].state == 2)
+        {
+            return UpdateCompareFlag(handle, true);
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(IS_FINGER_IN_AREA)
+{
+    float tX = cleo->ReadParam(handle)->f;
+    float tY = cleo->ReadParam(handle)->f;
+    float tR = cleo->ReadParam(handle)->f;
+    tR *= tR; // radius SQR
+
+    int size = OS_PointerGetNumber();
+    float xMult = 100.0f / (float)OS_ScreenGetWidth();
+    float yMult = 100.0f / (float)OS_ScreenGetHeight();
+    for(int i = 0; i < size; ++i)
+    {
+        if(Points[i].state == 2)
+        {
+            float x = xMult * Points[i].x - tX;
+            float y = yMult * Points[i].y - tY;
+            if(x*x + y*y < tR)
+            {
+                return UpdateCompareFlag(handle, true);
+            }
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(IS_FINGER_IN_AREA_TIMED)
+{
+    float tX = cleo->ReadParam(handle)->f;
+    float tY = cleo->ReadParam(handle)->f;
+    float tR = cleo->ReadParam(handle)->f;
+    double time = (double)cleo->ReadParam(handle)->i / 1000.0;
+    tR *= tR; // radius SQR
+
+    int size = OS_PointerGetNumber();
+    float xMult = 100.0f / (float)OS_ScreenGetWidth();
+    float yMult = 100.0f / (float)OS_ScreenGetHeight();
+    for(int i = 0; i < size; ++i)
+    {
+        if(Points[i].state == 2)
+        {
+            float x = xMult * Points[i].x - tX;
+            float y = yMult * Points[i].y - tY;
+            if(x*x + y*y < tR)
+            {
+                int clcIdx = (Points[i].clickIndex == 0);
+                if((Points[i].clickTime[clcIdx] + time + *base_time) < *last_current_time)
+                {
+                    return UpdateCompareFlag(handle, true);
+                }
+            }
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(TOUCH_XY_TO_PERCENTAGE)
+{
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    cleo->GetPointerToScriptVar(handle)->f = 100.0f * x / (float)OS_ScreenGetWidth();
+    cleo->GetPointerToScriptVar(handle)->f = 100.0f * y / (float)OS_ScreenGetHeight();
+}
+CLEO_Fn(SPRITE_XY_TO_PERCENTAGE)
+{
+    float trashVar;
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    float sx = OS_ScreenGetWidth(), sy = OS_ScreenGetHeight();
+
+    CorrectAspect(&x, &y, &trashVar, &trashVar);
+    cleo->GetPointerToScriptVar(handle)->f = 100.0f * x / sx;
+    cleo->GetPointerToScriptVar(handle)->f = 100.0f * y / sy;
+}
+CLEO_Fn(GET_MAX_POINTS_NUM)
+{
+    cleo->GetPointerToScriptVar(handle)->i = OS_PointerGetNumber();
+}
+CLEO_Fn(GET_POINT_XY)
+{
+    int num = cleo->ReadParam(handle)->i;
+    if(num < 0 || num >= OS_PointerGetNumber() || Points[num].state != 2)
+    {
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+    }
+    else
+    {
+        cleo->GetPointerToScriptVar(handle)->f = Points[num].x;
+        cleo->GetPointerToScriptVar(handle)->f = Points[num].y;
+    }
+}
+CLEO_Fn(IS_FINGER_NUM_IN_AREA)
+{
+    int i = cleo->ReadParam(handle)->i;
+    float tX = cleo->ReadParam(handle)->f;
+    float tY = cleo->ReadParam(handle)->f;
+    float tR = cleo->ReadParam(handle)->f;
+    tR *= tR; // radius SQR
+
+    int size = OS_PointerGetNumber();
+    if(i >= 0 && i < OS_PointerGetNumber())
+    {
+        if(Points[i].state == 2)
+        {
+            float xMult = 100.0f / (float)OS_ScreenGetWidth();
+            float yMult = 100.0f / (float)OS_ScreenGetHeight();
+            float x = xMult * Points[i].x - tX;
+            float y = yMult * Points[i].y - tY;
+            if(x*x + y*y < tR)
+            {
+                return UpdateCompareFlag(handle, true);
+            }
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(IS_FINGER_NUM_IN_AREA_TIMED)
+{
+    int i = cleo->ReadParam(handle)->i;
+    float tX = cleo->ReadParam(handle)->f;
+    float tY = cleo->ReadParam(handle)->f;
+    float tR = cleo->ReadParam(handle)->f;
+    double time = (double)cleo->ReadParam(handle)->i / 1000.0;
+    tR *= tR; // radius SQR
+
+    if(i >= 0 && i < OS_PointerGetNumber())
+    {
+        if(Points[i].state == 2)
+        {
+            float xMult = 100.0f / (float)OS_ScreenGetWidth();
+            float yMult = 100.0f / (float)OS_ScreenGetHeight();
+            float x = xMult * Points[i].x - tX;
+            float y = yMult * Points[i].y - tY;
+            if(x*x + y*y < tR)
+            {
+                int clcIdx = (Points[i].clickIndex == 0);
+                if((Points[i].clickTime[clcIdx] + time + *base_time) < *last_current_time)
+                {
+                    return UpdateCompareFlag(handle, true);
+                }
+            }
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(HAS_VEHICLE_RADIO)
+{
+    int vehiclePtr = GetVehicleFromRef(cleo->ReadParam(handle)->i);
+    if(vehiclePtr)
+    {
+        if(*nGameIdent == GTASA)
+        {
+            return UpdateCompareFlag(handle, *(char*)(vehiclePtr + 0x1D7) == 0 );
+        }
+        else if(*nGameIdent == GTAVC)
+        {
+            return UpdateCompareFlag(handle, *(uint8_t*)(vehiclePtr + 0x240) < 10 );
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
+CLEO_Fn(HAS_VEHICLE_STRUCT_RADIO)
+{
+    int vehiclePtr = cleo->ReadParam(handle)->i;
+    if(vehiclePtr)
+    {
+        if(*nGameIdent == GTASA)
+        {
+            return UpdateCompareFlag(handle, *(char*)(vehiclePtr + 0x1D7) == 0 );
+        }
+        else if(*nGameIdent == GTAVC)
+        {
+            return UpdateCompareFlag(handle, *(uint8_t*)(vehiclePtr + 0x240) < 10 );
+        }
+    }
+    UpdateCompareFlag(handle, false);
+}
 
 // Default scripting funcs
 
-void (*CorrectAspect)(float*,float*,float*,float*);
 CLEO_Fn(DRAW_SPRITE)
 {
     if(IsScriptCustom(handle))
@@ -643,6 +842,14 @@ void DrawSingleRect(void* handle, CustomScriptRect& rt)
 
 void Init201Opcodes()
 {
+    SET_TO(Points, *(void**)(nGameAddr + ValueForGame(0, 0x394C78, 0x679E94)));
+    SET_TO(OS_PointerGetNumber, cleo->GetMainLibrarySymbol("_Z19OS_PointerGetNumberv"));
+    SET_TO(OS_ScreenGetWidth, cleo->GetMainLibrarySymbol("_Z17OS_ScreenGetWidthv"));
+    SET_TO(OS_ScreenGetHeight, cleo->GetMainLibrarySymbol("_Z18OS_ScreenGetHeightv"));
+    SET_TO(CorrectAspect, cleo->GetMainLibrarySymbol("_Z13CorrectAspectRfS_S_S_"));
+    SET_TO(base_time, cleo->GetMainLibrarySymbol("base_time"));
+    SET_TO(last_current_time, nGameAddr + ValueForGame(0, 0x74BD68, 0x6D70D8));
+
     // Disable switch-case labels for default opcodes
     aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x00, 0x0466); // 0DD0
     //aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x01, 0x0466); // 0DD1
@@ -665,6 +872,20 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0AFF, SET_COMPARE_FLAG); // 0AFF=1,set_compare_flag %1d%
     CLEO_RegisterOpcode(0x0CB0, GET_LANGUAGE_CODE); // 0CB0=1,%1d% = get_language_code
     CLEO_RegisterOpcode(0x0CB1, GET_COUNTRY_CODE); // 0CB1=1,%1d% = get_country_code
+    CLEO_RegisterOpcode(0x0CB2, ATOF); // 0CB2=2,%2d% = atof %1d%
+    CLEO_RegisterOpcode(0x0CB3, ATOI); // 0CB3=2,%2d% = atoi %1d%
+    CLEO_RegisterOpcode(0x0CB4, GET_SCREEN_HEIGHT); // 0CB4=2,get_screen_height x %1d% y %2d%
+    CLEO_RegisterOpcode(0x0CB5, IS_ANY_FINGER_ONSCREEN); // 0CB5=0,is_any_finger_onscreen // IF and SET
+    CLEO_RegisterOpcode(0x0CB6, IS_FINGER_IN_AREA); // 0CB6=3,is_finger_in_area %1d% %2d% radius %3d% // IF and SET
+    CLEO_RegisterOpcode(0x0CB7, IS_FINGER_IN_AREA_TIMED); // 0CB7=4,is_finger_in_area_timed %1d% %2d% radius %3d% time_ms %4d% // IF and SET
+    CLEO_RegisterOpcode(0x0CB8, TOUCH_XY_TO_PERCENTAGE); // 0CB8=4,%3d% %4d% = touchxy_to_perc %1d% %2d%
+    CLEO_RegisterOpcode(0x0CB9, SPRITE_XY_TO_PERCENTAGE); // 0CB9=4,%3d% %4d% = spritexy_to_perc %1d% %2d%
+    CLEO_RegisterOpcode(0x0CBA, GET_MAX_POINTS_NUM); // 0CBA=1,%1d% = get_max_points_num
+    CLEO_RegisterOpcode(0x0CBB, GET_POINT_XY); // 0CBB=3,%2d% %3d% = get_pointer_xy %1d%
+    CLEO_RegisterOpcode(0x0CBC, IS_FINGER_NUM_IN_AREA); // 0CBC=4,is_finger %1d% in_area %2d% %3d% radius %4d% // IF and SET
+    CLEO_RegisterOpcode(0x0CBD, IS_FINGER_NUM_IN_AREA_TIMED); // 0CBD=5,is_finger %1d% in_area_timed %2d% %3d% radius %4d% time_ms %5d% // IF and SET
+    CLEO_RegisterOpcode(0x0CD0, HAS_VEHICLE_RADIO); // 0CD0=1,has_vehicle_radio %1d% // IF and SET
+    CLEO_RegisterOpcode(0x0CD1, HAS_VEHICLE_STRUCT_RADIO); // 0CD1=1,has_vehicle_struct_radio %1d% // IF and SET
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS
@@ -675,8 +896,6 @@ void Init201Opcodes()
         CLEO_RegisterOpcode(0x038F, LOAD_SPRITE); // 038F=2,load_texture %2h% as %1d%
         CLEO_RegisterOpcode(0x03E3, SET_SPRITES_DRAW_BEFORE_FADE); // 03E3=1,set_texture_to_be_drawn_antialiased %1h%
         CLEO_RegisterOpcode(0x074B, DRAW_SPRITE_WITH_ROTATION); // 074B=10,draw_texture %1h% position %2d% %3d% scale %4d% %5d% angle %6d% color_RGBA %7d% %8d% %9d% %10d%
-
-        SET_TO(CorrectAspect, cleo->GetMainLibrarySymbol("_Z13CorrectAspectRfS_S_S_"));
     }
 #endif
 }

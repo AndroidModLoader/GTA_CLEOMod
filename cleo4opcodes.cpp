@@ -1525,21 +1525,6 @@ CLEO_Fn(CREATE_FILE_OR_DIRECTORY)
     }
 }
 
-CLEO_Fn(NORMALIZE_ANGLE_DEGREES)
-{
-    float* angle = &cleo->GetPointerToScriptVar(handle)->f;
-    while (*angle >= 360.0f) *angle -= 360.0f;
-    while (*angle < 0.0f)    *angle += 360.0f;
-}
-
-CLEO_Fn(NORMALIZE_ANGLE_RADIANS)
-{
-    float* rad = &cleo->GetPointerToScriptVar(handle)->f;
-    const float TWO_PI = 6.2831853072f;
-    while (*rad >= TWO_PI) *rad -= TWO_PI;
-    while (*rad < 0.0f)     *rad += TWO_PI;
-}
-
 CLEO_Fn(TOGGLE_BOOLEAN_VAR)
 {
     int* var = &cleo->GetPointerToScriptVar(handle)->i;
@@ -2095,34 +2080,6 @@ CLEO_Fn(BLEND_RGBA_INT)
     cleo->GetPointerToScriptVar(handle)->i = oa;
 }
 
-// Firm: result = INT_RULE_OF_THREE A B C
-CLEO_Fn(INT_RULE_OF_THREE)
-{
-    int A = cleo->ReadParam(handle)->i;
-    int B = cleo->ReadParam(handle)->i;
-    int C = cleo->ReadParam(handle)->i;
-
-    int result = 0;
-    if (A != 0)
-        result = (B * C) / A;
-
-    cleo->GetPointerToScriptVar(handle)->i = result;
-}
-
-// Firm: result = FLOAT_RULE_OF_THREE A B C
-CLEO_Fn(FLOAT_RULE_OF_THREE)
-{
-    float A = cleo->ReadParam(handle)->f;
-    float B = cleo->ReadParam(handle)->f;
-    float C = cleo->ReadParam(handle)->f;
-
-    float result = 0.0f;
-    if (fabsf(A) > 1e-6f)
-        result = (B * C) / A;
-
-    cleo->GetPointerToScriptVar(handle)->f = result;
-}
-
 // Helpers (float)
 static inline float DegToRadF(float deg) { return deg * (3.14159265358979323846f / 180.0f); }
 static inline bool IsFiniteFloat(float v) { return std::isfinite(v); }
@@ -2359,9 +2316,8 @@ void Init4Opcodes()
     //CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
     //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
     //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
+    //
     CLEO_RegisterOpcode(0x7003, CREATE_FILE_OR_DIRECTORY); // 7003=1,create_file_or_directory %1d%
-    // CLEO_RegisterOpcode(0x7004, NORMALIZE_ANGLE_DEGREES); // 7004=2,%2d% = normalize_angle_degrees %1d% (commit by implementation of KillMan :c)
-    // CLEO_RegisterOpcode(0x7005, NORMALIZE_ANGLE_RADIANS); // 7005=2,%2d% = normalize_angle_radians %1d% (commit by implementation of KillMan :c)
     CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = !%1d% ; boolean
     CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
     CLEO_RegisterOpcode(0x7008, FLOAT_MUL); // 7008=3,%3d% = %1d% * %2d% ; float
@@ -2377,8 +2333,6 @@ void Init4Opcodes()
     CLEO_RegisterOpcode(0x7012, HSV_LERP_INT); // 7012=13,%10d% %11d% %12d% %13d% = HSV_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
     CLEO_RegisterOpcode(0x7013, HSL_LERP_INT); // 7013=13,%10d% %11d% %12d% %13d% = HSL_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
     CLEO_RegisterOpcode(0x7014, BLEND_RGBA_INT); // 7014=9,%5d% %6d% %7d% %8d% = BLEND_RGBA_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% mode %9d%
-    //CLEO_RegisterOpcode(0x7015, INT_RULE_OF_THREE); // 7015=4,%4d% = %1d% * %2d% / %3d% ; int (commit by implementation of KillMan :c)
-    //CLEO_RegisterOpcode(0x7016, FLOAT_RULE_OF_THREE); // 7016=4,%4d% = %1d% * %2d% / %3d% ; float (commit by implementation of KillMan :c)
     CLEO_RegisterOpcode(0x7017, ORBIT_2D); // 7017=7,ORBIT_2D %6d% %7d% = angleMode %1d% angle %2d% radius %3d% cx %4d% cy %5d%
     CLEO_RegisterOpcode(0x7018, ORBIT_3D); // 7018=10,ORBIT_3D %8d% %9d% %10d% = angleMode %1d% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
 }

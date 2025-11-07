@@ -818,6 +818,7 @@ void Init201Opcodes();
 void Init4Opcodes();
 void Init5Opcodes();
 void InitMathOpcodes();
+void InitUtilsOpcodes();
 char g_szScriptStore[256 * 0x100]; // 0x100 is the size of script in GTA:SA
                                    // (VC has smaller size=0x88 so it's fine to use BIGGER static value)
 ON_ALL_MODS_LOAD()
@@ -945,6 +946,7 @@ ON_ALL_MODS_LOAD()
 
     // MathOperations Opcodes
     InitMathOpcodes();
+    InitUtilsOpcodes();
 
     // DMA Fix (only in GTA:SA!)
     if(*nGameIdent == GTASA)

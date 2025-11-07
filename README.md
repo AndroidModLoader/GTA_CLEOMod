@@ -269,7 +269,7 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 1C61=2,%2d% = normalize_radians %1d%
 ```
 
-### Opcodes by MatiDragon
+### CLEO Utils (MatiDragon)
 ```
 7003=1,CREATE_FILE_OR_DIRECTORY %1d%
 7005=3,ANGLE_DIFF %3d% = %1d% %2d%

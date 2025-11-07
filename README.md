@@ -271,23 +271,19 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 
 ### Opcodes by MatiDragon
 ```
-7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
-7003=1,create_file_or_directory %1d%
-7004=2,%2d% = normalize_angle_degrees %1d%
-7005=2,%2d% = normalize_angle_radians %1d%
-7006=2,%2d% = !%1d% ; boolean
-7007=3,%3d% = %1d% / %2d% ; float
-7008=3,%3d% = %1d% * %2d% ; float
-7009=3,%3d% = %1d% + %2d% ; float
-700A=3,%3d% = %1d% - %2d% ; float
-700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
-700C=2,file_rename %1d% to %2d%
-700D=8,%5d% %6d% %7d% %8d% = CONV_RGBA_TO_HSVA_INT %1d% %2d% %3d% %4d%
-700E=8,%5d% %6d% %7d% %8d% = CONV_HSVA_TO_RGBA_INT %1d% %2d% %3d% %4d%
-700F=8,%5d% %6d% %7d% %8d% = CONV_RGBA_TO_HSLA_INT %1d% %2d% %3d% %4d%
-7010=8,%5d% %6d% %7d% %8d% = CONV_HSLA_TO_RGBA_INT %1d% %2d% %3d% %4d%
-7011=13,%10d% %11d% %12d% %13d% = RGBA_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
-7012=13,%10d% %11d% %12d% %13d% = HSVA_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
-7013=13,%10d% %11d% %12d% %13d% = HSLA_LERP_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% percent %9d%
-7014=9,%5d% %6d% %7d% %8d% = BLEND_RGBA_INT %1d% %2d% %3d% %4d% and %5d% %6d% %7d% %8d% mode %9d%
+7003=1,CREATE_FILE_OR_DIRECTORY %1d%
+7005=3,ANGLE_DIFF %3d% = %1d% %2d%
+7006=2,TOGGLE_BOOLEAN_VAR %2d% = !%1d% ; boolean
+7007=3,FLOAT_DIV %3d% = %1d% / %2d% ; float
+7008=3,FLOAT_MUL %3d% = %1d% * %2d% ; float
+7009=3,FLOAT_SUM %3d% = %1d% + %2d% ; float
+700A=3,FLOAT_SUB %3d% = %1d% - %2d% ; float
+700B=4,SPLIT_FLOAT_TO_SIGNED_PARTS %3d% %4d% = any_float %1d% decimals %2d%
+700C=2,FILE_RENAME %1d% to %2d%
+700D=8,CONV_RGB_TO_HSV_INT %5d% %6d% %7d% %8d% = %1d% %2d% %3d% %4d%
+700E=8,CONV_HSV_TO_RGB_INT %5d% %6d% %7d% %8d% = %1d% %2d% %3d% %4d%
+700F=8,CONV_RGB_TO_HSL_INT %5d% %6d% %7d% %8d% = %1d% %2d% %3d% %4d%
+7010=8,CONV_HSL_TO_RGB_INT %5d% %6d% %7d% %8d% = %1d% %2d% %3d% %4d%
+7017=7,ORBIT_2D %6d% %7d% = angleMode %1d% angle %2d% radius %3d% cx %4d% cy %5d%
+7018=10,ORBIT_3D %8d% %9d% %10d% = angleMode %1d% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
 ```

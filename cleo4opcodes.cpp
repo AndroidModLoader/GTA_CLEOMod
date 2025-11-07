@@ -1527,10 +1527,22 @@ CLEO_Fn(CREATE_FILE_OR_DIRECTORY)
     }
 }
 
+CLEO_Fn(ANGLE_DIFF)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+
+    float diff = fmodf(b - a + 180.0f, 360.0f);
+    if (diff < 0.0f) diff += 360.0f;
+    diff -= 180.0f;
+
+    cleo->GetPointerToScriptVar(handle)->f = diff;
+}
+
 CLEO_Fn(TOGGLE_BOOLEAN_VAR)
 {
-    int* var = &cleo->GetPointerToScriptVar(handle)->i;
-    *var = (*var == 0) ? 1 : 0;
+    int v = cleo->ReadParam(handle)->i;
+    cleo->GetPointerToScriptVar(handle)->i = (v == 0) ? 1 : 0;
 }
 
 CLEO_Fn(FLOAT_DIV)
@@ -2129,7 +2141,9 @@ void Init4Opcodes()
     //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
     //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
     //
+    // CLEO_RegisterOpcode(0x7002, DELETE_FILE_OR_DIRECTORY); // 7002=1,delete_file_or_directory %1d%
     CLEO_RegisterOpcode(0x7003, CREATE_FILE_OR_DIRECTORY); // 7003=1,create_file_or_directory %1d%
+    CLEO_RegisterOpcode(0x7005, ANGLE_DIFF); // 7005=3,%3d% = angle_diff %1d% %2d%
     CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = !%1d% ; boolean
     CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
     CLEO_RegisterOpcode(0x7008, FLOAT_MUL); // 7008=3,%3d% = %1d% * %2d% ; float

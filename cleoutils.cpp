@@ -2,6 +2,10 @@
 #include <mod/logger.h>
 #include <cleohelpers.h>
 
+#include <dirent.h>
+#include <list>
+#include <string>
+#include <sys/stat.h>
 
 #include <math.h>
 /////////////////////////////////////////////////////

@@ -53,6 +53,52 @@ CLEO_Fn(SET_WIDGET_TRANSFORM)
     UpdateCompareFlag(handle, widgetPtr != 0);
 }
 
+CLEO_Fn(GET_WIDGET_TRANSFORM)
+{
+    // Leer el ID del widget desde el script CLEO
+    int widgetId = cleo->ReadParam(handle)->i;
+
+    // Dirección base de los widgets
+    uintptr_t widgetsAddr = (uintptr_t)TouchInterface_PositionWidgets;
+
+    // Calcular la dirección del widget
+    widgetsAddr += widgetId * 4;  // Cada widget ocupa 4 bytes
+    uintptr_t widgetPtr = *(uintptr_t*)widgetsAddr;
+
+    // Verificar si el puntero al widget es válido
+    if (widgetPtr)
+    {
+        widgetPtr += 12; // Desplazamiento para acceder a las propiedades del widget
+
+        // Leer las propiedades del widget
+        float x = *(float*)widgetPtr;      // Leer posición X
+        widgetPtr += 4;
+        float y = *(float*)widgetPtr;      // Leer posición Y
+        widgetPtr += 4;
+        float width = *(float*)widgetPtr;  // Leer ancho
+        widgetPtr += 4;
+        float height = *(float*)widgetPtr; // Leer alto
+
+        // Devolver las propiedades al script CLEO
+        cleo->GetPointerToScriptVar(handle)->f = x;
+        cleo->GetPointerToScriptVar(handle)->f = y;
+        cleo->GetPointerToScriptVar(handle)->f = width;
+        cleo->GetPointerToScriptVar(handle)->f = height;
+
+        // Actualizar el flag de comparación para indicar éxito
+        UpdateCompareFlag(handle, true);
+    }
+    else
+    {
+        // Si el puntero no es válido, devolver 0 y actualizar el flag de comparación
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
+        UpdateCompareFlag(handle, false);
+    }
+}
+
 /*
 CLEO_Fn(IS_TOUCH_PRESSED)
 {
@@ -581,12 +627,12 @@ void InitUtilsOpcodes()
     // MatiDragon opcodes
     
     CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
-    
-    //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
-    //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
+    CLEO_RegisterOpcode(0x7001, GET_WIDGET_TRANSFORM); // 7001=1,get_widget_transform %1d% -> coords %2d% %3d% scales %4d% %5d%
+    //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7002=1,is_touch_pressed store_to %1d%
+    //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7003=2,get_touch_xy %1d% %2d%
     //
-    // CLEO_RegisterOpcode(0x7002, DELETE_FILE_OR_DIRECTORY); // 7002=1,delete_file_or_directory %1d%
-    CLEO_RegisterOpcode(0x7003, CREATE_FILE_OR_DIRECTORY); // 7003=1,create_file_or_directory %1d%
+    // CLEO_RegisterOpcode(0x7002, DELETE_FILE_OR_DIRECTORY); // 7004=1,delete_file_or_directory %1d%
+    CLEO_RegisterOpcode(0x7004, CREATE_FILE_OR_DIRECTORY); // 7004=1,create_file_or_directory %1d%
     CLEO_RegisterOpcode(0x7005, ANGLE_DIFF); // 7005=3,%3d% = angle_diff %1d% %2d%
     CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = !%1d% ; boolean
     CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
@@ -599,6 +645,6 @@ void InitUtilsOpcodes()
     CLEO_RegisterOpcode(0x700E, CONV_HSV_TO_RGB_INT); // 700E=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_RGB_INT %1d% %2d% %3d% %4d%
     CLEO_RegisterOpcode(0x700F, CONV_RGB_TO_HSL_INT); // 700F=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSL_INT %1d% %2d% %3d% %4d%
     CLEO_RegisterOpcode(0x7010, CONV_HSL_TO_RGB_INT); // 7010=8,%5d% %6d% %7d% %8d% = CONV_HSL_TO_RGB_INT %1d% %2d% %3d% %4d%
-    CLEO_RegisterOpcode(0x7017, ORBIT_2D); // 7017=7,ORBIT_2D %6d% %7d% = angleMode %1d% angle %2d% radius %3d% cx %4d% cy %5d%
-    CLEO_RegisterOpcode(0x7018, ORBIT_3D); // 7018=10,ORBIT_3D %8d% %9d% %10d% = angleMode %1d% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
+    CLEO_RegisterOpcode(0x7017, ORBIT_2D); // 7017=7,%6d% %7d% = orbit_2d %1b:angle/radian% angle %2d% radius %3d% cx %4d% cy %5d%
+    CLEO_RegisterOpcode(0x7018, ORBIT_3D); // 7018=10,%8d% %9d% %10d% = orbit_3d %1b:angle/radian% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
 }

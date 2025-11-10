@@ -8,43 +8,52 @@
 #include <sys/stat.h>
 
 #include <math.h>
+
+
+int (*TouchInterface_PositionWidgets)();
+
 /////////////////////////////////////////////////////
 /////////// BEGIN OPCODES by MatiDragon /////////////
 /////////////////////////////////////////////////////
 
-/*
 CLEO_Fn(SET_WIDGET_TRANSFORM)
 {
     // Widget ID
-    int buttonId = cleo->ReadParam(handle)->i;
+    int widgetId = cleo->ReadParam(handle)->i;  // ID del widget
 
-    // Transform
-    float x = cleo->ReadParam(handle)->f;      // Coord X
-    float y = cleo->ReadParam(handle)->f;      // Coord Y
-    float width = cleo->ReadParam(handle)->f;  // Width
-    float height = cleo->ReadParam(handle)->f; // Height
+    // Widget transform properties
+    float x = cleo->ReadParam(handle)->f;       // Coord X
+    float y = cleo->ReadParam(handle)->f;       // Coord Y
+    float width = cleo->ReadParam(handle)->f;   // Width
+    float height = cleo->ReadParam(handle)->f;  // Height
 
-    uintptr_t widgetsAddr = (*TouchInterfaceWidgets);
+    // Widget base address
+    uintptr_t widgetsAddr = (uintptr_t)TouchInterface_PositionWidgets;
 
-    // Calculate button address
-    widgetsAddr += buttonId * 4;
-    uintptr_t buttonPtr = *(uintptr_t*)widgetsAddr;
+    // Calculate widget address
+    widgetsAddr += widgetId * 4;  // Each widget occupies 4 bytes
+    uintptr_t widgetPtr = *(uintptr_t*)widgetsAddr;
 
-    if (buttonPtr)
+    // Verify if the widget pointer is valid
+    if (widgetPtr)
     {
-        buttonPtr += 12; // Offset to access position
-        *(float*)buttonPtr = x;      // Write X position
-        buttonPtr += 4;
-        *(float*)buttonPtr = y;      // Write Y position
-        buttonPtr += 4;
-        *(float*)buttonPtr = width;  // Write width
-        buttonPtr += 4;
-        *(float*)buttonPtr = height; // Write height
+        widgetPtr += 12; // Offset to access widget properties
+
+        // Write widget properties
+        *(float*)widgetPtr = x;      // Coord X
+        widgetPtr += 4;
+        *(float*)widgetPtr = y;      // Coord Y
+        widgetPtr += 4;
+        *(float*)widgetPtr = width;  // Width
+        widgetPtr += 4;
+        *(float*)widgetPtr = height; // Height
     }
 
-    UpdateCompareFlag(handle, buttonPtr != 0); // Update compare flag
+    // Update compare flag to indicate success or failure
+    UpdateCompareFlag(handle, widgetPtr != 0);
 }
 
+/*
 CLEO_Fn(IS_TOUCH_PRESSED)
 {
     uintptr_t touchDownAddr = cleo->TouchInterfaceTouchDown();
@@ -567,8 +576,12 @@ CLEO_Fn(ORBIT_3D)
 
 void InitUtilsOpcodes()
 {
+    SET_TO(TouchInterface_PositionWidgets, cleo->GetMainLibrarySymbol("_ZN15CTouchInterface10m_pWidgetsE"));
+
     // MatiDragon opcodes
-    //CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
+    
+    CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
+    
     //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7001=1,is_touch_pressed store_to %1d%
     //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7002=2,get_touch_xy %1d% %2d%
     //

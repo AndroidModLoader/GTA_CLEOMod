@@ -272,8 +272,8 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 ### CLEO Utils (MatiDragon)
 ```
 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
-7001=1,get_widget_transform %1d% -> coords %2d% %3d% scales %4d% %5d%
-7005=1,create_file_or_directory %1d%
+7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
+7004=1,create_file_or_directory %1d%
 7005=3,%3d% = angle_diff %1d% %2d%
 7006=2,%2d% = !%1d% ; boolean
 7007=3,%3d% = %1d% / %2d% ; float
@@ -286,6 +286,10 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 700E=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_RGB_INT %1d% %2d% %3d% %4d%
 700F=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSL_INT %1d% %2d% %3d% %4d%
 7010=8,%5d% %6d% %7d% %8d% = CONV_HSL_TO_RGB_INT %1d% %2d% %3d% %4d%
+7011=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_HSL_INT %1d% %2d% %3d% %4d%
+7012=8,%5d% %6d% %7d% %8d% = CONV_HSL_TO_HSV_INT %1d% %2d% %3d% %4d%
+7015=6,%6d% = PACK_4DEC_TO_INT32 %1d% %2d% %3d% %4d% %5d%
+7016=6,%3d% %4d% %5d% %6d% = UNPACK_INT32_TO_4DEC %1d% %2d%
 7017=7,%6d% %7d% = orbit_2d %1b:angle/radian% angle %2d% radius %3d% cx %4d% cy %5d%
 7018=10,%8d% %9d% %10d% = orbit_3d %1b:angle/radian% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
 ```

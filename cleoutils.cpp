@@ -476,6 +476,45 @@ static void HSL_to_RGB_int_scale(int H, int S, int L, int &outR, int &outG, int 
     outB = clampi((int)roundf(bf * 255.0f), 0, 255);
 }
 
+// HSV (H:0..360, S:0..100, V:0..100) → HSL (H:0..360, S:0..100, L:0..100)
+static void HSV_to_HSL_int_scale(int H, int S, int V, int &outH, int &outS, int &outL)
+{
+    // Normalizar hue como en el resto de funciones
+    float hh = fmodf((float)H, 360.0f);
+    if (hh < 0.0f) hh += 360.0f;
+    outH = clampi((int)roundf(hh), 0, 360);
+
+    float s = clampf((float)S / 100.0f, 0.0f, 1.0f);
+    float v = clampf((float)V / 100.0f, 0.0f, 1.0f);
+
+    float l  = v * (1.0f - 0.5f * s);
+    float sl = 0.0f;
+    if (l > 0.0f && l < 1.0f)
+        sl = (v - l) / fminf(l, 1.0f - l);   // equivale a chroma / (2 * min(l,1-l))
+
+    outL = clampi((int)roundf(l  * 100.0f), 0, 100);
+    outS = clampi((int)roundf(sl * 100.0f), 0, 100);
+}
+
+// HSL (H:0..360, S:0..100, L:0..100) → HSV (H:0..360, S:0..100, V:0..100)
+static void HSL_to_HSV_int_scale(int H, int S, int L, int &outH, int &outS, int &outV)
+{
+    // Normalizar hue igual que arriba
+    float hh = fmodf((float)H, 360.0f);
+    if (hh < 0.0f) hh += 360.0f;
+    outH = clampi((int)roundf(hh), 0, 360);
+
+    float sl = clampf((float)S / 100.0f, 0.0f, 1.0f);
+    float l  = clampf((float)L / 100.0f, 0.0f, 1.0f);
+
+    float chroma = sl * (1.0f - fabsf(2.0f * l - 1.0f));
+    float v      = l + 0.5f * chroma;
+    float sv     = (v < 1e-6f) ? 0.0f : chroma / v;
+
+    outV = clampi((int)roundf(v  * 100.0f), 0, 100);
+    outS = clampi((int)roundf(sv * 100.0f), 0, 100);
+}
+
 // ---------------- CLEO opcodes: ALPHA OBLIGATORIA --------------------
 
 // Firma obligatoria: todos reciben y devuelven A (0..255).
@@ -547,6 +586,121 @@ CLEO_Fn(CONV_HSL_TO_RGB_INT)
     cleo->GetPointerToScriptVar(handle)->i = b;
     cleo->GetPointerToScriptVar(handle)->i = a;
 }
+
+// H S L a = CONV_HSV_TO_HSL_INT H S V a
+CLEO_Fn(CONV_HSV_TO_HSL_INT)
+{
+    int H = cleo->ReadParam(handle)->i;
+    int S = cleo->ReadParam(handle)->i;
+    int V = cleo->ReadParam(handle)->i;
+    int a = cleo->ReadParam(handle)->i;  // alpha obligatoria
+
+    int outH, outS, outL;
+    HSV_to_HSL_int_scale(H, S, V, outH, outS, outL);
+
+    cleo->GetPointerToScriptVar(handle)->i = outH;
+    cleo->GetPointerToScriptVar(handle)->i = outS;
+    cleo->GetPointerToScriptVar(handle)->i = outL;
+    cleo->GetPointerToScriptVar(handle)->i = a;
+}
+
+// H S V a = CONV_HSL_TO_HSV_INT H S L a
+CLEO_Fn(CONV_HSL_TO_HSV_INT)
+{
+    int H = cleo->ReadParam(handle)->i;
+    int S = cleo->ReadParam(handle)->i;
+    int L = cleo->ReadParam(handle)->i;
+    int a = cleo->ReadParam(handle)->i;  // alpha obligatoria
+
+    int outH, outS, outV;
+    HSL_to_HSV_int_scale(H, S, L, outH, outS, outV);
+
+    cleo->GetPointerToScriptVar(handle)->i = outH;
+    cleo->GetPointerToScriptVar(handle)->i = outS;
+    cleo->GetPointerToScriptVar(handle)->i = outV;
+    cleo->GetPointerToScriptVar(handle)->i = a;
+}
+
+// ----------------------------------------------------------------
+
+
+// ===================================================================
+// PACK / UNPACK cuatro valores 8-bit (signed o unsigned según flags) → int32
+// Flags como int binario directo, sin #define:
+// bit 0 (1)      → byte0 (lowest) signed
+// bit 1 (2)      → byte1 signed  
+// bit 2 (4)      → byte2 signed
+// bit 3 (8)      → byte3 (highest) signed
+// Ejemplos:
+// 0b0000 → todos unsigned 0..255
+// 0b1111 → todos signed   -128..127
+// 0b0011 → solo byte0 y byte1 signed
+// ===================================================================
+
+static void PackFourInt8_to_Int32(int byte3, int byte2, int byte1, int byte0, int flags, int &outPacked)
+{
+    // clamp según flags
+    int v3 = (flags & (1<<3)) ? clampi(byte3, -128, 127) : clampi(byte3, 0, 255);
+    int v2 = (flags & (1<<2)) ? clampi(byte2, -128, 127) : clampi(byte2, 0, 255);
+    int v1 = (flags & (1<<1)) ? clampi(byte1, -128, 127) : clampi(byte1, 0, 255);
+    int v0 = (flags & (1<<0)) ? clampi(byte0, -128, 127) : clampi(byte0, 0, 255);
+
+    // conversión correcta a unsigned char (two's complement)
+    unsigned char u3 = static_cast<unsigned char>(v3);
+    unsigned char u2 = static_cast<unsigned char>(v2);
+    unsigned char u1 = static_cast<unsigned char>(v1);
+    unsigned char u0 = static_cast<unsigned char>(v0);
+
+    outPacked = (int(u3) << 24) |
+                (int(u2) << 16) |
+                (int(u1) <<  8) |
+                int(u0);
+}
+
+static void UnpackInt32_to_FourInt8(int packed, int flags, int &outByte3, int &outByte2, int &outByte1, int &outByte0)
+{
+    unsigned char u3 = (packed >> 24) & 0xFF;
+    unsigned char u2 = (packed >> 16) & 0xFF;
+    unsigned char u1 = (packed >>  8) & 0xFF;
+    unsigned char u0 =  packed        & 0xFF;
+
+    outByte3 = (flags & (1<<3)) ? static_cast<signed char>(u3) : int(u3);
+    outByte2 = (flags & (1<<2)) ? static_cast<signed char>(u2) : int(u2);
+    outByte1 = (flags & (1<<1)) ? static_cast<signed char>(u1) : int(u1);
+    outByte0 = (flags & (1<<0)) ? static_cast<signed char>(u0) : int(u0);
+}
+// packed = PACK_4DEC_TO_INT32 byte3 byte2 byte1 byte0 flags
+CLEO_Fn(PACK_4DEC_TO_INT32)
+{
+    int byte3 = cleo->ReadParam(handle)->i;
+    int byte2 = cleo->ReadParam(handle)->i;
+    int byte1 = cleo->ReadParam(handle)->i;
+    int byte0 = cleo->ReadParam(handle)->i;
+    int flags = cleo->ReadParam(handle)->i;   // 5 parámetros de entrada
+
+    int packed;
+    PackFourInt8_to_Int32(byte3, byte2, byte1, byte0, flags, packed);
+
+    cleo->GetPointerToScriptVar(handle)->i = packed;   // 0@ = valor empaquetado
+}
+
+// byte3 byte2 byte1 byte0 = UNPACK_INT32_TO_4DEC packed flags
+CLEO_Fn(UNPACK_INT32_TO_4DEC)
+{
+    int packed = cleo->ReadParam(handle)->i;
+    int flags  = cleo->ReadParam(handle)->i;
+
+    int byte3, byte2, byte1, byte0;
+    UnpackInt32_to_FourInt8(packed, flags, byte3, byte2, byte1, byte0);
+
+    cleo->GetPointerToScriptVar(handle)->i = byte3;
+    cleo->GetPointerToScriptVar(handle)->i = byte2;
+    cleo->GetPointerToScriptVar(handle)->i = byte1;
+    cleo->GetPointerToScriptVar(handle)->i = byte0;
+}
+
+// ----------------------------------------------------------------
+
 
 // Helpers (float)
 static inline float DegToRadF(float deg) { return deg * (3.14159265358979323846f / 180.0f); }
@@ -627,12 +781,10 @@ void InitUtilsOpcodes()
     // MatiDragon opcodes
     
     CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
-    CLEO_RegisterOpcode(0x7001, GET_WIDGET_TRANSFORM); // 7001=1,get_widget_transform %1d% -> coords %2d% %3d% scales %4d% %5d%
-    //CLEO_RegisterOpcode(0x7001, IS_TOUCH_PRESSED); // 7002=1,is_touch_pressed store_to %1d%
-    //CLEO_RegisterOpcode(0x7002, GET_TOUCH_XY); // 7003=2,get_touch_xy %1d% %2d%
-    //
-    // CLEO_RegisterOpcode(0x7002, DELETE_FILE_OR_DIRECTORY); // 7004=1,delete_file_or_directory %1d%
+    CLEO_RegisterOpcode(0x7001, GET_WIDGET_TRANSFORM); // 7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
+    
     CLEO_RegisterOpcode(0x7004, CREATE_FILE_OR_DIRECTORY); // 7004=1,create_file_or_directory %1d%
+    
     CLEO_RegisterOpcode(0x7005, ANGLE_DIFF); // 7005=3,%3d% = angle_diff %1d% %2d%
     CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = !%1d% ; boolean
     CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
@@ -640,11 +792,19 @@ void InitUtilsOpcodes()
     CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = %1d% + %2d% ; float
     CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
+    
     CLEO_RegisterOpcode(0x700C, FILE_RENAME); // 700C=2,file_rename %1d% to %2d%
+    
     CLEO_RegisterOpcode(0x700D, CONV_RGB_TO_HSV_INT); // 700D=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSV_INT %1d% %2d% %3d% %4d%
     CLEO_RegisterOpcode(0x700E, CONV_HSV_TO_RGB_INT); // 700E=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_RGB_INT %1d% %2d% %3d% %4d%
     CLEO_RegisterOpcode(0x700F, CONV_RGB_TO_HSL_INT); // 700F=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSL_INT %1d% %2d% %3d% %4d%
     CLEO_RegisterOpcode(0x7010, CONV_HSL_TO_RGB_INT); // 7010=8,%5d% %6d% %7d% %8d% = CONV_HSL_TO_RGB_INT %1d% %2d% %3d% %4d%
+    CLEO_RegisterOpcode(0x7011, CONV_HSV_TO_HSL_INT); // 7011=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_HSL_INT %1d% %2d% %3d% %4d%
+    CLEO_RegisterOpcode(0x7012, CONV_HSL_TO_HSV_INT); // 7012=8,%5d% %6d% %7d% %8d% = CONV_HSL_TO_HSV_INT %1d% %2d% %3d% %4d%
+    
+    CLEO_RegisterOpcode(0x7015, PACK_4DEC_TO_INT32); // 7015=6,%6d% = PACK_4DEC_TO_INT32 %1d% %2d% %3d% %4d% %5d%
+    CLEO_RegisterOpcode(0x7016, UNPACK_INT32_TO_4DEC); // 7016=6,%3d% %4d% %5d% %6d% = UNPACK_INT32_TO_4DEC %1d% %2d%
+    
     CLEO_RegisterOpcode(0x7017, ORBIT_2D); // 7017=7,%6d% %7d% = orbit_2d %1b:angle/radian% angle %2d% radius %3d% cx %4d% cy %5d%
     CLEO_RegisterOpcode(0x7018, ORBIT_3D); // 7018=10,%8d% %9d% %10d% = orbit_3d %1b:angle/radian% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
 }

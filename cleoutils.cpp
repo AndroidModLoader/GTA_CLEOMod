@@ -732,8 +732,8 @@ void InitUtilsOpcodes()
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
     CLEO_RegisterOpcode(0x700C, CONVERT_MODEL_COLOR); // 700C=8,%5d% %6d% %7d% = CONVERT_MODEL_COLOR %1d% inputs %2d% %3d% %4d%
     
-    CLEO_RegisterOpcode(0x7015, PACK_4DEC_TO_INT32); // 7015=6,%6d% = PACK_4DEC_TO_INT32 %1d% %2d% %3d% %4d% %5d%
-    CLEO_RegisterOpcode(0x7016, UNPACK_INT32_TO_4DEC); // 7016=6,%3d% %4d% %5d% %6d% = UNPACK_INT32_TO_4DEC %1d% %2d%
+    CLEO_RegisterOpcode(0x7015, PACK_4DEC_TO_INT32); // 7015=6,%6d% = PACK_4DEC_TO_INT32 %1d% %2d% %3d% %4d% flags %5d%
+    CLEO_RegisterOpcode(0x7016, UNPACK_INT32_TO_4DEC); // 7016=6,%3d% %4d% %5d% %6d% = UNPACK_INT32_TO_4DEC %1d% flags %2d%
     CLEO_RegisterOpcode(0x7017, ORBIT_2D); // 7017=7,%6d% %7d% = orbit_2d %1b:angle/radian% angle %2d% radius %3d% cx %4d% cy %5d%
     CLEO_RegisterOpcode(0x7018, ORBIT_3D); // 7018=10,%8d% %9d% %10d% = orbit_3d %1b:angle/radian% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
 }

@@ -124,7 +124,7 @@ CLEO_Fn(INT_ADD)
 
 CLEO_Fn(INT_SUB)
 {
-    if(GetVarArgCount(handle) > 1)
+    if(GetVarArgCount(handle) > 0)
     {
         int a = cleo->ReadParam(handle)->i;
         int b = cleo->ReadParam(handle)->i;
@@ -139,16 +139,15 @@ CLEO_Fn(INT_SUB)
 
 CLEO_Fn(INT_MUL)
 {
-    if(GetVarArgCount(handle) > 1)
+    int a = cleo->ReadParam(handle)->i;
+    if(a == 0)
     {
-        int a = cleo->ReadParam(handle)->i;
+        UpdateCompareFlag(handle, IsHIDPressed(a, NULL));
+    }
+    else
+    {
         int b = cleo->ReadParam(handle)->i;
         cleo->GetPointerToScriptVar(handle)->i = a * b;
-    }
-    else // default opcode (screw you WarDrum)
-    {
-        int hidNum = cleo->ReadParam(handle)->i;
-        UpdateCompareFlag(handle, IsHIDPressed(hidNum, NULL));
     }
 }
 

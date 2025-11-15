@@ -16,88 +16,82 @@ int (*TouchInterface_PositionWidgets)();
 /////////// BEGIN OPCODES by MatiDragon /////////////
 /////////////////////////////////////////////////////
 
+static uintptr_t g_widgetsBase = 0;
+
 CLEO_Fn(SET_WIDGET_TRANSFORM)
 {
-    // Widget ID
-    int widgetId = cleo->ReadParam(handle)->i;  // ID del widget
+    // Cachear la dirección base de widgets UNA sola vez
+    if (!g_widgetsBase)
+        g_widgetsBase = (uintptr_t)TouchInterface_PositionWidgets;
 
-    // Widget transform properties
-    float x = cleo->ReadParam(handle)->f;       // Coord X
-    float y = cleo->ReadParam(handle)->f;       // Coord Y
-    float width = cleo->ReadParam(handle)->f;   // Width
-    float height = cleo->ReadParam(handle)->f;  // Height
+    // Leer params
+    int widgetId = cleo->ReadParam(handle)->i;
+    float x      = cleo->ReadParam(handle)->f;
+    float y      = cleo->ReadParam(handle)->f;
+    float width  = cleo->ReadParam(handle)->f;
+    float height = cleo->ReadParam(handle)->f;
 
-    // Widget base address
-    uintptr_t widgetsAddr = (uintptr_t)TouchInterface_PositionWidgets;
+    // Calcular dirección del puntero del widget (id * 4 bytes)
+    uintptr_t ptrAddr = g_widgetsBase + (widgetId << 2);
+    uintptr_t widgetPtr = *(uintptr_t*)ptrAddr;
 
-    // Calculate widget address
-    widgetsAddr += widgetId * 4;  // Each widget occupies 4 bytes
-    uintptr_t widgetPtr = *(uintptr_t*)widgetsAddr;
-
-    // Verify if the widget pointer is valid
-    if (widgetPtr)
+    // Validación rápida
+    if (!widgetPtr)
     {
-        widgetPtr += 12; // Offset to access widget properties
-
-        // Write widget properties
-        *(float*)widgetPtr = x;      // Coord X
-        widgetPtr += 4;
-        *(float*)widgetPtr = y;      // Coord Y
-        widgetPtr += 4;
-        *(float*)widgetPtr = width;  // Width
-        widgetPtr += 4;
-        *(float*)widgetPtr = height; // Height
+        UpdateCompareFlag(handle, false);
+        return;
     }
 
-    // Update compare flag to indicate success or failure
-    UpdateCompareFlag(handle, widgetPtr != 0);
+    // Saltar a la parte de propiedades
+    float* props = (float*)(widgetPtr + 12);
+
+    // Escribir directamente (más rápido y limpio)
+    props[0] = x;
+    props[1] = y;
+    props[2] = width;
+    props[3] = height;
+
+    UpdateCompareFlag(handle, true);
 }
 
 CLEO_Fn(GET_WIDGET_TRANSFORM)
 {
-    // Leer el ID del widget desde el script CLEO
+    // Cachear dirección base una sola vez
+    if (!g_widgetsBase)
+        g_widgetsBase = (uintptr_t)TouchInterface_PositionWidgets;
+
+    // Leer ID del widget
     int widgetId = cleo->ReadParam(handle)->i;
 
-    // Dirección base de los widgets
-    uintptr_t widgetsAddr = (uintptr_t)TouchInterface_PositionWidgets;
+    // Obtener puntero al widget
+    uintptr_t widgetPtr = *(uintptr_t*)(g_widgetsBase + (widgetId << 2));
 
-    // Calcular la dirección del widget
-    widgetsAddr += widgetId * 4;  // Cada widget ocupa 4 bytes
-    uintptr_t widgetPtr = *(uintptr_t*)widgetsAddr;
-
-    // Verificar si el puntero al widget es válido
-    if (widgetPtr)
+    if (!widgetPtr)
     {
-        widgetPtr += 12; // Desplazamiento para acceder a las propiedades del widget
+        // Si no existe, devolver 4 valores 0
+        auto out = cleo->GetPointerToScriptVar(handle);
+        out[0].f = 0.0f;
+        out[1].f = 0.0f;
+        out[2].f = 0.0f;
+        out[3].f = 0.0f;
 
-        // Leer las propiedades del widget
-        float x = *(float*)widgetPtr;      // Leer posición X
-        widgetPtr += 4;
-        float y = *(float*)widgetPtr;      // Leer posición Y
-        widgetPtr += 4;
-        float width = *(float*)widgetPtr;  // Leer ancho
-        widgetPtr += 4;
-        float height = *(float*)widgetPtr; // Leer alto
-
-        // Devolver las propiedades al script CLEO
-        cleo->GetPointerToScriptVar(handle)->f = x;
-        cleo->GetPointerToScriptVar(handle)->f = y;
-        cleo->GetPointerToScriptVar(handle)->f = width;
-        cleo->GetPointerToScriptVar(handle)->f = height;
-
-        // Actualizar el flag de comparación para indicar éxito
-        UpdateCompareFlag(handle, true);
-    }
-    else
-    {
-        // Si el puntero no es válido, devolver 0 y actualizar el flag de comparación
-        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
-        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
-        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
-        cleo->GetPointerToScriptVar(handle)->f = 0.0f;
         UpdateCompareFlag(handle, false);
+        return;
     }
+
+    // Acceder a las propiedades (offset +12)
+    float* props = (float*)(widgetPtr + 12);
+
+    // Enviar valores al CLEO (x, y, width, height)
+    auto out = cleo->GetPointerToScriptVar(handle);
+    out[0].f = props[0];
+    out[1].f = props[1];
+    out[2].f = props[2];
+    out[3].f = props[3];
+
+    UpdateCompareFlag(handle, true);
 }
+
 
 /*
 CLEO_Fn(IS_TOUCH_PRESSED)

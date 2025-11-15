@@ -350,7 +350,7 @@ static float clampf(float v, float a, float b) { if (v < a) return a; if (v > b)
 static int clampi(int v, int a, int b) { if (v < a) return a; if (v > b) return b; return v; }
 
 // RGB(0..255) -> HSV(H:0..360 int, S:0..100 int, V:0..100 int)
-static void RGB_to_HSV_int_scale(int r, int g, int b, int &outH, int &outS, int &outV)
+static void RGB_to_HSV(int r, int g, int b, int &outH, int &outS, int &outV)
 {
     float rf = r / 255.0f;
     float gf = g / 255.0f;
@@ -376,7 +376,7 @@ static void RGB_to_HSV_int_scale(int r, int g, int b, int &outH, int &outS, int 
 }
 
 // HSV(H:0..360, S:0..100, V:0..100) -> RGB(0..255)
-static void HSV_to_RGB_int_scale(int H, int S, int V, int &outR, int &outG, int &outB)
+static void HSV_to_RGB(int H, int S, int V, int &outR, int &outG, int &outB)
 {
     float h = (float)H;
     float s = (float)S / 100.0f;
@@ -412,7 +412,7 @@ static void HSV_to_RGB_int_scale(int H, int S, int V, int &outR, int &outG, int 
 }
 
 // RGB -> HSL (H:0..360, S:0..100, L:0..100)
-static void RGB_to_HSL_int_scale(int r, int g, int b, int &outH, int &outS, int &outL)
+static void RGB_to_HSL(int r, int g, int b, int &outH, int &outS, int &outL)
 {
     float rf = r / 255.0f;
     float gf = g / 255.0f;
@@ -444,7 +444,7 @@ static void RGB_to_HSL_int_scale(int r, int g, int b, int &outH, int &outS, int 
 }
 
 // HSL -> RGB
-static void HSL_to_RGB_int_scale(int H, int S, int L, int &outR, int &outG, int &outB)
+static void HSL_to_RGB(int H, int S, int L, int &outR, int &outG, int &outB)
 {
     float h = fmodf((float)H, 360.0f);
     if (h < 0.0f) h += 360.0f;
@@ -477,7 +477,7 @@ static void HSL_to_RGB_int_scale(int H, int S, int L, int &outR, int &outG, int 
 }
 
 // HSV (H:0..360, S:0..100, V:0..100) → HSL (H:0..360, S:0..100, L:0..100)
-static void HSV_to_HSL_int_scale(int H, int S, int V, int &outH, int &outS, int &outL)
+static void HSV_to_HSL(int H, int S, int V, int &outH, int &outS, int &outL)
 {
     // Normalizar hue como en el resto de funciones
     float hh = fmodf((float)H, 360.0f);
@@ -497,7 +497,7 @@ static void HSV_to_HSL_int_scale(int H, int S, int V, int &outH, int &outS, int 
 }
 
 // HSL (H:0..360, S:0..100, L:0..100) → HSV (H:0..360, S:0..100, V:0..100)
-static void HSL_to_HSV_int_scale(int H, int S, int L, int &outH, int &outS, int &outV)
+static void HSL_to_HSV(int H, int S, int L, int &outH, int &outS, int &outV)
 {
     // Normalizar hue igual que arriba
     float hh = fmodf((float)H, 360.0f);
@@ -515,110 +515,53 @@ static void HSL_to_HSV_int_scale(int H, int S, int L, int &outH, int &outS, int 
     outS = clampi((int)roundf(sv * 100.0f), 0, 100);
 }
 
-// ---------------- CLEO opcodes: ALPHA OBLIGATORIA --------------------
+enum CONV_MODE {
+  RGB_TO_HSV,
+  RGB_TO_HSL,
+  HSL_TO_HSV,
+  HSL_TO_RGB,
+  HSV_TO_HSL,
+  HSV_TO_RGB
+};
 
-// Firma obligatoria: todos reciben y devuelven A (0..255).
-
-// r g b a = CONV_RGB_TO_HSV_INT r g b a
-CLEO_Fn(CONV_RGB_TO_HSV_INT)
+// [a, b, c] = CONVERT_MODEL_COLOR(mode, x, y, z)
+CLEO_Fn(CONVERT_MODEL_COLOR)
 {
-    int r = cleo->ReadParam(handle)->i;
-    int g = cleo->ReadParam(handle)->i;
+    int mode = cleo->ReadParam(handle)->i; // convertion mode
+
+    int a = cleo->ReadParam(handle)->i;
     int b = cleo->ReadParam(handle)->i;
-    int a = cleo->ReadParam(handle)->i; // OBLIGATORIO
+    int c = cleo->ReadParam(handle)->i;
 
-    int H,S,V;
-    RGB_to_HSV_int_scale(r,g,b,H,S,V);
+    int X,Y,Z;
+    switch (mode)
+    {
+    case CONV_MODE::RGB_TO_HSV:
+        RGB_to_HSV(a,b,c,X,Y,Z);
+        break;
+    case CONV_MODE::RGB_TO_HSL:
+        RGB_to_HSL(a,b,c,X,Y,Z);
+        break;
+    case CONV_MODE::HSL_TO_HSV:
+        HSL_to_HSV(a,b,c,X,Y,Z);
+        break;
+    case CONV_MODE::HSL_TO_RGB:
+        HSL_to_RGB(a,b,c,X,Y,Z);
+        break;
+    case CONV_MODE::HSV_TO_HSL:
+        HSV_to_HSL(a,b,c,X,Y,Z);
+        break;
+    case CONV_MODE::HSV_TO_RGB:
+        HSV_to_RGB(a,b,c,X,Y,Z);
+        break;
+    default:
+        X = Y = Z = 0;
+        break;
+    }
 
-    cleo->GetPointerToScriptVar(handle)->i = H;
-    cleo->GetPointerToScriptVar(handle)->i = S;
-    cleo->GetPointerToScriptVar(handle)->i = V;
-    cleo->GetPointerToScriptVar(handle)->i = a;
-}
-
-// r g b a = CONV_HSV_TO_RGB_INT H S V A
-CLEO_Fn(CONV_HSV_TO_RGB_INT)
-{
-    int H = cleo->ReadParam(handle)->i;
-    int S = cleo->ReadParam(handle)->i;
-    int V = cleo->ReadParam(handle)->i;
-    int a = cleo->ReadParam(handle)->i; // OBLIGATORIO
-
-    int r,g,b;
-    HSV_to_RGB_int_scale(H,S,V,r,g,b);
-
-    cleo->GetPointerToScriptVar(handle)->i = r;
-    cleo->GetPointerToScriptVar(handle)->i = g;
-    cleo->GetPointerToScriptVar(handle)->i = b;
-    cleo->GetPointerToScriptVar(handle)->i = a;
-}
-
-// H S L a = CONV_RGB_TO_HSL_INT r g b a
-CLEO_Fn(CONV_RGB_TO_HSL_INT)
-{
-    int r = cleo->ReadParam(handle)->i;
-    int g = cleo->ReadParam(handle)->i;
-    int b = cleo->ReadParam(handle)->i;
-    int a = cleo->ReadParam(handle)->i; // OBLIGATORIO
-
-    int H,S,L;
-    RGB_to_HSL_int_scale(r,g,b,H,S,L);
-
-    cleo->GetPointerToScriptVar(handle)->i = H;
-    cleo->GetPointerToScriptVar(handle)->i = S;
-    cleo->GetPointerToScriptVar(handle)->i = L;
-    cleo->GetPointerToScriptVar(handle)->i = a;
-}
-
-// r g b a = CONV_HSL_TO_RGB_INT H S L A
-CLEO_Fn(CONV_HSL_TO_RGB_INT)
-{
-    int H = cleo->ReadParam(handle)->i;
-    int S = cleo->ReadParam(handle)->i;
-    int L = cleo->ReadParam(handle)->i;
-    int a = cleo->ReadParam(handle)->i; // OBLIGATORIO
-
-    int r,g,b;
-    HSL_to_RGB_int_scale(H,S,L,r,g,b);
-
-    cleo->GetPointerToScriptVar(handle)->i = r;
-    cleo->GetPointerToScriptVar(handle)->i = g;
-    cleo->GetPointerToScriptVar(handle)->i = b;
-    cleo->GetPointerToScriptVar(handle)->i = a;
-}
-
-// H S L a = CONV_HSV_TO_HSL_INT H S V a
-CLEO_Fn(CONV_HSV_TO_HSL_INT)
-{
-    int H = cleo->ReadParam(handle)->i;
-    int S = cleo->ReadParam(handle)->i;
-    int V = cleo->ReadParam(handle)->i;
-    int a = cleo->ReadParam(handle)->i;  // alpha obligatoria
-
-    int outH, outS, outL;
-    HSV_to_HSL_int_scale(H, S, V, outH, outS, outL);
-
-    cleo->GetPointerToScriptVar(handle)->i = outH;
-    cleo->GetPointerToScriptVar(handle)->i = outS;
-    cleo->GetPointerToScriptVar(handle)->i = outL;
-    cleo->GetPointerToScriptVar(handle)->i = a;
-}
-
-// H S V a = CONV_HSL_TO_HSV_INT H S L a
-CLEO_Fn(CONV_HSL_TO_HSV_INT)
-{
-    int H = cleo->ReadParam(handle)->i;
-    int S = cleo->ReadParam(handle)->i;
-    int L = cleo->ReadParam(handle)->i;
-    int a = cleo->ReadParam(handle)->i;  // alpha obligatoria
-
-    int outH, outS, outV;
-    HSL_to_HSV_int_scale(H, S, L, outH, outS, outV);
-
-    cleo->GetPointerToScriptVar(handle)->i = outH;
-    cleo->GetPointerToScriptVar(handle)->i = outS;
-    cleo->GetPointerToScriptVar(handle)->i = outV;
-    cleo->GetPointerToScriptVar(handle)->i = a;
+    cleo->GetPointerToScriptVar(handle)->i = X;
+    cleo->GetPointerToScriptVar(handle)->i = Y;
+    cleo->GetPointerToScriptVar(handle)->i = Z;
 }
 
 // ----------------------------------------------------------------
@@ -783,6 +726,7 @@ void InitUtilsOpcodes()
     CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
     CLEO_RegisterOpcode(0x7001, GET_WIDGET_TRANSFORM); // 7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
     
+    CLEO_RegisterOpcode(0x7003, FILE_RENAME); // 7003=2,file_rename %1d% to %2d%
     CLEO_RegisterOpcode(0x7004, CREATE_FILE_OR_DIRECTORY); // 7004=1,create_file_or_directory %1d%
     
     CLEO_RegisterOpcode(0x7005, ANGLE_DIFF); // 7005=3,%3d% = angle_diff %1d% %2d%
@@ -792,19 +736,10 @@ void InitUtilsOpcodes()
     CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = %1d% + %2d% ; float
     CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
-    
-    CLEO_RegisterOpcode(0x700C, FILE_RENAME); // 700C=2,file_rename %1d% to %2d%
-    
-    CLEO_RegisterOpcode(0x700D, CONV_RGB_TO_HSV_INT); // 700D=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSV_INT %1d% %2d% %3d% %4d%
-    CLEO_RegisterOpcode(0x700E, CONV_HSV_TO_RGB_INT); // 700E=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_RGB_INT %1d% %2d% %3d% %4d%
-    CLEO_RegisterOpcode(0x700F, CONV_RGB_TO_HSL_INT); // 700F=8,%5d% %6d% %7d% %8d% = CONV_RGB_TO_HSL_INT %1d% %2d% %3d% %4d%
-    CLEO_RegisterOpcode(0x7010, CONV_HSL_TO_RGB_INT); // 7010=8,%5d% %6d% %7d% %8d% = CONV_HSL_TO_RGB_INT %1d% %2d% %3d% %4d%
-    CLEO_RegisterOpcode(0x7011, CONV_HSV_TO_HSL_INT); // 7011=8,%5d% %6d% %7d% %8d% = CONV_HSV_TO_HSL_INT %1d% %2d% %3d% %4d%
-    CLEO_RegisterOpcode(0x7012, CONV_HSL_TO_HSV_INT); // 7012=8,%5d% %6d% %7d% %8d% = CONV_HSL_TO_HSV_INT %1d% %2d% %3d% %4d%
+    CLEO_RegisterOpcode(0x700C, CONVERT_MODEL_COLOR); // 700C=8,%5d% %6d% %7d% = CONVERT_MODEL_COLOR %1d% inputs %2d% %3d% %4d%
     
     CLEO_RegisterOpcode(0x7015, PACK_4DEC_TO_INT32); // 7015=6,%6d% = PACK_4DEC_TO_INT32 %1d% %2d% %3d% %4d% %5d%
     CLEO_RegisterOpcode(0x7016, UNPACK_INT32_TO_4DEC); // 7016=6,%3d% %4d% %5d% %6d% = UNPACK_INT32_TO_4DEC %1d% %2d%
-    
     CLEO_RegisterOpcode(0x7017, ORBIT_2D); // 7017=7,%6d% %7d% = orbit_2d %1b:angle/radian% angle %2d% radius %3d% cx %4d% cy %5d%
     CLEO_RegisterOpcode(0x7018, ORBIT_3D); // 7018=10,%8d% %9d% %10d% = orbit_3d %1b:angle/radian% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
 }

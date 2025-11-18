@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 
 #include <math.h>
+#include <cstdint>
 
 
 int (*TouchInterface_PositionWidgets)();
@@ -35,12 +36,6 @@ CLEO_Fn(SET_WIDGET_TRANSFORM)
     uintptr_t ptrAddr = g_widgetsBase + (widgetId << 2);
     uintptr_t widgetPtr = *(uintptr_t*)ptrAddr;
 
-    // Validación rápida
-    if (!widgetPtr)
-    {
-        UpdateCompareFlag(handle, false);
-        return;
-    }
 
     // Saltar a la parte de propiedades
     float* props = (float*)(widgetPtr + 12);
@@ -50,8 +45,6 @@ CLEO_Fn(SET_WIDGET_TRANSFORM)
     props[1] = y;
     props[2] = width;
     props[3] = height;
-
-    UpdateCompareFlag(handle, true);
 }
 
 CLEO_Fn(GET_WIDGET_TRANSFORM)
@@ -66,19 +59,6 @@ CLEO_Fn(GET_WIDGET_TRANSFORM)
     // Obtener puntero al widget
     uintptr_t widgetPtr = *(uintptr_t*)(g_widgetsBase + (widgetId << 2));
 
-    if (!widgetPtr)
-    {
-        // Si no existe, devolver 4 valores 0
-        auto out = cleo->GetPointerToScriptVar(handle);
-        out[0].f = 0.0f;
-        out[1].f = 0.0f;
-        out[2].f = 0.0f;
-        out[3].f = 0.0f;
-
-        UpdateCompareFlag(handle, false);
-        return;
-    }
-
     // Acceder a las propiedades (offset +12)
     float* props = (float*)(widgetPtr + 12);
 
@@ -88,8 +68,6 @@ CLEO_Fn(GET_WIDGET_TRANSFORM)
     out[1].f = props[1];
     out[2].f = props[2];
     out[3].f = props[3];
-
-    UpdateCompareFlag(handle, true);
 }
 
 
@@ -183,6 +161,12 @@ CLEO_Fn(TOGGLE_BOOLEAN_VAR)
     cleo->GetPointerToScriptVar(handle)->i = (v == 0) ? 1 : 0;
 }
 
+CLEO_Fn(TOGGLE_BOOLEAN_REAL)
+{
+    int v = cleo->ReadParam(handle)->i;
+    cleo->GetPointerToScriptVar(handle)->i = (v == 0) ? 0 : 1;
+}
+
 CLEO_Fn(FLOAT_DIV)
 {
     float a = cleo->ReadParam(handle)->f;
@@ -248,8 +232,6 @@ CLEO_Fn(SPLIT_FLOAT_TO_SIGNED_PARTS)
     // Return values: first int (integer part), second int (fractional scaled)
     cleo->GetPointerToScriptVar(handle)->i = intPart;
     cleo->GetPointerToScriptVar(handle)->i = fracPart;
-
-    UpdateCompareFlag(handle, true);
 }
 
 CLEO_Fn(FILE_RENAME)
@@ -558,6 +540,84 @@ CLEO_Fn(CONVERT_MODEL_COLOR)
     cleo->GetPointerToScriptVar(handle)->i = Z;
 }
 
+// op: 0==, 1!=, 2<, 3<=, 4>, 5>=
+static bool CompareInts(int a, int b, int op)
+{
+    switch(op)
+    {
+        case 0: return a == b;
+        case 1: return a != b;
+        case 2: return a <  b;
+        case 3: return a <= b;
+        case 4: return a >  b;
+        case 5: return a >= b;
+        default: return false;
+    }
+}
+static bool CompareFloats(float a, float b, int op)
+{
+    switch(op)
+    {
+        case 0: return a == b;
+        case 1: return a != b;
+        case 2: return a <  b;
+        case 3: return a <= b;
+        case 4: return a >  b;
+        case 5: return a >= b;
+        default: return false;
+    }
+}
+
+// out = LOGICAL_OR a b
+CLEO_Fn(LOGICAL_OR)
+{
+    int a = cleo->ReadParam(handle)->i;
+    int b = cleo->ReadParam(handle)->i;
+
+    cleo->GetPointerToScriptVar(handle)->i = (a != 0) ? a : b;
+}
+
+
+//%4d% = %1d% ? %2d% : %3d%
+CLEO_Fn(IF_TERNARY)
+{
+    int a = cleo->ReadParam(handle)->i;
+    int b = cleo->ReadParam(handle)->i;
+    int c = cleo->ReadParam(handle)->i;
+
+    cleo->GetPointerToScriptVar(handle)->i = (a != 0) ? b : c;
+}
+
+// out = IF_TERNARY_INT A op B ? C : D
+CLEO_Fn(IF_TERNARY_INT)
+{
+    int A  = cleo->ReadParam(handle)->i;
+    int op = cleo->ReadParam(handle)->i;
+    int B  = cleo->ReadParam(handle)->i;
+    std::uint32_t C  = cleo->ReadParam(handle)->i;
+    std::uint32_t D  = cleo->ReadParam(handle)->i;
+
+    std::uint32_t result = CompareInts(A, B, op) ? C : D;
+
+    cleo->GetPointerToScriptVar(handle)->i = result;
+}
+
+// out = IF_TERNARY_FLOAT A op B ? C : D
+CLEO_Fn(IF_TERNARY_FLOAT)
+{
+    float A  = cleo->ReadParam(handle)->f;
+    int op = cleo->ReadParam(handle)->i;
+    float B  = cleo->ReadParam(handle)->f;
+    std::uint32_t C  = cleo->ReadParam(handle)->f;
+    std::uint32_t D  = cleo->ReadParam(handle)->f;
+
+    std::uint32_t result = CompareFloats(A, B, op) ? C : D;
+
+    cleo->GetPointerToScriptVar(handle)->i = result;
+}
+
+
+
 // ----------------------------------------------------------------
 
 
@@ -636,15 +696,151 @@ CLEO_Fn(UNPACK_INT32_TO_4DEC)
     cleo->GetPointerToScriptVar(handle)->i = byte0;
 }
 
-// ----------------------------------------------------------------
+static int PackSetByte_Internal(int packed, int byteIndex, int value, int isSigned)
+{
+    int clamped = isSigned ? clampi(value, -128, 127) : clampi(value, 0, 255);
+    unsigned char u = static_cast<unsigned char>(clamped);
+
+    int shift = byteIndex * 8;
+    packed &= ~(0xFF << shift);
+    packed |= (int(u) << shift);
+
+    return packed;
+}
+
+// packed = PACK_SET_BYTE packed byteIndex newValue isSigned
+CLEO_Fn(PACK_SET_BYTE)
+{
+    int packed     = cleo->ReadParam(handle)->i;
+    int byteIndex  = cleo->ReadParam(handle)->i;
+    int newValue   = cleo->ReadParam(handle)->i;
+    int isSigned   = cleo->ReadParam(handle)->i;
+
+    cleo->GetPointerToScriptVar(handle)->i =
+        PackSetByte_Internal(packed, byteIndex, newValue, isSigned);
+}
+
+static int PackGetByte_Internal(int packed, int byteIndex, int isSigned)
+{
+    int shift = byteIndex * 8;
+    unsigned char u = (packed >> shift) & 0xFF;
+    return isSigned ? int(static_cast<signed char>(u)) : int(u);
+}
+
+// byte = PACK_GET_BYTE packed byteIndex isSigned
+CLEO_Fn(PACK_GET_BYTE)
+{
+    int packed    = cleo->ReadParam(handle)->i;
+    int byteIndex = cleo->ReadParam(handle)->i;
+    int isSigned  = cleo->ReadParam(handle)->i;
+
+    cleo->GetPointerToScriptVar(handle)->i =
+        PackGetByte_Internal(packed, byteIndex, isSigned);
+}
+
+static int PackRotateLeft32(int packed, int amount)
+{
+    amount &= 31;
+    unsigned int u = (unsigned int)packed;
+    return (u << amount) | (u >> (32 - amount));
+}
+
+static int PackRotateRight32(int packed, int amount)
+{
+    amount &= 31;
+    unsigned int u = (unsigned int)packed;
+    return (u >> amount) | (u << (32 - amount));
+}
+
+// result = PACK_ROTATE packed direction amount
+CLEO_Fn(PACK_ROTATE)
+{
+    int packed = cleo->ReadParam(handle)->i;
+    int direction = cleo->ReadParam(handle)->i;
+    int amount = cleo->ReadParam(handle)->i;
+
+    if (direction == 0) {
+        cleo->GetPointerToScriptVar(handle)->i = PackRotateLeft32(packed, amount);
+    }
+    else {
+        cleo->GetPointerToScriptVar(handle)->i = PackRotateRight32(packed, amount);
+    }
+}
+
+static int PackCheckTruthy_Internal(int packed, int mask, int mode)
+{
+    unsigned char b3 = (packed >> 24) & 0xFF;
+    unsigned char b2 = (packed >> 16) & 0xFF;
+    unsigned char b1 = (packed >>  8) & 0xFF;
+    unsigned char b0 =  packed        & 0xFF;
+
+    bool arr[4] = { b0 != 0, b1 != 0, b2 != 0, b3 != 0 };
+
+    if (mode == 0)  // ALL
+    {
+        for (int i = 0; i < 4; i++)
+            if ((mask & (1<<i)) && !arr[i])
+                return 0;
+        return 1;
+    }
+    else            // ANY
+    {
+        for (int i = 0; i < 4; i++)
+            if ((mask & (1<<i)) && arr[i])
+                return 1;
+        return 0;
+    }
+}
+// truth = PACK_CHECK_TRUTHY packed mask mode
+// mask bits: 1=byte0, 2=byte1, 4=byte2, 8=byte3
+// mode: 0=ALL, 1=ANY
+CLEO_Fn(PACK_CHECK_TRUTHY)
+{
+    int packed = cleo->ReadParam(handle)->i;
+    int mask   = cleo->ReadParam(handle)->i;
+    int mode   = cleo->ReadParam(handle)->i;
+
+    cleo->GetPointerToScriptVar(handle)->i =
+        PackCheckTruthy_Internal(packed, mask, mode);
+}
+
+static int PackSwapCustom(int p, int i3, int i2, int i1, int i0)
+{
+    unsigned char b[4];
+    b[3] = (p >> 24) & 0xFF;
+    b[2] = (p >> 16) & 0xFF;
+    b[1] = (p >>  8) & 0xFF;
+    b[0] =  p        & 0xFF;
+
+    return (int(b[i3]) << 24) |
+           (int(b[i2]) << 16) |
+           (int(b[i1]) <<  8) |
+           int(b[i0]);
+}
+// out = PACK_SWAP_CUSTOM packed i3 i2 i1 i0
+CLEO_Fn(PACK_SWAP_CUSTOM)
+{
+    int p  = cleo->ReadParam(handle)->i;
+    int i3 = cleo->ReadParam(handle)->i;
+    int i2 = cleo->ReadParam(handle)->i;
+    int i1 = cleo->ReadParam(handle)->i;
+    int i0 = cleo->ReadParam(handle)->i;
+
+    cleo->GetPointerToScriptVar(handle)->i = PackSwapCustom(p,i3,i2,i1,i0);
+}
+
+
+
+///////////////////////////////////////////////////
+///////////////////// ORBITS //////////////////////
+///////////////////////////////////////////////////
 
 
 // Helpers (float)
 static inline float DegToRadF(float deg) { return deg * (3.14159265358979323846f / 180.0f); }
-static inline bool IsFiniteFloat(float v) { return finite(v); }
 
-// ORBIT_2D
-CLEO_Fn(ORBIT_2D)
+// 7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
+CLEO_Fn(ORBIT_CIRCLE)
 {
     int angleMode = cleo->ReadParam(handle)->i;
     float angle = cleo->ReadParam(handle)->f;
@@ -654,23 +850,15 @@ CLEO_Fn(ORBIT_2D)
 
     if (angleMode == 0) angle = DegToRadF(angle);
 
-    if (!IsFiniteFloat(angle) || !IsFiniteFloat(radius) || !IsFiniteFloat(cx) || !IsFiniteFloat(cy))
-    {
-        UpdateCompareFlag(handle, false);
-        return;
-    }
-
     float x = cosf(angle) * radius + cx;
     float y = sinf(angle) * radius + cy;
 
     cleo->GetPointerToScriptVar(handle)->f = x;
     cleo->GetPointerToScriptVar(handle)->f = y;
-
-    UpdateCompareFlag(handle, true);
 }
 
-// ORBIT_3D
-CLEO_Fn(ORBIT_3D)
+// 7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
+CLEO_Fn(ORBIT_SPHERE)
 {
     int angleMode = cleo->ReadParam(handle)->i;
     float ax = cleo->ReadParam(handle)->f;
@@ -681,13 +869,6 @@ CLEO_Fn(ORBIT_3D)
     float cz = cleo->ReadParam(handle)->f;
 
     if (angleMode == 0) { ax = DegToRadF(ax); ay = DegToRadF(ay); }
-
-    if (!IsFiniteFloat(ax) || !IsFiniteFloat(ay) || !IsFiniteFloat(radius) ||
-        !IsFiniteFloat(cx) || !IsFiniteFloat(cy) || !IsFiniteFloat(cz))
-    {
-        UpdateCompareFlag(handle, false);
-        return;
-    }
 
     float sax = sinf(ax);
     float cax = cosf(ax);
@@ -701,17 +882,150 @@ CLEO_Fn(ORBIT_3D)
     cleo->GetPointerToScriptVar(handle)->f = x;
     cleo->GetPointerToScriptVar(handle)->f = y;
     cleo->GetPointerToScriptVar(handle)->f = z;
-
-    UpdateCompareFlag(handle, true);
 }
 
+// 7019=7,%7d% %8d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% coords %5d% %6d%
+CLEO_Fn(ORBIT_OVAL)
+{
+    int angleMode = cleo->ReadParam(handle)->i;
+    float angle = cleo->ReadParam(handle)->f;
+    float radiusX = cleo->ReadParam(handle)->f;
+    float radiusY = cleo->ReadParam(handle)->f;
+    float cx = cleo->ReadParam(handle)->f;
+    float cy = cleo->ReadParam(handle)->f;
+
+    if (angleMode == 0) angle = DegToRadF(angle);
+
+    float x = cosf(angle) * radiusX + cx;
+    float y = sinf(angle) * radiusY + cy;
+
+    cleo->GetPointerToScriptVar(handle)->f = x;
+    cleo->GetPointerToScriptVar(handle)->f = y;
+}
+
+// 701A=10,%10d% %11d% %12d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% coords %7d% %8d% %9d%
+CLEO_Fn(ORBIT_OVOID)
+{
+    int angleMode = cleo->ReadParam(handle)->i;
+    float ax = cleo->ReadParam(handle)->f;
+    float ay = cleo->ReadParam(handle)->f;
+    float radiusX = cleo->ReadParam(handle)->f;
+    float radiusY = cleo->ReadParam(handle)->f;
+    float radiusZ = cleo->ReadParam(handle)->f;
+    float cx = cleo->ReadParam(handle)->f;
+    float cy = cleo->ReadParam(handle)->f;
+    float cz = cleo->ReadParam(handle)->f;
+
+    if (angleMode == 0) { ax = DegToRadF(ax); ay = DegToRadF(ay); }
+
+    float sax = sinf(ax);
+    float cax = cosf(ax);
+    float say = sinf(ay);
+    float cay = cosf(ay);
+
+    float x = sax * cay * radiusX + cx;
+    float y = sax * say * radiusY + cy;
+    float z = cax * radiusZ + cz;
+
+    cleo->GetPointerToScriptVar(handle)->f = x;
+    cleo->GetPointerToScriptVar(handle)->f = y;
+    cleo->GetPointerToScriptVar(handle)->f = z;
+}
+
+// Normalize helper
+static inline void Normalize(float& x, float& y, float& z) {
+    float len = sqrtf(x*x + y*y + z*z);
+    if (len > 0.000001f) {
+        x /= len; y /= len; z /= len;
+    }
+}
+
+// Cross product
+static inline void Cross(float ax, float ay, float az, float bx, float by, float bz,
+                         float& rx, float& ry, float& rz)
+{
+    rx = ay*bz - az*by;
+    ry = az*bx - ax*bz;
+    rz = ax*by - ay*bx;
+}
+
+// 701B=10,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radius %5d% %6d% direction %7d% %8d% %9d% coords %10d% %11d% %12d%
+// params:
+// 1: angleMode (0° / 1 rad)
+// 2: angle
+// 3: heightAlongCylinder
+// 4: maxHeight
+// 5: radiusStart
+// 6: radiusEnd
+// 7,8,9: dirX dirY dirZ (direction of cylinder)
+// 10,11,12: centerX centerY centerZ
+CLEO_Fn(ORBIT_CYLINDER)
+{
+    int angleMode   = cleo->ReadParam(handle)->i;
+    float angle     = cleo->ReadParam(handle)->f;
+    float h         = cleo->ReadParam(handle)->f;
+    float maxH      = cleo->ReadParam(handle)->f;
+    float r1        = cleo->ReadParam(handle)->f;
+    float r2        = cleo->ReadParam(handle)->f;
+
+    float dx = cleo->ReadParam(handle)->f;
+    float dy = cleo->ReadParam(handle)->f;
+    float dz = cleo->ReadParam(handle)->f;
+
+    float cx = cleo->ReadParam(handle)->f;
+    float cy = cleo->ReadParam(handle)->f;
+    float cz = cleo->ReadParam(handle)->f;
+
+    if (angleMode == 0) {
+        angle = DegToRadF(angle);
+        dx = DegToRadF(dx);
+        dy = DegToRadF(dy);
+        dz = DegToRadF(dz);
+    }
+
+    // Normalize direction
+    Normalize(dx, dy, dz);
+
+    // Compute interpolation of radius
+    float t = (maxH != 0.0f) ? (h / maxH) : 0.0f;
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+
+    float radius = r1 + (r2 - r1) * t;
+
+    // Find orthonormal basis perpendicular to D
+    float ux, uy, uz;
+    float vx, vy, vz;
+
+    // Pick a vector not colinear with D
+    float auxX = (fabs(dx) > 0.9f) ? 0.0f : 1.0f;
+    float auxY = 0.0f;
+    float auxZ = (fabs(dx) > 0.9f) ? 1.0f : 0.0f;
+
+    // U = D × aux  (orthogonal)
+    Cross(dx, dy, dz, auxX, auxY, auxZ, ux, uy, uz);
+    Normalize(ux, uy, uz);
+
+    // V = D × U  (second orthogonal)
+    Cross(dx, dy, dz, ux, uy, uz, vx, vy, vz);
+    Normalize(vx, vy, vz);
+
+    // Final position
+    float px = cx + dx*h + (ux*cosf(angle) + vx*sinf(angle)) * radius;
+    float py = cy + dy*h + (uy*cosf(angle) + vy*sinf(angle)) * radius;
+    float pz = cz + dz*h + (uz*cosf(angle) + vz*sinf(angle)) * radius;
+
+    cleo->GetPointerToScriptVar(handle)->f = px;
+    cleo->GetPointerToScriptVar(handle)->f = py;
+    cleo->GetPointerToScriptVar(handle)->f = pz;
+}
 
 
 ///////////////////////////////////////////////////
 //////////// END OPCODES by MatiDragon ////////////
 ///////////////////////////////////////////////////
 
-void InitUtilsOpcodes()
+void InitGrimoireOpcodes()
 {
     SET_TO(TouchInterface_PositionWidgets, cleo->GetMainLibrarySymbol("_ZN15CTouchInterface10m_pWidgetsE"));
 
@@ -719,10 +1033,9 @@ void InitUtilsOpcodes()
     
     CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
     CLEO_RegisterOpcode(0x7001, GET_WIDGET_TRANSFORM); // 7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
-    
+    CLEO_RegisterOpcode(0x7002, LOGICAL_OR); // 7002=2,%1d% = %1d% || %2d%
     CLEO_RegisterOpcode(0x7003, FILE_RENAME); // 7003=2,file_rename %1d% to %2d%
     CLEO_RegisterOpcode(0x7004, CREATE_FILE_OR_DIRECTORY); // 7004=1,create_file_or_directory %1d%
-    
     CLEO_RegisterOpcode(0x7005, ANGLE_DIFF); // 7005=3,%3d% = angle_diff %1d% %2d%
     CLEO_RegisterOpcode(0x7006, TOGGLE_BOOLEAN_VAR); // 7006=2,%2d% = !%1d% ; boolean
     CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
@@ -730,10 +1043,21 @@ void InitUtilsOpcodes()
     CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = %1d% + %2d% ; float
     CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
-    CLEO_RegisterOpcode(0x700C, CONVERT_MODEL_COLOR); // 700C=8,%5d% %6d% %7d% = CONVERT_MODEL_COLOR %1d% inputs %2d% %3d% %4d%
-    
-    CLEO_RegisterOpcode(0x7015, PACK_4DEC_TO_INT32); // 7015=6,%6d% = PACK_4DEC_TO_INT32 %1d% %2d% %3d% %4d% flags %5d%
-    CLEO_RegisterOpcode(0x7016, UNPACK_INT32_TO_4DEC); // 7016=6,%3d% %4d% %5d% %6d% = UNPACK_INT32_TO_4DEC %1d% flags %2d%
-    CLEO_RegisterOpcode(0x7017, ORBIT_2D); // 7017=7,%6d% %7d% = orbit_2d %1b:angle/radian% angle %2d% radius %3d% cx %4d% cy %5d%
-    CLEO_RegisterOpcode(0x7018, ORBIT_3D); // 7018=10,%8d% %9d% %10d% = orbit_3d %1b:angle/radian% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
+    CLEO_RegisterOpcode(0x700C, CONVERT_MODEL_COLOR); // 700C=8,%5d% %6d% %7d% = convert_model_color %1d% inputs %2d% %3d% %4d%
+    CLEO_RegisterOpcode(0x700D, IF_TERNARY_INT); // %6d% = int %1d% op %2d% int %3d% ? any_value %4d% : any_value %5d%
+    CLEO_RegisterOpcode(0x700E, IF_TERNARY_FLOAT); // %6d% = float %1d% op %2d% float %3d% ? any_value %4d% : any_value %5d%
+    CLEO_RegisterOpcode(0x700F, PACK_SET_BYTE); // 700F=5,%5d% = pack_set_byte %1d% byteIndex %2d% newValue %3d% isSigned %4b%
+    CLEO_RegisterOpcode(0x7010, PACK_GET_BYTE); // 7010=4,%4d% = pack_get_byte %1d% byteIndex %2d% isSigned %3b%
+    CLEO_RegisterOpcode(0x7011, PACK_ROTATE); // 7011=4,%4d% = pack_rotate %1d% direction %2b% amount %3d%
+    CLEO_RegisterOpcode(0x7012, PACK_CHECK_TRUTHY); // 7012=4,%4d% = pack_check_truthy %1d% mask %2d% mode %3b% //IF/SET
+    CLEO_RegisterOpcode(0x7013, PACK_SWAP_CUSTOM); // 7013=6,%6d% = pack_swap_custom %1d% i3 %2d% i2 %3d% i1 %4d% i0 %5d%
+    CLEO_RegisterOpcode(0x7014, IF_TERNARY); // 7014=4,%4d% = is_truthy %1d% ? any_value %2d% : any_value %3d%
+    CLEO_RegisterOpcode(0x7015, PACK_4DEC_TO_INT32); // 7015=6,%6d% = pack_4dec_to_int32 %1d% %2d% %3d% %4d% flags %5d%
+    CLEO_RegisterOpcode(0x7016, UNPACK_INT32_TO_4DEC); // 7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
+    CLEO_RegisterOpcode(0x7017, ORBIT_CIRCLE);   // 7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
+    CLEO_RegisterOpcode(0x7018, ORBIT_SPHERE);   // 7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
+    CLEO_RegisterOpcode(0x7019, ORBIT_OVAL);     // 7019=7,%7d% %8d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% coords %5d% %6d%
+    CLEO_RegisterOpcode(0x701A, ORBIT_OVOID);    // 701A=10,%10d% %11d% %12d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% coords %7d% %8d% %9d%
+    CLEO_RegisterOpcode(0x701B, ORBIT_CYLINDER); // 701B=10,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radius %5d% %6d% direction %7d% %8d% %9d% coords %10d% %11d% %12d%
+    CLEO_RegisterOpcode(0x701C, TOGGLE_BOOLEAN_REAL); // 701C=2,%2d% = !!%1d%
 }

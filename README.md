@@ -269,22 +269,62 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 1C61=2,%2d% = normalize_radians %1d%
 ```
 
-### CLEO Utils (MatiDragon)
+### Grimoire (MatiDragon)
+to your SASCM.ini
 ```
 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
 7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
 7003=2,file_rename %1d% to %2d%
 7004=1,create_file_or_directory %1d%
+
 7005=3,%3d% = angle_diff %1d% %2d%
-7006=2,%2d% = !%1d% ; boolean
+701C=2,%2d% = !! %1d%
+7006=2,%2d% = ! %1d%
+7002=2,%1d% = %1d% || %2d%
 7007=3,%3d% = %1d% / %2d% ; float
 7008=3,%3d% = %1d% * %2d% ; float
 7009=3,%3d% = %1d% + %2d% ; float
 700A=3,%3d% = %1d% - %2d% ; float
 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
-700C=8,%5d% %6d% %7d% = CONVERT_MODEL_COLOR %1d% inputs %2d% %3d% %4d%
-7015=6,%6d% = PACK_4DEC_TO_INT32 %1d% %2d% %3d% %4d% flags %5d%
-7016=6,%3d% %4d% %5d% %6d% = UNPACK_INT32_TO_4DEC %1d% flags %2d%
-7017=7,%6d% %7d% = orbit_2d %1b:angle/radian% angle %2d% radius %3d% cx %4d% cy %5d%
-7018=10,%8d% %9d% %10d% = orbit_3d %1b:angle/radian% ax %2d% ay %3d% radius %4d% cx %5d% cy %6d% cz %7d%
+700C=8,%5d% %6d% %7d% = convert_model_color %1d% inputs %2d% %3d% %4d%
+
+700D=6,%6d% = int %1d% op %2d% int %3d% ? any_value %4d% : any_value %5d%
+700E=6,%6d% = float %1d% op %2d% float %3d% ? any_value %4d% : any_value %5d%
+7014=4,%4d% = is_truthy %1d% ? any_value %2d% : any_value %3d%
+
+700F=5,%5d% = pack_set_byte %1d% byteIndex %2d% newValue %3d% isSigned %4b%
+7010=4,%4d% = pack_get_byte %1d% byteIndex %2d% isSigned %3b%
+7011=4,%4d% = pack_rotate %1d% direction %2b% amount %3d%
+7012=4,%4d% = pack_check_truthy %1d% mask %2d% mode %3b% //IF/SET
+7013=6,%6d% = pack_swap_custom %1d% i3 %2d% i2 %3d% i1 %4d% i0 %5d%
+7015=6,%6d% = pack_4dec_to_int32 %1d% %2d% %3d% %4d% flags %5d%
+7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
+
+7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
+7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
+7019=7,%7d% %8d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% coords %5d% %6d%
+701A=10,%10d% %11d% %12d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% coords %7d% %8d% %9d%
+701B=10,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radius %5d% %6d% direction %7d% %8d% %9d% coords %10d% %11d% %12d%
+```
+
+constants
+```
+const
+    // Red Green Blue
+    // Hue Saturation Value
+    // Hue Saturation Lightness
+    COLOR_RGB_TO_HSV = 0
+    COLOR_RGB_TO_HSL = 1
+    COLOR_HSL_TO_HSV = 2
+    COLOR_HSL_TO_RGB = 3
+    COLOR_HSV_TO_HSL = 4
+    COLOR_HSV_TO_RGB = 5
+
+    OP_EQUAL = 0           // ==
+    OP_UNEQUAL = 1         // !=
+    OP_LESSER = 2          // <
+    OP_LESSER_EQUAL = 3    // <=
+    OP_GREATER = 4         // >
+    OP_GREATER_EQUAL = 5   // >=
+end
 ```

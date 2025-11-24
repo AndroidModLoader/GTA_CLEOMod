@@ -333,6 +333,12 @@ const
     OP_LESSER_EQUAL = 3    // <=
     OP_GREATER = 4         // >
     OP_GREATER_EQUAL = 5   // >=
+
+    DIRECTION_LEFT = 0
+    DIRECTION_RIGTH = 1
+
+    MODE_AND = 0
+    MODE_OR = 1
 end
 ```
 

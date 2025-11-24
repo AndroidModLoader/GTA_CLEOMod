@@ -1,4 +1,5 @@
-### CLEO? For Android?
+<details>
+  <summary><h3>CLEO? For Android?</h3></summary>
 Well, yes! This is a CLEO wrapped in an AML mod!
 Original author of a CLEO on Android is Alexander Blade (http://www.dev-c.com/).
 
@@ -148,7 +149,6 @@ There is an additional opcodes for GTA:SA Android:
 0AE2=7,%7d% = find_vehicle_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% pass_wrecked %6h% // IF and SET
 0AE3=6,%6d% = find_object_near_point %1d% %2d% %3d% in_radius %4d% find_next %5h% // IF and SET
 ```
-
 If you need extensions such as IniFiles or IntOperations, they are already available! You can find them in our project's Discord (https://discord.gg/2MY7W39kBg) or get them here:
 
 https://github.com/AndroidModLoader/GTA_CLEO_IniFiles 
@@ -268,9 +268,16 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 1C60=2,%2d% = normalize_angle %1d%
 1C61=2,%2d% = normalize_radians %1d%
 ```
+</details>
 
-### Grimoire (MatiDragon)
-to your SASCM.ini
+# [Grimoire (MatiDragon)](https://youtube.com/@MatiDragon)
+
+This is a pack of opcodes to reduce lines of code that are commonly repeated in scripts. It also aims to prevent you from having to write a lot of code in your projects in order to reduce the number of variables you have to use for a simple task.
+
+<details>
+  <summary>For your Sanny Builder</summary>
+
+SASCM.ini
 ```
 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
 7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
@@ -280,7 +287,7 @@ to your SASCM.ini
 7005=3,%3d% = angle_diff %1d% %2d%
 701C=2,%2d% = !! %1d%
 7006=2,%2d% = ! %1d%
-7002=2,%1d% = %1d% || %2d%
+7002=3,%1d% = %1d% || %2d%
 7007=3,%3d% = %1d% / %2d% ; float
 7008=3,%3d% = %1d% * %2d% ; float
 7009=3,%3d% = %1d% + %2d% ; float
@@ -327,4 +334,137 @@ const
     OP_GREATER = 4         // >
     OP_GREATER_EQUAL = 5   // >=
 end
+```
+
+</details>
+
+## Documentation
+
+Working with widgets has never been easier than this.
+```js
+7000: set_widget_transform 50 coords 250.0 100.0 scales 11.0 11.0
+7001: get_widget_transform 50 coords 0@ 1@ scales 2@ 3@
+```
+
+Renaming files, nothing more to say.
+```js
+7003: file_rename "DYOM.scm" to "ASS.scm"
+```
+
+If we need to manage a PATH but don't know whether it exists or not, we can use this opcode.
+It is used to create files or folders depending on what we enter.
+If they already exist, they are not replaced; they are only created if they do not exist.
+```js
+7004: create_file_or_directory "pop" // create file
+7004: create_file_or_directory "pop.bin" // create file
+7004: create_file_or_directory "/pop.bin" // create file
+7004: create_file_or_directory "pop.bin/" // create folder
+7004: create_file_or_directory "/pop.bin/" // create folder
+```
+
+Find the difference between the closest distances between two angles in degrees.
+The results remain within a range of 180 to -180 degrees.
+```js
+7005: 0@ = angle_diff 0.0 10.0  // 10.0
+7005: 0@ = angle_diff 50.0 60.0 // 10.0
+7005: 0@ = angle_diff 350.0 0.0 // 10.0
+7005: 0@ = angle_diff 0.0 350.0 // -10.0
+7005: 0@ = angle_diff 0.0 190.0 // -170.0
+7005: 0@ = angle_diff 190.0 0   // 170.0
+```
+
+These are just operations that should have been added in the early stages of CSM.
+```js
+701C: 0@ = !! 6.67  // truthy : 6.67 = true
+701C: 0@ = !! 6     // truthy : 6    = true
+701C: 0@ = !! 1     // truthy : 1    = true
+701C: 0@ = !! 0     // falsy  : 0    = false
+
+7006: 0@ = !  6.67  // falsy  : 6.67 = false
+7006: 0@ = !  6     // falsy  : 6    = false
+7006: 0@ = !  1     // falsy  : 1    = false
+7006: 0@ = !  0     // truthy : 0    = true
+
+7002: 0@ = 0 || 22 // 0@ = 22
+7002: 0@ = 0 || 3.3 // 0@ = 3.3
+7002: 0@ = 44 || 3.3 // 0@ = 44
+
+7007: 0@ = 1@ / 1.22    // float
+7008: 0@ = 2.2 * 3.14   // float
+7009: 0@ = $x + MATH_PI // float
+700A: 0@ = &0 - 22.2    // float
+```
+
+Divide a floating point number from where the decimal point is and choose how many decimal places you want to recover.
+```js
+700B: 0@ 1@= split_float_to_signed_parts 3.14159 decimals 4
+// 0@ = 3
+// 1@ = 1415 (4 decimals)
+```
+
+Convert a color model to another between RGB-HSL-HSV.
+The function only accepts integers.
+```js
+COLOR_RGB_TO_HSV = 0
+COLOR_RGB_TO_HSL = 1
+COLOR_HSL_TO_HSV = 2
+COLOR_HSL_TO_RGB = 3
+COLOR_HSV_TO_HSL = 4
+COLOR_HSV_TO_RGB = 5
+
+700C: 0@ 1@ 2@ = convert_model_color COLOR_RGB_TO_HSL inputs 0 100 100
+// 0@ = 255
+// 0@ = 0
+// 0@ = 0
+```
+
+Ternary operator
+```js
+OP_EQUAL = 0           // ==
+OP_UNEQUAL = 1         // !=
+OP_LESSER = 2          // <
+OP_LESSER_EQUAL = 3    // <=
+OP_GREATER = 4         // >
+OP_GREATER_EQUAL = 5   // >=
+
+700D: 0@ = 22 OP_EQUAL 21 ? 0xfff : 3.14159 // int op (0@ = 3.14159)
+700E: 1@ = 50.0 OP_GREATER 2.33  ? 5.4 : 55@ // float op (0@ = 5.4)
+7014: 2@ = false ? 1234 : 4321 // 2@ = 4321
+```
+
+Compresses up to 4 small numbers in the 4-bit range (from 0 to 256 or from -127 to 128) into one variable.
+Instead of using 4 variables, you can write and read 1.
+This can be used, for example, to pass an RGBA HEX color to one of these opcodes to break it down into 4 separate variables and work on each channel separately.
+```JS
+7015: 0@ = pack_4dec_to_int32 255 0 0 15 flags 0b0000 // 0@ = 0xFF00000F
+7016: 1@ 2@ 3@ 4@ = unpack_int32_to_4dec 0@ flags 0b0000 // 1@ 2@ 3@ 4@ = 255 0 0 15
+
+700F: 0@ = pack_set_byte 0@ byteIndex 1 newValue 2 isSigned false // 0@ = 0xFF02000F
+7010: 6@ = pack_get_byte 0@ byteIndex 2 isSigned false // 6@ = 0
+
+DIRECTION_LEFT = 0
+DIRECTION_RIGTH = 1
+7011: 0@ = pack_rotate 0@ direction DIRECTION_LEFT amount 1 // 0@ = 0x02000FFF
+7011: 0@ = pack_rotate 0@ direction DIRECTION_LEFT amount 1 // 0@ = 0x000FFF02 
+7011: 0@ = pack_rotate 0@ direction DIRECTION_RIGTH amount 2 // 0@ = 0xFF02000F
+
+MODE_AND = 0
+MODE_OR = 1
+7012: 5@ = pack_check_truthy @0 mask 0b1000 mode MODE_AND // IF 5@ = true
+7012: 5@ = pack_check_truthy @0 mask 0b0010 mode MODE_AND // IF 5@ = false
+7012: 5@ = pack_check_truthy @0 mask 0b1010 mode MODE_AND // IF 5@ = false
+7012: 5@ = pack_check_truthy @0 mask 0b1010 mode MODE_OR  // IF 5@ = true
+
+//  0@ = 0x 00-04-08-0C
+7013: 10@ = pack_swap_custom 0@ i3 4 i2 1 i1 3 i0 2
+// 10@ = 0x 04-0C-08-00
+```
+
+Create all the orbit shapes you want. Just indicate whether you are going to use angles or radians for the angle where your element will be, the radius of the point it orbits, and the coordinates it has to orbit.
+```js
+7017: 0@ 1@ = orbit_circle 0 angle 28.0 radius 5.0 coords 22.454 44.312
+7018: 0@ 1@ 2@ = orbit_sphere 0 angles 28.0 90.0 radius 5.0 coords 22.454 44.312 7.0
+7019: 0@ 1@ = orbit_oval 0 angle 28.0 radius 5.0 2.0 coords 22.454 44.312
+701A: 0@ 1@ 2@ = orbit_ovoid 0 angles 28.0 90.0 radius 5.0 2.0 10.0 coords 22.454 44.312 7.0
+701B: 0@ 1@ 2@ = orbit_cylinder 0 angle 28.0 level 5.0 height 10.0 radius 2.5 10.0 direction 0.0 90.0 0.0 coords 22.454 44.312 7.0
 ```

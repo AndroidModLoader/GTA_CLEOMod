@@ -1033,7 +1033,7 @@ void InitGrimoireOpcodes()
     
     CLEO_RegisterOpcode(0x7000, SET_WIDGET_TRANSFORM); // 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
     CLEO_RegisterOpcode(0x7001, GET_WIDGET_TRANSFORM); // 7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
-    CLEO_RegisterOpcode(0x7002, LOGICAL_OR); // 7002=2,%1d% = %1d% || %2d%
+    CLEO_RegisterOpcode(0x7002, LOGICAL_OR); // 7002=3,%1d% = %1d% || %2d%
     CLEO_RegisterOpcode(0x7003, FILE_RENAME); // 7003=2,file_rename %1d% to %2d%
     CLEO_RegisterOpcode(0x7004, CREATE_FILE_OR_DIRECTORY); // 7004=1,create_file_or_directory %1d%
     CLEO_RegisterOpcode(0x7005, ANGLE_DIFF); // 7005=3,%3d% = angle_diff %1d% %2d%

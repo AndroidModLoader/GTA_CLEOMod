@@ -838,6 +838,8 @@ CLEO_Fn(PACK_SWAP_CUSTOM)
 
 // Helpers (float)
 static inline float DegToRadF(float deg) { return deg * (3.14159265358979323846f / 180.0f); }
+static inline float LerpF(float a, float b, float t) { return a + (b - a) * t; }
+static inline float Vec2Len(float x, float y) { return sqrtf(x*x + y*y); }
 
 // 7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
 CLEO_Fn(ORBIT_CIRCLE)
@@ -884,86 +886,162 @@ CLEO_Fn(ORBIT_SPHERE)
     cleo->GetPointerToScriptVar(handle)->f = z;
 }
 
-// 7019=7,%7d% %8d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% coords %5d% %6d%
+// 7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
 CLEO_Fn(ORBIT_OVAL)
 {
     int angleMode = cleo->ReadParam(handle)->i;
-    float angle = cleo->ReadParam(handle)->f;
+    float angle   = cleo->ReadParam(handle)->f;
     float radiusX = cleo->ReadParam(handle)->f;
     float radiusY = cleo->ReadParam(handle)->f;
-    float cx = cleo->ReadParam(handle)->f;
-    float cy = cleo->ReadParam(handle)->f;
+    float rot2d   = cleo->ReadParam(handle)->f;
+    float cx      = cleo->ReadParam(handle)->f;
+    float cy      = cleo->ReadParam(handle)->f;
 
-    if (angleMode == 0) angle = DegToRadF(angle);
+    // Convert angles to radians if needed
+    if (angleMode == 0) {
+        angle = DegToRadF(angle);
+        rot2d = DegToRadF(rot2d);
+    }
 
-    float x = cosf(angle) * radiusX + cx;
-    float y = sinf(angle) * radiusY + cy;
+    // Parametric position on the ellipse (before rotation)
+    // x' = cos(t) * a
+    // y' = sin(t) * b
+    float x = cosf(angle) * radiusX;
+    float y = sinf(angle) * radiusY;
 
-    cleo->GetPointerToScriptVar(handle)->f = x;
-    cleo->GetPointerToScriptVar(handle)->f = y;
+    // 👉 Optimización: si rot2d = 0, no rotar
+    if (rot2d != 0.0f)
+    {
+        float s = sinf(rot2d);
+        float c = cosf(rot2d);
+
+        float xr = x * c - y * s;
+        float yr = x * s + y * c;
+        x = xr;
+        y = yr;
+    }
+
+    cleo->GetPointerToScriptVar(handle)->f = x + cx;
+    cleo->GetPointerToScriptVar(handle)->f = y + cy;
 }
 
-// 701A=10,%10d% %11d% %12d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% coords %7d% %8d% %9d%
+// 701A=15,%13d% %14d% %15d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
 CLEO_Fn(ORBIT_OVOID)
 {
     int angleMode = cleo->ReadParam(handle)->i;
+
     float ax = cleo->ReadParam(handle)->f;
     float ay = cleo->ReadParam(handle)->f;
+
     float radiusX = cleo->ReadParam(handle)->f;
     float radiusY = cleo->ReadParam(handle)->f;
     float radiusZ = cleo->ReadParam(handle)->f;
+
+    float rx = cleo->ReadParam(handle)->f; // rotX
+    float ry = cleo->ReadParam(handle)->f; // rotY
+    float rz = cleo->ReadParam(handle)->f; // rotZ
+
     float cx = cleo->ReadParam(handle)->f;
     float cy = cleo->ReadParam(handle)->f;
     float cz = cleo->ReadParam(handle)->f;
 
-    if (angleMode == 0) { ax = DegToRadF(ax); ay = DegToRadF(ay); }
+    if (angleMode == 0) {
+        ax = DegToRadF(ax);
+        ay = DegToRadF(ay);
+        rx = DegToRadF(rx);
+        ry = DegToRadF(ry);
+        rz = DegToRadF(rz);
+    }
 
     float sax = sinf(ax);
     float cax = cosf(ax);
     float say = sinf(ay);
     float cay = cosf(ay);
 
-    float x = sax * cay * radiusX + cx;
-    float y = sax * say * radiusY + cy;
-    float z = cax * radiusZ + cz;
+    float x = sax * cay * radiusX;
+    float y = sax * say * radiusY;
+    float z =      cax * radiusZ;
 
-    cleo->GetPointerToScriptVar(handle)->f = x;
-    cleo->GetPointerToScriptVar(handle)->f = y;
-    cleo->GetPointerToScriptVar(handle)->f = z;
+    // 👉 Rotación 3D opcional
+    if (rx != 0.0f || ry != 0.0f || rz != 0.0f)
+    {
+        // Rot X
+        if (rx != 0.0f) {
+            float s = sinf(rx), c = cosf(rx);
+            float ny = y * c - z * s;
+            float nz = y * s + z * c;
+            y = ny; z = nz;
+        }
+
+        // Rot Y
+        if (ry != 0.0f) {
+            float s = sinf(ry), c = cosf(ry);
+            float nx = x * c + z * s;
+            float nz = -x * s + z * c;
+            x = nx; z = nz;
+        }
+
+        // Rot Z
+        if (rz != 0.0f) {
+            float s = sinf(rz), c = cosf(rz);
+            float nx = x * c - y * s;
+            float ny = x * s + y * c;
+            x = nx; y = ny;
+        }
+    }
+
+    cleo->GetPointerToScriptVar(handle)->f = x + cx;
+    cleo->GetPointerToScriptVar(handle)->f = y + cy;
+    cleo->GetPointerToScriptVar(handle)->f = z + cz;
 }
+
 
 // Normalize helper
 static inline void Normalize(float& x, float& y, float& z) {
-    float len = sqrtf(x*x + y*y + z*z);
-    if (len > 0.000001f) {
-        x /= len; y /= len; z /= len;
+    // skip entirely if it's already unit-ish
+    const float len2 = x*x + y*y + z*z;
+    if (len2 > 1.000002f || len2 < 0.999998f) {
+        float len = sqrtf(len2);
+        if (len > 0.000001f) {
+            x /= len; y /= len; z /= len;
+        }
     }
 }
+
 
 // Cross product
 static inline void Cross(float ax, float ay, float az, float bx, float by, float bz,
                          float& rx, float& ry, float& rz)
 {
+    // si ambos vectores son cero → resultado es cero
+    if ((ax == 0.0f && ay == 0.0f && az == 0.0f) ||
+        (bx == 0.0f && by == 0.0f && bz == 0.0f))
+    {
+        rx = ry = rz = 0.0f;
+        return;
+    }
+
     rx = ay*bz - az*by;
     ry = az*bx - ax*bz;
     rz = ax*by - ay*bx;
 }
 
-// 701B=10,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radius %5d% %6d% direction %7d% %8d% %9d% coords %10d% %11d% %12d%
+
+// 701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radius %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
 // params:
 // 1: angleMode (0° / 1 rad)
 // 2: angle
-// 3: heightAlongCylinder
+// 3: level (height along cylinder axis)
 // 4: maxHeight
 // 5: radiusStart
 // 6: radiusEnd
-// 7,8,9: dirX dirY dirZ (direction of cylinder)
+// 7,8,9: rotX rotY rotZ (rotation of cylinder)
 // 10,11,12: centerX centerY centerZ
 CLEO_Fn(ORBIT_CYLINDER)
 {
     int angleMode   = cleo->ReadParam(handle)->i;
     float angle     = cleo->ReadParam(handle)->f;
-    float h         = cleo->ReadParam(handle)->f;
+    float level     = cleo->ReadParam(handle)->f;
     float maxH      = cleo->ReadParam(handle)->f;
     float r1        = cleo->ReadParam(handle)->f;
     float r2        = cleo->ReadParam(handle)->f;
@@ -978,47 +1056,352 @@ CLEO_Fn(ORBIT_CYLINDER)
 
     if (angleMode == 0) {
         angle = DegToRadF(angle);
-        dx = DegToRadF(dx);
-        dy = DegToRadF(dy);
-        dz = DegToRadF(dz);
+
+        if (dx != 0.0f) dx = DegToRadF(dx);
+        if (dy != 0.0f) dy = DegToRadF(dy);
+        if (dz != 0.0f) dz = DegToRadF(dz);
     }
 
-    // Normalize direction
-    Normalize(dx, dy, dz);
+    // Normalize direction ONLY if needed
+    if (!(dx == 0.0f && dy == 0.0f && dz == 0.0f))
+        Normalize(dx, dy, dz);
 
-    // Compute interpolation of radius
-    float t = (maxH != 0.0f) ? (h / maxH) : 0.0f;
+    float t = (maxH != 0.0f) ? (level / maxH) : 0.0f;
     if (t < 0.0f) t = 0.0f;
     if (t > 1.0f) t = 1.0f;
 
     float radius = r1 + (r2 - r1) * t;
 
-    // Find orthonormal basis perpendicular to D
+    // if direction is 0,0,0 → use default UP vector
+    if (dx == 0.0f && dy == 0.0f && dz == 0.0f)
+        dz = 1.0f;
+
     float ux, uy, uz;
     float vx, vy, vz;
 
-    // Pick a vector not colinear with D
     float auxX = (fabs(dx) > 0.9f) ? 0.0f : 1.0f;
     float auxY = 0.0f;
     float auxZ = (fabs(dx) > 0.9f) ? 1.0f : 0.0f;
 
-    // U = D × aux  (orthogonal)
     Cross(dx, dy, dz, auxX, auxY, auxZ, ux, uy, uz);
     Normalize(ux, uy, uz);
 
-    // V = D × U  (second orthogonal)
     Cross(dx, dy, dz, ux, uy, uz, vx, vy, vz);
     Normalize(vx, vy, vz);
 
-    // Final position
-    float px = cx + dx*h + (ux*cosf(angle) + vx*sinf(angle)) * radius;
-    float py = cy + dy*h + (uy*cosf(angle) + vy*sinf(angle)) * radius;
-    float pz = cz + dz*h + (uz*cosf(angle) + vz*sinf(angle)) * radius;
+    float px = cx + dx*level + (ux*cosf(angle) + vx*sinf(angle)) * radius;
+    float py = cy + dy*level + (uy*cosf(angle) + vy*sinf(angle)) * radius;
+    float pz = cz + dz*level + (uz*cosf(angle) + vz*sinf(angle)) * radius;
 
     cleo->GetPointerToScriptVar(handle)->f = px;
     cleo->GetPointerToScriptVar(handle)->f = py;
     cleo->GetPointerToScriptVar(handle)->f = pz;
 }
+
+// 701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
+// params:
+// 1: angleMode (0 = degrees, 1 = radians)
+// 2: angle
+// 3: sides
+// 4: radius
+// 5,6,7: rotX rotY rotZ   (rotation in 3D space)
+// 8,9,10: centerX centerY centerZ
+CLEO_Fn(ORBIT_POLYGON)
+{
+    int angleMode = cleo->ReadParam(handle)->i;
+    float angle   = cleo->ReadParam(handle)->f;
+    int sides     = cleo->ReadParam(handle)->i;
+    float radius  = cleo->ReadParam(handle)->f;
+
+    float smooth  = cleo->ReadParam(handle)->f;
+
+    float rotX    = cleo->ReadParam(handle)->f;
+    float rotY    = cleo->ReadParam(handle)->f;
+    float rotZ    = cleo->ReadParam(handle)->f;
+
+    float cx = cleo->ReadParam(handle)->f;
+    float cy = cleo->ReadParam(handle)->f;
+    float cz = cleo->ReadParam(handle)->f;
+
+    if (sides < 3) sides = 3;
+
+    // Convert initial angle
+    if (angleMode == 0)
+        angle = DegToRadF(angle);
+
+    const float TWO_PI = 6.28318530717958647692f;
+
+    angle = fmodf(angle, TWO_PI);
+    if (angle < 0) angle += TWO_PI;
+
+    float step = TWO_PI / (float)sides;
+
+    // Convert rotations only if needed
+    bool useRot = (rotX != 0.0f || rotY != 0.0f || rotZ != 0.0f);
+
+    if (angleMode == 0 && useRot)
+    {
+        rotX = DegToRadF(rotX);
+        rotY = DegToRadF(rotY);
+        rotZ = DegToRadF(rotZ);
+    }
+
+    // ---------------------------
+    // Cálculo del polígono base
+    // ---------------------------
+
+    float frac = angle / TWO_PI;
+    float a = frac * TWO_PI;
+
+    int segIndex = (int)(a / step);
+    float localT = (a - segIndex * step) / step;
+
+    segIndex %= sides;
+
+    int i0 = segIndex;
+    int i1 = (i0 + 1) % sides;
+
+    float ang0 = step * i0;
+    float ang1 = step * i1;
+
+    float x0 = radius * cosf(ang0);
+    float y0 = radius * sinf(ang0);
+
+    float x1 = radius * cosf(ang1);
+    float y1 = radius * sinf(ang1);
+
+    // ---------------------------
+    // Interpolación suave
+    // ---------------------------
+    float rawX = LerpF(x0, x1, localT);
+    float rawY = LerpF(y0, y1, localT);
+
+    float circX = radius * cosf(angle);
+    float circY = radius * sinf(angle);
+
+    // Mezcla entre polígono duro y círculo
+    float x = LerpF(rawX, circX, smooth);
+    float y = LerpF(rawY, circY, smooth);
+    float z = 0.0f;
+
+    // ---------------------------
+    // Rotaciones (solo si se necesitan)
+    // ---------------------------
+    if (useRot)
+    {
+        if (rotX != 0.0f) {
+            float s = sinf(rotX), c = cosf(rotX);
+            float ny = y * c - z * s;
+            float nz = y * s + z * c;
+            y = ny; z = nz;
+        }
+
+        if (rotY != 0.0f) {
+            float s = sinf(rotY), c = cosf(rotY);
+            float nx = x * c + z * s;
+            float nz = -x * s + z * c;
+            x = nx; z = nz;
+        }
+
+        if (rotZ != 0.0f) {
+            float s = sinf(rotZ), c = cosf(rotZ);
+            float nx = x * c - y * s;
+            float ny = x * s + y * c;
+            x = nx; y = ny;
+        }
+    }
+
+    // ---------------------------
+    // Agregar centro
+    // ---------------------------
+    x += cx;
+    y += cy;
+    z += cz;
+
+    cleo->GetPointerToScriptVar(handle)->f = x;
+    cleo->GetPointerToScriptVar(handle)->f = y;
+    cleo->GetPointerToScriptVar(handle)->f = z;
+}
+
+
+// 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
+// params:
+// 1: angleMode (0° / 1 rad)
+// 2,3: angles X Y
+// 4,5,6: sizeX sizeY sizeZ
+// 7: smooth (0.0 = cube duro / 1.0 = total ovoide)
+// 8,9,10: rotX rotY rotZ (rotation applied to final point)
+// 11,12,13: centerX centerY centerZ
+CLEO_Fn(ORBIT_CUBE)
+{
+    int angleMode = cleo->ReadParam(handle)->i;
+
+    float angX = cleo->ReadParam(handle)->f;
+    float angY = cleo->ReadParam(handle)->f;
+
+    float sizeX = cleo->ReadParam(handle)->f;
+    float sizeY = cleo->ReadParam(handle)->f;
+    float sizeZ = cleo->ReadParam(handle)->f;
+
+    float smooth = cleo->ReadParam(handle)->f;
+
+    float rotX = cleo->ReadParam(handle)->f;
+    float rotY = cleo->ReadParam(handle)->f;
+    float rotZ = cleo->ReadParam(handle)->f;
+
+    float cx = cleo->ReadParam(handle)->f;
+    float cy = cleo->ReadParam(handle)->f;
+    float cz = cleo->ReadParam(handle)->f;
+
+    // ---------------------------
+    // Convertir ángulos si hace falta
+    // ---------------------------
+    if (angleMode == 0)
+    {
+        angX = DegToRadF(angX);
+        angY = DegToRadF(angY);
+
+        if (rotX != 0.0f) rotX = DegToRadF(rotX);
+        if (rotY != 0.0f) rotY = DegToRadF(rotY);
+        if (rotZ != 0.0f) rotZ = DegToRadF(rotZ);
+    }
+
+    // ---------------------------
+    // Calcular posición cúbica sin suavizado
+    // ---------------------------
+
+    float sx = sinf(angX);
+    float cxA = cosf(angX);
+    float sy = sinf(angY);
+    float cyA = cosf(angY);
+
+    // Para cubo: tomamos signos "duros"
+    float baseX = (sx >= 0 ? sizeX : -sizeX);
+    float baseY = (sy >= 0 ? sizeY : -sizeY);
+    float baseZ = (cxA >= 0 ? sizeZ : -sizeZ);
+
+    // ---------------------------
+    // Crear ovoide interpolado (smooth)
+    // ---------------------------
+    float ox = sx * sizeX;
+    float oy = sy * sizeY;
+    float oz = cxA * sizeZ;
+
+    float px = baseX * (1.0f - smooth) + ox * smooth;
+    float py = baseY * (1.0f - smooth) + oy * smooth;
+    float pz = baseZ * (1.0f - smooth) + oz * smooth;
+
+    // ---------------------------
+    // Rotación extra del cubo / ovoide (si no es 0 evita cálculo)
+    // ---------------------------
+    // Rotación en X
+    if (rotX != 0.0f)
+    {
+        float s = sinf(rotX), c = cosf(rotX);
+        float ny = py * c - pz * s;
+        float nz = py * s + pz * c;
+        py = ny; pz = nz;
+    }
+
+    // Rotación en Y
+    if (rotY != 0.0f)
+    {
+        float s = sinf(rotY), c = cosf(rotY);
+        float nx = px * c + pz * s;
+        float nz = -px * s + pz * c;
+        px = nx; pz = nz;
+    }
+
+    // Rotación en Z
+    if (rotZ != 0.0f)
+    {
+        float s = sinf(rotZ), c = cosf(rotZ);
+        float nx = px * c - py * s;
+        float ny = px * s + py * c;
+        px = nx; py = ny;
+    }
+
+    // ---------------------------
+    // Resultado final + centro
+    // ---------------------------
+    cleo->GetPointerToScriptVar(handle)->f = px + cx;
+    cleo->GetPointerToScriptVar(handle)->f = py + cy;
+    cleo->GetPointerToScriptVar(handle)->f = pz + cz;
+}
+
+// 701F=12,%10d% %11d% %12d% = orbit_rectangle %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d% %9d%
+// params:
+// 1: angleMode (0° / 1 rad)
+// 2: angle
+// 3,4: sizeX sizeY
+// 5: smooth (0.0 = cube duro / 1.0 = total ovoide)
+// 6: rotZ (rotation applied to final point)
+// 7,8,9: centerX centerY centerZ
+CLEO_Fn(ORBIT_RECTANGLE)
+{
+    int angleMode = cleo->ReadParam(handle)->i;
+
+    float ang = cleo->ReadParam(handle)->f;
+
+    float sizeX = cleo->ReadParam(handle)->f;
+    float sizeY = cleo->ReadParam(handle)->f;
+
+    float rotZ = cleo->ReadParam(handle)->f;
+
+    float cx = cleo->ReadParam(handle)->f;
+    float cy = cleo->ReadParam(handle)->f;
+    float cz = cleo->ReadParam(handle)->f;
+
+    // ---------------------------
+    // Convertir ángulo si hace falta
+    // ---------------------------
+    if (angleMode == 0)
+        ang = (float)(ang * 0.017453292519943295f); // DegToRadF inline
+
+    // ---------------------------
+    // Valores trigonométricos
+    // ---------------------------
+    float s = sinf(ang);
+    float c = cosf(ang);
+
+    // ---------------------------
+    // Coordenadas cuadradas puras (hard edges)
+    // ---------------------------
+    float baseX = (s >= 0 ? sizeX : -sizeX);
+    float baseY = (c >= 0 ? sizeY : -sizeY);
+
+    // ---------------------------
+    // Coordenadas suaves (círculo/oval)
+    // ---------------------------
+    float ox = s * sizeX;
+    float oy = c * sizeY;
+
+    // ---------------------------
+    // Interpolación cuadrado ↔ círculo
+    // ---------------------------
+    float px = baseX * (1.0f - 0.0) + ox * 0.0;
+    float py = baseY * (1.0f - 0.0) + oy * 0.0;
+
+    // ---------------------------
+    // Rotación Z opcional (evita cálculos si rotZ=0)
+    // ---------------------------
+    if (rotZ != 0.0f)
+    {
+        float sz = sinf(rotZ);
+        float czZ = cosf(rotZ);
+        float nx = px * czZ - py * sz;
+        float ny = px * sz + py * czZ;
+        px = nx; py = ny;
+    }
+
+    // ---------------------------
+    // Resultado final + centro
+    // ---------------------------
+    cleo->GetPointerToScriptVar(handle)->f = px + cx;
+    cleo->GetPointerToScriptVar(handle)->f = py + cy;
+    cleo->GetPointerToScriptVar(handle)->f = cz;
+}
+
 
 
 ///////////////////////////////////////////////////
@@ -1056,8 +1439,11 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x7016, UNPACK_INT32_TO_4DEC); // 7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
     CLEO_RegisterOpcode(0x7017, ORBIT_CIRCLE);   // 7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
     CLEO_RegisterOpcode(0x7018, ORBIT_SPHERE);   // 7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
-    CLEO_RegisterOpcode(0x7019, ORBIT_OVAL);     // 7019=7,%7d% %8d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% coords %5d% %6d%
-    CLEO_RegisterOpcode(0x701A, ORBIT_OVOID);    // 701A=10,%10d% %11d% %12d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% coords %7d% %8d% %9d%
-    CLEO_RegisterOpcode(0x701B, ORBIT_CYLINDER); // 701B=10,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radius %5d% %6d% direction %7d% %8d% %9d% coords %10d% %11d% %12d%
+    CLEO_RegisterOpcode(0x7019, ORBIT_OVAL);     // 7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
+    CLEO_RegisterOpcode(0x701A, ORBIT_OVOID);    // 701A=15,%13d% %14d% %15d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
+    CLEO_RegisterOpcode(0x701B, ORBIT_CYLINDER); // 701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
     CLEO_RegisterOpcode(0x701C, TOGGLE_BOOLEAN_REAL); // 701C=2,%2d% = !!%1d%
+    CLEO_RegisterOpcode(0x701D, ORBIT_POLYGON);   // 701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
+    CLEO_RegisterOpcode(0x701E, ORBIT_CUBE);   // 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
+    CLEO_RegisterOpcode(0x701F, ORBIT_RECTANGLE);   // 701F=12,%10d% %11d% %12d% = orbit_rectangle %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d% %9d%
 }

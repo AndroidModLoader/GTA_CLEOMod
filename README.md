@@ -309,9 +309,12 @@ SASCM.ini
 
 7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
 7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
-7019=7,%7d% %8d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% coords %5d% %6d%
-701A=10,%10d% %11d% %12d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% coords %7d% %8d% %9d%
-701B=10,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radius %5d% %6d% direction %7d% %8d% %9d% coords %10d% %11d% %12d%
+7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
+701A=15,%13d% %14d% %15d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
+701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
+701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
+701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
+701F=12,%10d% %11d% %12d% = orbit_rectangle %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d% %9d%
 ```
 
 constants
@@ -456,10 +459,10 @@ DIRECTION_RIGTH = 1
 
 MODE_AND = 0
 MODE_OR = 1
-7012: 5@ = pack_check_truthy @0 mask 0b1000 mode MODE_AND // IF 5@ = true
-7012: 5@ = pack_check_truthy @0 mask 0b0010 mode MODE_AND // IF 5@ = false
-7012: 5@ = pack_check_truthy @0 mask 0b1010 mode MODE_AND // IF 5@ = false
-7012: 5@ = pack_check_truthy @0 mask 0b1010 mode MODE_OR  // IF 5@ = true
+7012: 5@ = pack_check_truthy 0@ mask 0b1000 mode MODE_AND // IF 5@ = true
+7012: 5@ = pack_check_truthy 0@ mask 0b0010 mode MODE_AND // IF 5@ = false
+7012: 5@ = pack_check_truthy 0@ mask 0b1010 mode MODE_AND // IF 5@ = false
+7012: 5@ = pack_check_truthy 0@ mask 0b1010 mode MODE_OR  // IF 5@ = true
 
 //  0@ = 0x 00-04-08-0C
 7013: 10@ = pack_swap_custom 0@ i3 4 i2 1 i1 3 i0 2
@@ -468,9 +471,12 @@ MODE_OR = 1
 
 Create all the orbit shapes you want. Just indicate whether you are going to use angles or radians for the angle where your element will be, the radius of the point it orbits, and the coordinates it has to orbit.
 ```js
-7017: 0@ 1@ = orbit_circle 0 angle 28.0 radius 5.0 coords 22.454 44.312
-7018: 0@ 1@ 2@ = orbit_sphere 0 angles 28.0 90.0 radius 5.0 coords 22.454 44.312 7.0
-7019: 0@ 1@ = orbit_oval 0 angle 28.0 radius 5.0 2.0 coords 22.454 44.312
-701A: 0@ 1@ 2@ = orbit_ovoid 0 angles 28.0 90.0 radius 5.0 2.0 10.0 coords 22.454 44.312 7.0
-701B: 0@ 1@ 2@ = orbit_cylinder 0 angle 28.0 level 5.0 height 10.0 radius 2.5 10.0 direction 0.0 90.0 0.0 coords 22.454 44.312 7.0
+7017: 0@ 1@ = orbit_circle 0 angle 28.0 radius 5.0 put_at 22.454 44.312
+7018: 0@ 1@ 2@ = orbit_sphere 0 angles 28.0 90.0 radius 5.0 put_at 22.454 44.312 7.0
+7019: 0@ 1@ = orbit_oval 0 angle 28.0 radius 5.0 2.0 rot_xyz 0.0 put_at 22.454 44.312
+701A: 0@ 1@ 2@ = orbit_ovoid 0 angles 28.0 90.0 radius 5.0 2.0 10.0 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
+701B: 0@ 1@ 2@ = orbit_cylinder 0 angle 28.0 level 5.0 height 10.0 radii 2.5 10.0 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
+701D: 0@ 1@ 2@ = orbit_polygon 0 angle 28.0 sides 3 radius 2.5 smooth 0.25 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
+701E: 0@ 1@ 2@ = orbit_cube 0 angles 28.0 90.0 size 5.0 2.0 10.0 smooth 0.25 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
+701F: 0@ 1@ 2@ = orbit_rectangle 0 angles 28.0 size 5.0 2.0 smooth 0.25 rotZ 0.0 put_at 22.454 44.312 7.0
 ```

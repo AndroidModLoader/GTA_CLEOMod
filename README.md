@@ -270,7 +270,7 @@ I also moved MathOperations into the CLEOMod itself! Starting with 2.0.1.7, ther
 ```
 </details>
 
-# [Grimoire (MatiDragon)](https://youtube.com/@MatiDragon)
+# [Grimoire - Documentation](https://youtube.com/@MatiDragon)
 
 This is a pack of opcodes to reduce lines of code that are commonly repeated in scripts. It also aims to prevent you from having to write a lot of code in your projects in order to reduce the number of variables you have to use for a simple task.
 
@@ -317,7 +317,7 @@ SASCM.ini
 701F=12,%10d% %11d% %12d% = orbit_rectangle %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d% %9d%
 ```
 
-constants
+consts.txt
 ```
 const
     // Red Green Blue
@@ -345,15 +345,155 @@ const
 end
 ```
 
+keywords.txt
+```
+; Grimoire
+7000=SET_WIDGET_TRANSFORM
+7001=GET_WIDGET_TRANSFORM
+7002=LOGICAL_OR
+7003=FILE_RENAME
+7004=CREATE_FILE_OR_DIRECTORY
+7005=ANGLE_DIFF
+7006=TOGGLE_BOOLEAN_VAR
+7007=FLOAT_DIV
+7008=FLOAT_MUL
+7009=FLOAT_SUM
+700A=FLOAT_SUB
+700B=SPLIT_FLOAT_TO_SIGNED_PARTS
+700C=CONVERT_MODEL_COLOR
+700D=IF_TERNARY_INT
+700E=IF_TERNARY_FLOAT
+700F=PACK_SET_BYTE
+7010=PACK_GET_BYTE
+7011=PACK_ROTATE
+7012=PACK_CHECK_TRUTHY
+7013=PACK_SWAP_CUSTOM
+7014=IF_TERNARY
+7015=PACK_4DEC_TO_INT32
+7016=UNPACK_INT32_TO_4DEC
+7017=ORBIT_CIRCLE
+7018=ORBIT_SPHERE
+7019=ORBIT_OVAL
+701A=ORBIT_OVOID
+701B=ORBIT_CYLINDER
+701C=TOGGLE_BOOLEAN_REAL
+701D=ORBIT_POLYGON
+701E=ORBIT_CUBE
+701F=ORBIT_RECTANGLE
+```
+
 </details>
 
-## Documentation
+## 🌀 Orbit System
+
+Create any orbital shape you want: circles, spheres, ovals, polygons, cubes, rectangles, and more.
+
+This system allows you to position a point in 2D or 3D by describing orbits with different geometries.
+Just specify:
+
+* whether you use angles or radians,
+* the radius or dimensions,
+* the position angles,
+* the optional rotations,
+* and the center coordinates.
+
+Ideal for widgets, visual effects, decorations, dynamic HUD, and complex animations.
+
+### List 2D
+```js
+7017: 0@ 1@ = orbit_circle 0 angle 28.0 radius 5.0 put_at 22.454 44.312
+7019: 0@ 1@ = orbit_oval 0 angle 28.0 radius 5.0 2.0 rot 0.0 put_at 22.454 44.312
+```
+### List 3D
+```js
+7018: 0@ 1@ 2@ = orbit_sphere 0 angles 28.0 90.0 radius 5.0 put_at 22.454 44.312 7.0
+701A: 0@ 1@ 2@ = orbit_ovoid 0 angles 28.0 90.0 radius 5.0 2.0 10.0 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
+701B: 0@ 1@ 2@ = orbit_cylinder 0 angle 28.0 level 5.0 height 10.0 radii 2.5 10.0 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
+701D: 0@ 1@ 2@ = orbit_polygon 0 angle 28.0 sides 3 radius 2.5 smooth 0.25 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
+701E: 0@ 1@ 2@ = orbit_cube 0 angles 28.0 90.0 size 5.0 2.0 10.0 smooth 0.25 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
+701F: 0@ 1@ 2@ = orbit_rectangle 0 angles 28.0 size 5.0 2.0 smooth 0.25 rot 0.0 put_at 22.454 44.312 7.0
+```
+
+**Parameters:**
+* **angleMode** (0 = degrees, 1 = radians).
+* **angle** / **angles** : Position angles used by the shape.
+* **radius** : Main orbit radius.
+* **radii** : Initial and final radius.
+* **size** : Dimensions for rectangles, cubes, or ovoids.
+* **sides** : Number of sides for the polygon.
+* **smooth** : Corner smoothing (0.0 = sharp, 1.0 = rounded).
+* **rot** : Rotation applied to final point.
+* **put_at** : Center of the orbit.
+
+## 📦 Bit-Packing System
+
+Tools for **packing**, **rotating**, **extracting**, and **checking** values within an `int32`.
+They allow you to save variables, optimize memory, and manipulate bytes/nibbles as if they were pieces of an elegant puzzle.
+
+Compact 4 small values into a single 32-bit integer.
+
+* **Unsigned** : `0 … 255`
+* **Signed** : `-127 … 128` (with sign if `flags` allow)
+
+Ideal for storing RGBA, compressed data, or any set of 4 small numbers.
+
+```JS
+7015: 0@ = pack_4dec_to_int32 255 0 0 15 flags 0b0000 // 0@ = 0xFF00000F
+7015: 0@ = pack_4dec_to_int32 -127 -127 128 128 flags 0b1001 // 0@ = 0xC87F8080
+7016: 1@ 2@ 3@ 4@ = unpack_int32_to_4dec 0@ flags 0b0000 // 1@ 2@ 3@ 4@ = 255 0 0 15
+
+700F: 0@ = pack_set_byte 0@ byteIndex 1 newValue 2 isSigned false // 0@ = 0xFF02000F
+7010: 6@ = pack_get_byte 0@ byteIndex 2 isSigned false // 6@ = 0
+
+DIRECTION_LEFT = 0
+DIRECTION_RIGTH = 1
+7011: 0@ = pack_rotate 0@ direction DIRECTION_LEFT amount 1 // 0@ = 0x02000FFF
+7011: 0@ = pack_rotate 0@ direction DIRECTION_LEFT amount 1 // 0@ = 0x000FFF02 
+7011: 0@ = pack_rotate 0@ direction DIRECTION_RIGTH amount 2 // 0@ = 0xFF02000F
+
+MODE_AND = 0
+MODE_OR = 1
+7012: 5@ = pack_check_truthy 0@ mask 0b1000 mode MODE_AND // IF 5@ = true
+7012: 5@ = pack_check_truthy 0@ mask 0b0010 mode MODE_AND // IF 5@ = false
+7012: 5@ = pack_check_truthy 0@ mask 0b1010 mode MODE_AND // IF 5@ = false
+7012: 5@ = pack_check_truthy 0@ mask 0b1010 mode MODE_OR  // IF 5@ = true
+
+//  0@ = 0x 00-04-08-0C
+7013: 10@ = pack_swap_custom 0@ i3 4 i2 1 i1 3 i0 2
+// 10@ = 0x 04-0C-08-00
+```
+A pack is actually an INT number. It's not a pointer to something weird.
+
+## ⚖️ Ternary operator
+
+The system includes a compact ternary operator for performing quick comparisons and returning a value depending on the result. It works just like the classic ternary operator in languages ​​such as C, JS, or C#, but adapted to the CLEO environment.
+
+```js
+OP_EQUAL = 0           // ==
+OP_UNEQUAL = 1         // !=
+OP_LESSER = 2          // <
+OP_LESSER_EQUAL = 3    // <=
+OP_GREATER = 4         // >
+OP_GREATER_EQUAL = 5   // >=
+
+700D: 0@ = 22 OP_EQUAL 21 ? 0xfff : 3.14159 // int op (0@ = 3.14159)
+700E: 1@ = 50.0 OP_GREATER 2.33  ? 5.4 : 55@ // float op (0@ = 5.4)
+7014: 2@ = false ? 1234 : 4321 // 2@ = 4321
+```
+
+The difference between each opcode lies mainly in the type of comparison that is made (INT, FLOAT or TRUTHY)
+
+However, assignments are treated as uint32 to ensure that what we want to pass is the exact same value.
+
+## Widgets
 
 Working with widgets has never been easier than this.
 ```js
 7000: set_widget_transform 50 coords 250.0 100.0 scales 11.0 11.0
 7001: get_widget_transform 50 coords 0@ 1@ scales 2@ 3@
 ```
+
+## File system
 
 Renaming files, nothing more to say.
 ```js
@@ -370,6 +510,8 @@ If they already exist, they are not replaced; they are only created if they do n
 7004: create_file_or_directory "pop.bin/" // create folder
 7004: create_file_or_directory "/pop.bin/" // create folder
 ```
+
+## Others
 
 Find the difference between the closest distances between two angles in degrees.
 The results remain within a range of 180 to -180 degrees.
@@ -425,58 +567,4 @@ COLOR_HSV_TO_RGB = 5
 // 0@ = 255
 // 0@ = 0
 // 0@ = 0
-```
-
-Ternary operator
-```js
-OP_EQUAL = 0           // ==
-OP_UNEQUAL = 1         // !=
-OP_LESSER = 2          // <
-OP_LESSER_EQUAL = 3    // <=
-OP_GREATER = 4         // >
-OP_GREATER_EQUAL = 5   // >=
-
-700D: 0@ = 22 OP_EQUAL 21 ? 0xfff : 3.14159 // int op (0@ = 3.14159)
-700E: 1@ = 50.0 OP_GREATER 2.33  ? 5.4 : 55@ // float op (0@ = 5.4)
-7014: 2@ = false ? 1234 : 4321 // 2@ = 4321
-```
-
-Compresses up to 4 small numbers in the 4-bit range (from 0 to 256 or from -127 to 128) into one variable.
-Instead of using 4 variables, you can write and read 1.
-This can be used, for example, to pass an RGBA HEX color to one of these opcodes to break it down into 4 separate variables and work on each channel separately.
-```JS
-7015: 0@ = pack_4dec_to_int32 255 0 0 15 flags 0b0000 // 0@ = 0xFF00000F
-7016: 1@ 2@ 3@ 4@ = unpack_int32_to_4dec 0@ flags 0b0000 // 1@ 2@ 3@ 4@ = 255 0 0 15
-
-700F: 0@ = pack_set_byte 0@ byteIndex 1 newValue 2 isSigned false // 0@ = 0xFF02000F
-7010: 6@ = pack_get_byte 0@ byteIndex 2 isSigned false // 6@ = 0
-
-DIRECTION_LEFT = 0
-DIRECTION_RIGTH = 1
-7011: 0@ = pack_rotate 0@ direction DIRECTION_LEFT amount 1 // 0@ = 0x02000FFF
-7011: 0@ = pack_rotate 0@ direction DIRECTION_LEFT amount 1 // 0@ = 0x000FFF02 
-7011: 0@ = pack_rotate 0@ direction DIRECTION_RIGTH amount 2 // 0@ = 0xFF02000F
-
-MODE_AND = 0
-MODE_OR = 1
-7012: 5@ = pack_check_truthy 0@ mask 0b1000 mode MODE_AND // IF 5@ = true
-7012: 5@ = pack_check_truthy 0@ mask 0b0010 mode MODE_AND // IF 5@ = false
-7012: 5@ = pack_check_truthy 0@ mask 0b1010 mode MODE_AND // IF 5@ = false
-7012: 5@ = pack_check_truthy 0@ mask 0b1010 mode MODE_OR  // IF 5@ = true
-
-//  0@ = 0x 00-04-08-0C
-7013: 10@ = pack_swap_custom 0@ i3 4 i2 1 i1 3 i0 2
-// 10@ = 0x 04-0C-08-00
-```
-
-Create all the orbit shapes you want. Just indicate whether you are going to use angles or radians for the angle where your element will be, the radius of the point it orbits, and the coordinates it has to orbit.
-```js
-7017: 0@ 1@ = orbit_circle 0 angle 28.0 radius 5.0 put_at 22.454 44.312
-7018: 0@ 1@ 2@ = orbit_sphere 0 angles 28.0 90.0 radius 5.0 put_at 22.454 44.312 7.0
-7019: 0@ 1@ = orbit_oval 0 angle 28.0 radius 5.0 2.0 rot_xyz 0.0 put_at 22.454 44.312
-701A: 0@ 1@ 2@ = orbit_ovoid 0 angles 28.0 90.0 radius 5.0 2.0 10.0 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
-701B: 0@ 1@ 2@ = orbit_cylinder 0 angle 28.0 level 5.0 height 10.0 radii 2.5 10.0 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
-701D: 0@ 1@ 2@ = orbit_polygon 0 angle 28.0 sides 3 radius 2.5 smooth 0.25 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
-701E: 0@ 1@ 2@ = orbit_cube 0 angles 28.0 90.0 size 5.0 2.0 10.0 smooth 0.25 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
-701F: 0@ 1@ 2@ = orbit_rectangle 0 angles 28.0 size 5.0 2.0 smooth 0.25 rotZ 0.0 put_at 22.454 44.312 7.0
 ```

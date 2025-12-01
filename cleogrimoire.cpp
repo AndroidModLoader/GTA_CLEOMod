@@ -1408,8 +1408,6 @@ CLEO_Fn(MOVE_LERP_CONTINUOUS)
         return;
     }
 
-    if dt
-
     // Calculate delta progress
     float dtProgress = (speed * dt) / dist;
     t += dtProgress;

@@ -308,13 +308,20 @@ SASCM.ini
 7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
 
 7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
-7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
 7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
+701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
+7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
 701A=15,%13d% %14d% %15d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
 701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
 701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
-701F=12,%10d% %11d% %12d% = orbit_rectangle %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d% %9d%
+
+7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+7022=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous_loop %1d% %2d% %3d% to %4d% %5d% %6d% deltaTime %7d% speed %8d%
+7023=6,%5d% progress %6d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+7024=6,%5d% progress %6d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
+7025=6,%5d% progress %6d% = value_lerp_continuous_loop %1d% to %2d% deltatime %3d% speed %4d%
 ```
 
 consts.txt
@@ -346,7 +353,7 @@ end
 ```
 
 keywords.txt
-```
+```ini
 ; Grimoire
 7000=SET_WIDGET_TRANSFORM
 7001=GET_WIDGET_TRANSFORM
@@ -379,7 +386,13 @@ keywords.txt
 701C=TOGGLE_BOOLEAN_REAL
 701D=ORBIT_POLYGON
 701E=ORBIT_CUBE
-701F=ORBIT_RECTANGLE
+701F=ORBIT_SQUARE
+7020=MOVE_LERP
+7021=MOVE_LERP_CONTINUOUS
+7022=MOVE_LERP_CONTINUOUS_LOOP
+7023=VALUE_LERP
+7024=VALUE_LERP_CONTINUOUS
+7025=VALUE_LERP_CONTINUOUS_LOOP
 ```
 
 </details>
@@ -403,6 +416,7 @@ Ideal for widgets, visual effects, decorations, dynamic HUD, and complex animati
 ```js
 7017: 0@ 1@ = orbit_circle 0 angle 28.0 radius 5.0 put_at 22.454 44.312
 7019: 0@ 1@ = orbit_oval 0 angle 28.0 radius 5.0 2.0 rot 0.0 put_at 22.454 44.312
+701F: 0@ 1@ = orbit_square 0 angles 28.0 size 5.0 2.0 smooth 0.25 rot 0.0 put_at 22.454 44.312
 ```
 ### List 3D
 ```js
@@ -411,19 +425,21 @@ Ideal for widgets, visual effects, decorations, dynamic HUD, and complex animati
 701B: 0@ 1@ 2@ = orbit_cylinder 0 angle 28.0 level 5.0 height 10.0 radii 2.5 10.0 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
 701D: 0@ 1@ 2@ = orbit_polygon 0 angle 28.0 sides 3 radius 2.5 smooth 0.25 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
 701E: 0@ 1@ 2@ = orbit_cube 0 angles 28.0 90.0 size 5.0 2.0 10.0 smooth 0.25 rot_xyz 0.0 45.0 90.0 put_at 22.454 44.312 7.0
-701F: 0@ 1@ 2@ = orbit_rectangle 0 angles 28.0 size 5.0 2.0 smooth 0.25 rot 0.0 put_at 22.454 44.312 7.0
 ```
 
-**Parameters:**
+**Input:**
 * **angleMode** (0 = degrees, 1 = radians).
 * **angle** / **angles** : Position angles used by the shape.
 * **radius** : Main orbit radius.
 * **radii** : Initial and final radius.
-* **size** : Dimensions for rectangles, cubes, or ovoids.
+* **size** : Dimensions for squares, cubes, or ovoids.
 * **sides** : Number of sides for the polygon.
 * **smooth** : Corner smoothing (0.0 = sharp, 1.0 = rounded).
 * **rot** : Rotation applied to final point.
 * **put_at** : Center of the orbit.
+
+**Output:**
+* **orbit** : These are the coordinates where our point is centered.
 
 ## 📦 Bit-Packing System
 
@@ -475,13 +491,15 @@ OP_LESSER = 2          // <
 OP_LESSER_EQUAL = 3    // <=
 OP_GREATER = 4         // >
 OP_GREATER_EQUAL = 5   // >=
-
-700D: 0@ = 22 OP_EQUAL 21 ? 0xfff : 3.14159 // int op (0@ = 3.14159)
-700E: 1@ = 50.0 OP_GREATER 2.33  ? 5.4 : 55@ // float op (0@ = 5.4)
-7014: 2@ = false ? 1234 : 4321 // 2@ = 4321
 ```
 
 The difference between each opcode lies mainly in the type of comparison that is made (INT, FLOAT or TRUTHY)
+
+```js
+700D: 0@ = 22 OP_EQUAL 21 ? 0xfff : 3.14159 // int op (0@ = 3.14159)
+700E: 1@ = 50.0 OP_GREATER 2.33  ? 5.4 : 55@ // float op (0@ = 5.4)
+7014: 2@ = 31@ ? 1.2 : 123 // if 31@ <> 0 then 2@ = 1.2 else 2@ = 123
+```
 
 However, assignments are treated as uint32 to ensure that what we want to pass is the exact same value.
 
@@ -491,6 +509,78 @@ Working with widgets has never been easier than this.
 ```js
 7000: set_widget_transform 50 coords 250.0 100.0 scales 11.0 11.0
 7001: get_widget_transform 50 coords 0@ 1@ scales 2@ 3@
+```
+
+## Lerp Movement
+
+These commands are used to move a point from initial coordinates to final coordinates at a constant speed, using `deltaTime` to ensure smooth animation that is dependent on the frame rate.
+
+* Returns interpolated coordinates
+* Progress between `0.0` and `1.0`
+
+### `move_lerp`
+
+Perform an interpolation from one point to another, increasing the progress from `0.0 → 1.0` according to speed and `deltaTime`.
+When it reaches `1.0`: it stops.
+
+```js
+0@ = 0.0
+1@ = 0.0
+2@ = 0.0
+
+repeat
+  wait 0
+  4@ = 0.0
+  0079: 4@ += frame_delta_time * 1.0 // (float)
+
+  7020: 0@ 1@ 2@ progress 3@ = move_lerp 0@ 1@ 2@ to 10.0 10.0 10.0 deltatime 4@ speed 1.0
+
+  Object.SetPosition($obj, 0@, 1@, 2@)
+until 3@ <= 1.0
+```
+
+You must always pass the new coordinates within the opcode for the animation to be performed.
+
+### `move_lerp_continuous`
+
+Unlike the previous command, this one first reads the progress, then applies the calculations, and rewrites the progress variable.
+
+```js
+3@ = 0.0
+repeat
+  wait 0
+  4@ = 0.0
+  0079: 4@ += frame_delta_time * 1.0 // (float)
+
+  7021: 0@ 1@ 2@ progress 3@ = move_lerp_continuous 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0
+
+  Object.SetPosition($obj, 0@, 1@, 2@)
+until 3@ <= 1.0
+```
+
+Here, the progress variable must always be defined from the outset with a value between `0.0` and `1.0`. If you enter a number such as `0.5`, you will obtain a number halfway between the initial and final values.
+
+### `move_lerp_continuous_loop`
+
+This version does not stop; once it reaches the end, it returns to the starting point.
+
+```js
+while true
+  wait 0
+  4@ = 0.0
+  0079: 4@ += frame_delta_time * 1.0 // (float)
+
+  7022: 0@ 1@ 2@ progress 3@ = move_lerp_continuous_loop 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0
+
+  Object.SetPosition($obj, 0@, 1@, 2@)
+end
+```
+
+For a value, use
+```js
+7023: 0@ progress 1@ = value_lerp 0.0 to 10.0 deltatime 8@ speed 1.0
+7024: 0@ progress 1@ = value_lerp_continuous 0.0 to 10.0 deltatime 8@ speed 1.0
+7025: 0@ progress 1@ = value_lerp_continuous_loop 0.0 to 10.0 deltatime 8@ speed 1.0
 ```
 
 ## File system

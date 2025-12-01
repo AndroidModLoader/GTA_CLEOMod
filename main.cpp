@@ -372,7 +372,7 @@ DECL_HOOKi(ProcessScript, void* handle)
 void SAUtilsStarted()
 {
     snprintf(szCLEOVer, sizeof(szCLEOVer), "CLEOMod v%s", modinfo->VersionString());
-    snprintf(szCLEOVer, sizeof(szCLEOVer), "Grimoire v1.0.1", modinfo->VersionString());
+    snprintf(szCLEOVer, sizeof(szCLEOVer), "Grimoire v1.1.0", modinfo->VersionString());
     sautils->AddButton(SetType_Mods, szCLEOVer, NoneFunctionLogic);
     sautils->AddClickableItem(SetType_Game, "CLEO Location", pCfgCLEOLocation->GetInt(), 0, sizeofA(pLocations)-1, pLocations, OnLocationChanged, NULL);
     sautils->AddClickableItem(SetType_Game, "CLEO Red Arrow", pCfgCLEORedArrow->GetInt(), 0, sizeofA(pYesNo)-1, pYesNo, OnRedArrowChanged, NULL);

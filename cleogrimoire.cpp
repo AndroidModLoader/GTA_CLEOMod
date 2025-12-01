@@ -18,87 +18,42 @@ int (*TouchInterface_PositionWidgets)();
 /////////////////////////////////////////////////////
 
 static uintptr_t g_widgetsBase = 0;
-
-CLEO_Fn(SET_WIDGET_TRANSFORM)
+static inline float* GetWidgetProps(int widgetId)
 {
-    // Cachear la dirección base de widgets UNA sola vez
+    // cachea una sola vez
     if (!g_widgetsBase)
         g_widgetsBase = (uintptr_t)TouchInterface_PositionWidgets;
 
-    // Leer params
-    int widgetId = cleo->ReadParam(handle)->i;
-    float x      = cleo->ReadParam(handle)->f;
-    float y      = cleo->ReadParam(handle)->f;
-    float width  = cleo->ReadParam(handle)->f;
-    float height = cleo->ReadParam(handle)->f;
+    // *(g_widgetsBase + id*4) → puntero al widget
+    uintptr_t widgetPtr = *(uintptr_t*)(g_widgetsBase + (widgetId << 2));
 
-    // Calcular dirección del puntero del widget (id * 4 bytes)
-    uintptr_t ptrAddr = g_widgetsBase + (widgetId << 2);
-    uintptr_t widgetPtr = *(uintptr_t*)ptrAddr;
+    // offset 12 → props
+    return (float*)(widgetPtr + 12);
+}
 
+CLEO_Fn(SET_WIDGET_TRANSFORM)
+{
+    int id = cleo->ReadParam(handle)->i;
+    float* p = GetWidgetProps(id);
 
-    // Saltar a la parte de propiedades
-    float* props = (float*)(widgetPtr + 12);
-
-    // Escribir directamente (más rápido y limpio)
-    props[0] = x;
-    props[1] = y;
-    props[2] = width;
-    props[3] = height;
+    p[0] = cleo->ReadParam(handle)->f;
+    p[1] = cleo->ReadParam(handle)->f;
+    p[2] = cleo->ReadParam(handle)->f;
+    p[3] = cleo->ReadParam(handle)->f;
 }
 
 CLEO_Fn(GET_WIDGET_TRANSFORM)
 {
-    // Cachear dirección base una sola vez
-    if (!g_widgetsBase)
-        g_widgetsBase = (uintptr_t)TouchInterface_PositionWidgets;
+    int id = cleo->ReadParam(handle)->i;
+    float* p = GetWidgetProps(id);
 
-    // Leer ID del widget
-    int widgetId = cleo->ReadParam(handle)->i;
-
-    // Obtener puntero al widget
-    uintptr_t widgetPtr = *(uintptr_t*)(g_widgetsBase + (widgetId << 2));
-
-    // Acceder a las propiedades (offset +12)
-    float* props = (float*)(widgetPtr + 12);
-
-    // Enviar valores al CLEO (x, y, width, height)
     auto out = cleo->GetPointerToScriptVar(handle);
-    out[0].f = props[0];
-    out[1].f = props[1];
-    out[2].f = props[2];
-    out[3].f = props[3];
+    out[0].f = p[0];
+    out[1].f = p[1];
+    out[2].f = p[2];
+    out[3].f = p[3];
 }
 
-
-/*
-CLEO_Fn(IS_TOUCH_PRESSED)
-{
-    uintptr_t touchDownAddr = cleo->TouchInterfaceTouchDown();
-
-    uint8_t isPressed = *(uint8_t*)touchDownAddr; // Read touch state
-
-    // Update compare flag
-    UpdateCompareFlag(handle, isPressed != 0);
-
-    // Optional return: if the script requests to store the value
-    if (GetVarArgCount(handle) > 0)
-    {
-        cleo->GetPointerToScriptVar(handle)->i = isPressed;
-    }
-}
-
-CLEO_Fn(GET_TOUCH_XY)
-{
-    uintptr_t touchPosAddr = cleo->TouchInterfaceCachedPos();
-
-    float x = *(float*)touchPosAddr;       // X
-    float y = *(float*)(touchPosAddr + 4); // Y
-
-    cleo->GetPointerToScriptVar(handle)->i = (int)x; // Convert to integer
-    cleo->GetPointerToScriptVar(handle)->i = (int)y; // Convert to integer
-}
-*/
 CLEO_Fn(CREATE_FILE_OR_DIRECTORY)
 {
     char filepath[256];
@@ -198,40 +153,23 @@ CLEO_Fn(FLOAT_SUB)
 CLEO_Fn(SPLIT_FLOAT_TO_SIGNED_PARTS)
 {
     float v = cleo->ReadParam(handle)->f;
-    int decimals = cleo->ReadParam(handle)->i;
+    int decimals = clampi(cleo->ReadParam(handle)->i, 0, 9);
 
-    // Clamp decimals to [0,9] to avoid overflow on large multipliers
-    if (decimals < 0) decimals = 0;
-    if (decimals > 9) decimals = 9;
-
-    // Sign and absolute value
     int sign = (v < 0.0f) ? -1 : 1;
     float absv = fabsf(v);
 
-    // Integer part (trunc toward zero)
-    int intPart = (int)absv;
-    intPart *= sign; // restore sign for integer part
-
-    // Fractional part: take absolute fractional, scale, then truncate (no rounding)
-    float frac = absv - (float)((int)absv);
-    int multiplier = 1;
-    for (int i = 0; i < decimals; ++i) multiplier *= 10;
+    int intPart = (int)absv * sign;
 
     int fracPart = 0;
-    if (multiplier > 1)
+    if (decimals > 0)
     {
-        fracPart = (int)(frac * (float)multiplier); // truncates toward zero
-    }
-    else
-    {
-        fracPart = 0;
+        float scaled = (absv - (float)((int)absv)) * powf(10.0f, decimals);
+        fracPart = (int)scaled * sign;
     }
 
-    fracPart *= sign; // make fraction share the sign of original value
-
-    // Return values: first int (integer part), second int (fractional scaled)
-    cleo->GetPointerToScriptVar(handle)->i = intPart;
-    cleo->GetPointerToScriptVar(handle)->i = fracPart;
+    auto out = cleo->GetPointerToScriptVar(handle);
+    out[0].i = intPart;
+    out[1].i = fracPart;
 }
 
 CLEO_Fn(FILE_RENAME)
@@ -634,25 +572,20 @@ CLEO_Fn(IF_TERNARY_FLOAT)
 // 0b0011 → solo byte0 y byte1 signed
 // ===================================================================
 
-static void PackFourInt8_to_Int32(int byte3, int byte2, int byte1, int byte0, int flags, int &outPacked)
+static void PackFourInt8_to_Int32(int b3, int b2, int b1, int b0, int flags, int &out)
 {
-    // clamp según flags
-    int v3 = (flags & (1<<3)) ? clampi(byte3, -128, 127) : clampi(byte3, 0, 255);
-    int v2 = (flags & (1<<2)) ? clampi(byte2, -128, 127) : clampi(byte2, 0, 255);
-    int v1 = (flags & (1<<1)) ? clampi(byte1, -128, 127) : clampi(byte1, 0, 255);
-    int v0 = (flags & (1<<0)) ? clampi(byte0, -128, 127) : clampi(byte0, 0, 255);
+    auto clampb = [&](int v, int f) {
+        return (f ? clampi(v, -128, 127) : clampi(v, 0, 255));
+    };
 
-    // conversión correcta a unsigned char (two's complement)
-    unsigned char u3 = static_cast<unsigned char>(v3);
-    unsigned char u2 = static_cast<unsigned char>(v2);
-    unsigned char u1 = static_cast<unsigned char>(v1);
-    unsigned char u0 = static_cast<unsigned char>(v0);
+    unsigned char u3 = (unsigned char)clampb(b3, flags & 8);
+    unsigned char u2 = (unsigned char)clampb(b2, flags & 4);
+    unsigned char u1 = (unsigned char)clampb(b1, flags & 2);
+    unsigned char u0 = (unsigned char)clampb(b0, flags & 1);
 
-    outPacked = (int(u3) << 24) |
-                (int(u2) << 16) |
-                (int(u1) <<  8) |
-                int(u0);
+    out = (u3 << 24) | (u2 << 16) | (u1 << 8) | u0;
 }
+
 
 static void UnpackInt32_to_FourInt8(int packed, int flags, int &outByte3, int &outByte2, int &outByte1, int &outByte0)
 {
@@ -1329,15 +1262,15 @@ CLEO_Fn(ORBIT_CUBE)
     cleo->GetPointerToScriptVar(handle)->f = pz + cz;
 }
 
-// 701F=12,%10d% %11d% %12d% = orbit_rectangle %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d% %9d%
+// 701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
 // params:
 // 1: angleMode (0° / 1 rad)
 // 2: angle
 // 3,4: sizeX sizeY
-// 5: smooth (0.0 = cube duro / 1.0 = total ovoide)
-// 6: rotZ (rotation applied to final point)
-// 7,8,9: centerX centerY centerZ
-CLEO_Fn(ORBIT_RECTANGLE)
+// 5: smooth (0.0 = square duro / 1.0 = oval)
+// 6: rotZ
+// 7,8: centerX centerY
+CLEO_Fn(ORBIT_SQUARE)
 {
     int angleMode = cleo->ReadParam(handle)->i;
 
@@ -1346,61 +1279,300 @@ CLEO_Fn(ORBIT_RECTANGLE)
     float sizeX = cleo->ReadParam(handle)->f;
     float sizeY = cleo->ReadParam(handle)->f;
 
+    float smooth = cleo->ReadParam(handle)->f;
     float rotZ = cleo->ReadParam(handle)->f;
 
     float cx = cleo->ReadParam(handle)->f;
     float cy = cleo->ReadParam(handle)->f;
-    float cz = cleo->ReadParam(handle)->f;
 
-    // ---------------------------
     // Convertir ángulo si hace falta
-    // ---------------------------
     if (angleMode == 0)
-        ang = (float)(ang * 0.017453292519943295f); // DegToRadF inline
+        ang = ang * 0.017453292519943295f;
 
-    // ---------------------------
-    // Valores trigonométricos
-    // ---------------------------
     float s = sinf(ang);
     float c = cosf(ang);
 
-    // ---------------------------
     // Coordenadas cuadradas puras (hard edges)
-    // ---------------------------
     float baseX = (s >= 0 ? sizeX : -sizeX);
     float baseY = (c >= 0 ? sizeY : -sizeY);
 
-    // ---------------------------
     // Coordenadas suaves (círculo/oval)
-    // ---------------------------
     float ox = s * sizeX;
     float oy = c * sizeY;
 
-    // ---------------------------
     // Interpolación cuadrado ↔ círculo
-    // ---------------------------
-    float px = baseX * (1.0f - 0.0) + ox * 0.0;
-    float py = baseY * (1.0f - 0.0) + oy * 0.0;
+    float px = baseX * (1.0f - smooth) + ox * smooth;
+    float py = baseY * (1.0f - smooth) + oy * smooth;
 
-    // ---------------------------
-    // Rotación Z opcional (evita cálculos si rotZ=0)
-    // ---------------------------
+    // Rotación Z opcional
     if (rotZ != 0.0f)
     {
         float sz = sinf(rotZ);
-        float czZ = cosf(rotZ);
-        float nx = px * czZ - py * sz;
-        float ny = px * sz + py * czZ;
+        float cz = cosf(rotZ);
+        float nx = px * cz - py * sz;
+        float ny = px * sz + py * cz;
         px = nx; py = ny;
     }
 
-    // ---------------------------
-    // Resultado final + centro
-    // ---------------------------
+    // Resultado final
     cleo->GetPointerToScriptVar(handle)->f = px + cx;
     cleo->GetPointerToScriptVar(handle)->f = py + cy;
-    cleo->GetPointerToScriptVar(handle)->f = cz;
 }
+
+
+
+///////////////////////////////////////////////////
+/////////////////// ANIMATION /////////////////////
+///////////////////////////////////////////////////
+
+
+// 7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+CLEO_Fn(MOVE_LERP)
+{
+    float x0 = cleo->ReadParam(handle)->f;
+    float y0 = cleo->ReadParam(handle)->f;
+    float z0 = cleo->ReadParam(handle)->f;
+    
+    float x1 = cleo->ReadParam(handle)->f;
+    float y1 = cleo->ReadParam(handle)->f;
+    float z1 = cleo->ReadParam(handle)->f;
+
+    float dt = cleo->ReadParam(handle)->f;     // delta time
+    float speed = cleo->ReadParam(handle)->f;  // units/sec
+
+    // convertir dt a segundos
+    float dtSec = dt * 0.001f;
+
+    // distancia total de A → B
+    float dx = x1 - x0;
+    float dy = y1 - y0;
+    float dz = z1 - z0;
+    float dist = sqrtf(dx*dx + dy*dy + dz*dz);
+
+    // cuanto t avanza este frame
+    float tStep = 0.0f;
+    if (dist > 0.0f)
+        tStep = (speed * dtSec) / dist;
+
+    // clamping
+    if (tStep > 1.0f) tStep = 1.0f;
+
+    // interpolación lineal
+    float outX = x0 + dx * tStep;
+    float outY = y0 + dy * tStep;
+    float outZ = z0 + dz * tStep;
+
+    cleo->GetPointerToScriptVar(handle)->f = outX;
+    cleo->GetPointerToScriptVar(handle)->f = outY;
+    cleo->GetPointerToScriptVar(handle)->f = outZ;
+    cleo->GetPointerToScriptVar(handle)->f = tStep;
+}
+
+// 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+CLEO_Fn(MOVE_LERP_CONTINUOUS)
+{
+    // PARAMETERS
+    float x0 = cleo->ReadParam(handle)->f;
+    float y0 = cleo->ReadParam(handle)->f;
+    float z0 = cleo->ReadParam(handle)->f;
+
+    float x1 = cleo->ReadParam(handle)->f;
+    float y1 = cleo->ReadParam(handle)->f;
+    float z1 = cleo->ReadParam(handle)->f;
+
+    float dt    = cleo->ReadParam(handle)->f;   // delta time
+    float speed = cleo->ReadParam(handle)->f;   // units/sec
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f; // progress storage
+    float t = *tPtr;
+
+    // If already completed, return final coordinates immediately
+    if (t >= 1.0f) {
+        cleo->GetPointerToScriptVar(handle)->f = x1;
+        cleo->GetPointerToScriptVar(handle)->f = y1;
+        cleo->GetPointerToScriptVar(handle)->f = z1;
+        return;
+    }
+
+    // Total distance
+    float dx = x1 - x0;
+    float dy = y1 - y0;
+    float dz = z1 - z0;
+    float dist = sqrtf(dx*dx + dy*dy + dz*dz);
+
+    if (dist <= 0.000001f) {
+        *tPtr = 1.0f;
+        cleo->GetPointerToScriptVar(handle)->f = x1;
+        cleo->GetPointerToScriptVar(handle)->f = y1;
+        cleo->GetPointerToScriptVar(handle)->f = z1;
+        return;
+    }
+
+    if dt
+
+    // Calculate delta progress
+    float dtProgress = (speed * dt) / dist;
+    t += dtProgress;
+    if (t > 1.0f) t = 1.0f;
+
+    // Save updated progress
+    *tPtr = t;
+
+    // Interpolated coordinates
+    float x = x0 + dx * t;
+    float y = y0 + dy * t;
+    float z = z0 + dz * t;
+
+    // RETURN VALUES
+    cleo->GetPointerToScriptVar(handle)->f = x;
+    cleo->GetPointerToScriptVar(handle)->f = y;
+    cleo->GetPointerToScriptVar(handle)->f = z;
+}
+
+// 7022=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous_loop %1d% %2d% %3d% to %4d% %5d% %6d% deltaTime %7d% speed %8d%
+CLEO_Fn(MOVE_LERP_CONTINUOUS_LOOP)
+{
+    float sx = cleo->ReadParam(handle)->f;
+    float sy = cleo->ReadParam(handle)->f;
+    float sz = cleo->ReadParam(handle)->f;
+
+    float ex = cleo->ReadParam(handle)->f;
+    float ey = cleo->ReadParam(handle)->f;
+    float ez = cleo->ReadParam(handle)->f;
+    
+    float dt = cleo->ReadParam(handle)->f;
+    float speed = cleo->ReadParam(handle)->f;
+    float* progress = &cleo->GetPointerToScriptVar(handle)->f; // progress storage
+
+    // Lerp direction factor (we store it inside progress if negative)
+    bool reverse = false;
+    if (*progress < 0.0f) {
+        reverse = true;
+        *progress = -*progress;
+    }
+
+    // Increase progress
+    *progress += speed * dt;
+
+    // Loop mode: when reaches 1.0, reverse direction
+    if (*progress >= 1.0f) {
+        *progress = 1.0f;
+        reverse = !reverse;
+    }
+
+    // Apply reverse mapping
+    float t = reverse ? (1.0f - *progress) : *progress;
+
+    // Final position
+    float x = sx + (ex - sx) * t;
+    float y = sy + (ey - sy) * t;
+    float z = sz + (ez - sz) * t;
+
+    // Output
+    cleo->GetPointerToScriptVar(handle)->f = x;
+    cleo->GetPointerToScriptVar(handle)->f = y;
+    cleo->GetPointerToScriptVar(handle)->f = z;
+
+    // Store final progress with direction state encoded
+    *progress = reverse ? -*progress : *progress;
+}
+
+// 7023=6,%5d% progress %6d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+CLEO_Fn(VALUE_LERP)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+
+    float dt    = cleo->ReadParam(handle)->f;   // delta time (ms)
+    float speed = cleo->ReadParam(handle)->f;   // units/sec
+
+    float dtSec = dt * 0.001f;
+
+    float diff = b - a;
+    float dist = fabsf(diff);
+
+    float tStep = 0.0f;
+    if (dist > 0.0f)
+        tStep = (speed * dtSec) / dist;
+
+    if (tStep > 1.0f)
+        tStep = 1.0f;
+
+    float result = a + diff * tStep;
+
+    cleo->GetPointerToScriptVar(handle)->f = result; // value
+    cleo->GetPointerToScriptVar(handle)->f = tStep;  // t step
+}
+// 7024=6,%5d% progress %6d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
+CLEO_Fn(VALUE_LERP_CONTINUOUS)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+
+    float dt    = cleo->ReadParam(handle)->f;
+    float speed = cleo->ReadParam(handle)->f;
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    float t = *tPtr; // progress
+
+    if (t >= 1.0f) {
+        cleo->GetPointerToScriptVar(handle)->f = b;
+        return;
+    }
+
+    float diff = b - a;
+    float dist = fabsf(diff);
+
+    if (dist <= 0.000001f) {
+        *tPtr = 1.0f;
+        cleo->GetPointerToScriptVar(handle)->f = b;
+        return;
+    }
+
+    float tAdd = (speed * dt) / dist;
+    t += tAdd;
+
+    if (t > 1.0f) t = 1.0f;
+
+    *tPtr = t;
+
+    float result = a + diff * t;
+
+    cleo->GetPointerToScriptVar(handle)->f = result;
+}
+// 7025=6,%5d% progress %6d% = value_lerp_continuous_loop %1d% to %2d% deltatime %3d% speed %4d%
+CLEO_Fn(VALUE_LERP_CONTINUOUS_LOOP)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+
+    float dt    = cleo->ReadParam(handle)->f;
+    float speed = cleo->ReadParam(handle)->f;
+
+    float* p = &cleo->GetPointerToScriptVar(handle)->f;
+
+    bool reverse = false;
+    if (*p < 0.0f) {
+        reverse = true;
+        *p = -*p;
+    }
+
+    *p += speed * dt;
+
+    if (*p >= 1.0f) {
+        *p = 1.0f;
+        reverse = !reverse;
+    }
+
+    float t = reverse ? (1.0f - *p) : *p;
+
+    float result = a + (b - a) * t;
+
+    cleo->GetPointerToScriptVar(handle)->f = result;
+
+    *p = reverse ? -*p : *p;
+}
+
 
 
 
@@ -1445,5 +1617,11 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x701C, TOGGLE_BOOLEAN_REAL); // 701C=2,%2d% = !!%1d%
     CLEO_RegisterOpcode(0x701D, ORBIT_POLYGON);   // 701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
     CLEO_RegisterOpcode(0x701E, ORBIT_CUBE);   // 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
-    CLEO_RegisterOpcode(0x701F, ORBIT_RECTANGLE);   // 701F=12,%10d% %11d% %12d% = orbit_rectangle %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d% %9d%
+    CLEO_RegisterOpcode(0x701F, ORBIT_SQUARE);   // 701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
+    CLEO_RegisterOpcode(0x7020, MOVE_LERP);   // 7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% end %4d% %5d% %6d% deltatime %7d% speed %8d%
+    CLEO_RegisterOpcode(0x7021, MOVE_LERP_CONTINUOUS);   // 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+    CLEO_RegisterOpcode(0x7022, MOVE_LERP_CONTINUOUS_LOOP);   // 7022=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous_loop %1d% %2d% %3d% to %4d% %5d% %6d% deltaTime %7d% speed %8d%
+    CLEO_RegisterOpcode(0x7023, VALUE_LERP);   // 7023=6,%5d% progress %6d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+    CLEO_RegisterOpcode(0x7024, VALUE_LERP_CONTINUOUS);   // 7024=6,%5d% progress %6d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
+    CLEO_RegisterOpcode(0x7025, VALUE_LERP_CONTINUOUS_LOOP);   // 7025=6,%5d% progress %6d% = value_lerp_continuous_loop %1d% to %2d% deltatime %3d% speed %4d%
 }

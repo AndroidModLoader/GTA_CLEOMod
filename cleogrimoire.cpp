@@ -31,6 +31,12 @@ static inline float* GetWidgetProps(int widgetId)
     return (float*)(widgetPtr + 12);
 }
 
+// Helpers clamp
+static float clampf(float v, float a, float b) { if (v < a) return a; if (v > b) return b; return v; }
+static int clampi(int v, int a, int b) { if (v < a) return a; if (v > b) return b; return v; }
+
+
+
 CLEO_Fn(SET_WIDGET_TRANSFORM)
 {
     int id = cleo->ReadParam(handle)->i;
@@ -258,10 +264,6 @@ CLEO_Fn(FILE_RENAME)
 }
 
 // --- helpers: conversions (simple, comentadas) ------------------------
-
-// Helpers clamp
-static float clampf(float v, float a, float b) { if (v < a) return a; if (v > b) return b; return v; }
-static int clampi(int v, int a, int b) { if (v < a) return a; if (v > b) return b; return v; }
 
 // RGB(0..255) -> HSV(H:0..360 int, S:0..100 int, V:0..100 int)
 static void RGB_to_HSV(int r, int g, int b, int &outH, int &outS, int &outV)

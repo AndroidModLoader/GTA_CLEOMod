@@ -17,6 +17,10 @@ int (*TouchInterface_PositionWidgets)();
 /////////// BEGIN OPCODES by MatiDragon /////////////
 /////////////////////////////////////////////////////
 
+// Helpers clamp
+static float clampf(float v, float a, float b) { if (v < a) return a; if (v > b) return b; return v; }
+static int clampi(int v, int a, int b) { if (v < a) return a; if (v > b) return b; return v; }
+
 static uintptr_t g_widgetsBase = 0;
 static inline float* GetWidgetProps(int widgetId)
 {
@@ -30,12 +34,6 @@ static inline float* GetWidgetProps(int widgetId)
     // offset 12 → props
     return (float*)(widgetPtr + 12);
 }
-
-// Helpers clamp
-static float clampf(float v, float a, float b) { if (v < a) return a; if (v > b) return b; return v; }
-static int clampi(int v, int a, int b) { if (v < a) return a; if (v > b) return b; return v; }
-
-
 
 CLEO_Fn(SET_WIDGET_TRANSFORM)
 {
@@ -431,7 +429,7 @@ static void HSL_to_HSV(int H, int S, int L, int &outH, int &outS, int &outV)
     outS = clampi((int)roundf(sv * 100.0f), 0, 100);
 }
 
-enum CONV_MODE {
+enum CONVERT_MODE {
   RGB_TO_HSV,
   RGB_TO_HSL,
   HSL_TO_HSV,
@@ -452,22 +450,22 @@ CLEO_Fn(CONVERT_MODEL_COLOR)
     int X,Y,Z;
     switch (mode)
     {
-    case CONV_MODE::RGB_TO_HSV:
+    case CONVERT_MODE::RGB_TO_HSV:
         RGB_to_HSV(a,b,c,X,Y,Z);
         break;
-    case CONV_MODE::RGB_TO_HSL:
+    case CONVERT_MODE::RGB_TO_HSL:
         RGB_to_HSL(a,b,c,X,Y,Z);
         break;
-    case CONV_MODE::HSL_TO_HSV:
+    case CONVERT_MODE::HSL_TO_HSV:
         HSL_to_HSV(a,b,c,X,Y,Z);
         break;
-    case CONV_MODE::HSL_TO_RGB:
+    case CONVERT_MODE::HSL_TO_RGB:
         HSL_to_RGB(a,b,c,X,Y,Z);
         break;
-    case CONV_MODE::HSV_TO_HSL:
+    case CONVERT_MODE::HSV_TO_HSL:
         HSV_to_HSL(a,b,c,X,Y,Z);
         break;
-    case CONV_MODE::HSV_TO_RGB:
+    case CONVERT_MODE::HSV_TO_RGB:
         HSV_to_RGB(a,b,c,X,Y,Z);
         break;
     default:
@@ -1429,55 +1427,18 @@ CLEO_Fn(MOVE_LERP_CONTINUOUS)
     cleo->GetPointerToScriptVar(handle)->f = z;
 }
 
-// 7022=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous_loop %1d% %2d% %3d% to %4d% %5d% %6d% deltaTime %7d% speed %8d%
-CLEO_Fn(MOVE_LERP_CONTINUOUS_LOOP)
+// 7022=1,  lerp_is_finished %1d%
+CLEO_Fn(LERP_IS_FINISHED)
 {
-    float sx = cleo->ReadParam(handle)->f;
-    float sy = cleo->ReadParam(handle)->f;
-    float sz = cleo->ReadParam(handle)->f;
+    float progress = cleo->ReadParam(handle)->f;
 
-    float ex = cleo->ReadParam(handle)->f;
-    float ey = cleo->ReadParam(handle)->f;
-    float ez = cleo->ReadParam(handle)->f;
-    
-    float dt = cleo->ReadParam(handle)->f;
-    float speed = cleo->ReadParam(handle)->f;
-    float* progress = &cleo->GetPointerToScriptVar(handle)->f; // progress storage
-
-    // Lerp direction factor (we store it inside progress if negative)
-    bool reverse = false;
-    if (*progress < 0.0f) {
-        reverse = true;
-        *progress = -*progress;
-    }
-
-    // Increase progress
-    *progress += speed * dt;
-
-    // Loop mode: when reaches 1.0, reverse direction
-    if (*progress >= 1.0f) {
-        *progress = 1.0f;
-        reverse = !reverse;
-    }
-
-    // Apply reverse mapping
-    float t = reverse ? (1.0f - *progress) : *progress;
-
-    // Final position
-    float x = sx + (ex - sx) * t;
-    float y = sy + (ey - sy) * t;
-    float z = sz + (ez - sz) * t;
-
-    // Output
-    cleo->GetPointerToScriptVar(handle)->f = x;
-    cleo->GetPointerToScriptVar(handle)->f = y;
-    cleo->GetPointerToScriptVar(handle)->f = z;
-
-    // Store final progress with direction state encoded
-    *progress = reverse ? -*progress : *progress;
+    if (progress >= 1.0f)
+        UpdateCompareFlag(handle, true);
+    else
+        UpdateCompareFlag(handle, false);
 }
 
-// 7023=6,%5d% progress %6d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+// 7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
 CLEO_Fn(VALUE_LERP)
 {
     float a = cleo->ReadParam(handle)->f;
@@ -1503,7 +1464,8 @@ CLEO_Fn(VALUE_LERP)
     cleo->GetPointerToScriptVar(handle)->f = result; // value
     cleo->GetPointerToScriptVar(handle)->f = tStep;  // t step
 }
-// 7024=6,%5d% progress %6d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
+
+// 7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
 CLEO_Fn(VALUE_LERP_CONTINUOUS)
 {
     float a = cleo->ReadParam(handle)->f;
@@ -1540,40 +1502,252 @@ CLEO_Fn(VALUE_LERP_CONTINUOUS)
 
     cleo->GetPointerToScriptVar(handle)->f = result;
 }
-// 7025=6,%5d% progress %6d% = value_lerp_continuous_loop %1d% to %2d% deltatime %3d% speed %4d%
-CLEO_Fn(VALUE_LERP_CONTINUOUS_LOOP)
+
+// 7025=1,  lerp_maintain_loop %1d%
+CLEO_Fn(LERP_MAINTAIN_LOOP)
 {
-    float a = cleo->ReadParam(handle)->f;
-    float b = cleo->ReadParam(handle)->f;
-
-    float dt    = cleo->ReadParam(handle)->f;
-    float speed = cleo->ReadParam(handle)->f;
-
-    float* p = &cleo->GetPointerToScriptVar(handle)->f;
-
-    bool reverse = false;
-    if (*p < 0.0f) {
-        reverse = true;
-        *p = -*p;
-    }
-
-    *p += speed * dt;
-
-    if (*p >= 1.0f) {
-        *p = 1.0f;
-        reverse = !reverse;
-    }
-
-    float t = reverse ? (1.0f - *p) : *p;
-
-    float result = a + (b - a) * t;
-
-    cleo->GetPointerToScriptVar(handle)->f = result;
-
-    *p = reverse ? -*p : *p;
+    float* progress = &cleo->GetPointerToScriptVar(handle)->f;
+    *progress = (*progress > 1.0f) ? 0.0f : *progress;
 }
 
 
+
+// ==================== ESTRUCTURAS Y CONSTANTES ====================
+
+struct Vec3 {
+    float x, y, z;
+};
+
+// ==================== FUNCIONES AUXILIARES ====================
+
+// Interpolación lineal simple entre dos valores
+inline float lerp(float a, float b, float t) {
+    return a + (b - a) * t;
+}
+
+// Interpolación lineal para Vec3
+inline Vec3 lerp3D(const Vec3& a, const Vec3& b, float t) {
+    Vec3 result;
+    result.x = lerp(a.x, b.x, t);
+    result.y = lerp(a.y, b.y, t);
+    result.z = lerp(a.z, b.z, t);
+    return result;
+}
+
+// Aplica una curva al factor de interpolación (igual que tu código original)
+float applyCurve(float t, int mode, float p1, float p2, float p3, float p4) {
+    float y = 0.0f;
+    
+    enum CURVE_MODE {
+        CURVE_LINEAR = 0,
+        CURVE_SMOOTHSTEP = 1,
+        CURVE_EASE_IN = 2,
+        CURVE_EASE_OUT = 3,
+        CURVE_EASE_IN_OUT = 4,
+        CURVE_POWER_GENERAL = 5,
+        CURVE_CUBIC_BEZIER = 6,
+        CURVE_SPRING = 7,
+        CURVE_ELASTIC = 8,
+        CURVE_BOUNCE = 9,
+        CURVE_STEPPED = 10,
+        CURVE_OVERSHOOT_SPRING = 11
+    };
+
+    switch (mode) {
+        // 0 — LINEAR
+        default:
+        case CURVE_MODE::CURVE_LINEAR:
+            y = t;
+            break;
+
+        // 1 — SMOOTHSTEP
+        case CURVE_MODE::CURVE_SMOOTHSTEP:
+            y = t*t*(3 - 2*t);
+            break;
+
+        // 2 — EASE IN (power curve)
+        case CURVE_MODE::CURVE_EASE_IN:
+            y = powf(t, p1 <= 0 ? 2.0f : p1);
+            break;
+
+        // 3 — EASE OUT (power curve)
+        case CURVE_MODE::CURVE_EASE_OUT:
+            y = 1.0f - powf(1.0f - t, p1 <= 0 ? 2.0f : p1);
+            break;
+
+        // 4 — EASE IN OUT (power)
+        case CURVE_MODE::CURVE_EASE_IN_OUT: {
+            float exp = p1 <= 0 ? 2.0f : p1;
+            if (t < 0.5f) y = 0.5f * powf(t * 2.0f, exp);
+            else y = 1.0f - 0.5f * powf((1.0f - t) * 2.0f, exp);
+            break;
+        }
+
+        // 5 — POWER CURVE GENERAL (powf(t, p1+p2))
+        case CURVE_MODE::CURVE_POWER_GENERAL:
+            y = powf(t, p1 + p2);
+            break;
+
+        // 6 — CUBIC BEZIER (p1,p2,p3,p4)
+        case CURVE_MODE::CURVE_CUBIC_BEZIER: {
+            float u = 1 - t;
+            y = u*u*u * p1 +
+                3*u*u*t * p2 +
+                3*u*t*t * p3 +
+                t*t*t * p4;
+            break;
+        }
+
+        // 7 — SPRING (p1 stiffness, p2 damping)
+        case CURVE_MODE::CURVE_SPRING: {
+            float w = p1 <= 0 ? 8.0f : p1;  // stiffness
+            float d = p2 <= 0 ? 0.3f : p2;  // damping
+            y = 1 - expf(-t * w) * cosf(t * w * (1.0f - d));
+            break;
+        }
+
+        // 8 — ELASTIC (p1 amplitude, p2 frequency)
+        case CURVE_MODE::CURVE_ELASTIC: {
+            float amp = p1 == 0 ? 1.0f : p1;
+            float freq = p2 == 0 ? 10.0f : p2;
+            y = powf(2, -10*t) * sinf((t - p3) * (float)M_PI * freq) * amp + 1;
+            break;
+        }
+
+        // 9 — BOUNCE (p1 factor)
+        case CURVE_MODE::CURVE_BOUNCE: {
+            float k = p1 <= 0 ? 2.0f : p1;
+            y = fabsf(sinf(t * (float)M_PI * k)) * t;
+            break;
+        }
+
+        // 10 — STEPPED (p1 = cantidad de pasos)
+        case CURVE_MODE::CURVE_STEPPED: {
+            int steps = (int)(p1 < 1 ? 1 : p1);
+            y = floorf(t * steps) / steps;
+            break;
+        }
+
+        // 11 — OVERSHOOT SPRING (tipo cartoon)
+        case CURVE_MODE::CURVE_OVERSHOOT_SPRING: {
+            float stiff = p1 == 0 ? 12.0f : p1;
+            float damp = p2 == 0 ? 0.2f : p2;
+            y = 1 + expf(-t * stiff) * sinf(t * stiff * (1 - damp));
+            break;
+        }
+    }
+    
+    return y;
+}
+
+// Calcula la distancia 3D entre dos puntos
+float distance3D(const Vec3& a, const Vec3& b) {
+    float dx = b.x - a.x;
+    float dy = b.y - a.y;
+    float dz = b.z - a.z;
+    return sqrtf(dx*dx + dy*dy + dz*dz);
+}
+
+// 7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+CLEO_Fn(VALUE_LERP_CONTINUOUS_CURVED) {
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+    float dt = cleo->ReadParam(handle)->f;
+    float speed = cleo->ReadParam(handle)->f;
+    int mode = cleo->ReadParam(handle)->i;
+    float p1 = cleo->ReadParam(handle)->f;
+    float p2 = cleo->ReadParam(handle)->f;
+    float p3 = cleo->ReadParam(handle)->f;
+    float p4 = cleo->ReadParam(handle)->f;
+    bool overshoot = cleo->ReadParam(handle)->i != 0;
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    float t = *tPtr;
+
+    float diff = b - a;
+    float dist = fabsf(diff);
+
+    if (dist < 0.000001f) {
+        *tPtr = 1.0f;
+        cleo->GetPointerToScriptVar(handle)->f = b;
+        return;
+    }
+
+    float tAdd = (speed * dt) / dist;
+    t += tAdd;
+
+    if (!overshoot && t > 1.0f) t = 1.0f;
+    *tPtr = t;
+
+    float y = applyCurve(t, mode, p1, p2, p3, p4);
+    float result = a + diff * y;
+    
+    cleo->GetPointerToScriptVar(handle)->f = result;
+}
+
+// 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+CLEO_Fn(MOVE_LERP_CONTINUOUS_CURVED) {
+    // Leer punto inicial
+    Vec3 a;
+    a.x = cleo->ReadParam(handle)->f;
+    a.y = cleo->ReadParam(handle)->f;
+    a.z = cleo->ReadParam(handle)->f;
+    
+    // Leer punto final
+    Vec3 b;
+    b.x = cleo->ReadParam(handle)->f;
+    b.y = cleo->ReadParam(handle)->f;
+    b.z = cleo->ReadParam(handle)->f;
+    
+    // Leer parámetros de interpolación
+    float dt = cleo->ReadParam(handle)->f;
+    float speed = cleo->ReadParam(handle)->f;
+    int mode = cleo->ReadParam(handle)->i;
+    float p1 = cleo->ReadParam(handle)->f;
+    float p2 = cleo->ReadParam(handle)->f;
+    float p3 = cleo->ReadParam(handle)->f;
+    float p4 = cleo->ReadParam(handle)->f;
+    bool overshoot = cleo->ReadParam(handle)->i != 0;
+    
+    // Obtener punteros a variables de script
+    // t se almacena en la primera variable
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    float t = *tPtr;
+    
+    // Los resultados se almacenan en las siguientes 3 variables
+    float* resultXPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    float* resultYPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    float* resultZPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    
+    // Calcular distancia 3D
+    float dist = distance3D(a, b);
+    
+    if (dist < 0.000001f) {
+        *tPtr = 1.0f;
+        *resultXPtr = b.x;
+        *resultYPtr = b.y;
+        *resultZPtr = b.z;
+        return;
+    }
+    
+    // Actualizar t basado en la velocidad y distancia
+    float tAdd = (speed * dt) / dist;
+    t += tAdd;
+    
+    if (!overshoot && t > 1.0f) t = 1.0f;
+    *tPtr = t;
+    
+    // Aplicar curva
+    float curveFactor = applyCurve(t, mode, p1, p2, p3, p4);
+    
+    // Calcular resultado interpolado 3D
+    Vec3 result = lerp3D(a, b, curveFactor);
+    
+    // Escribir resultados
+    *resultXPtr = result.x;
+    *resultYPtr = result.y;
+    *resultZPtr = result.z;
+}
 
 
 ///////////////////////////////////////////////////
@@ -1599,8 +1773,8 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
     CLEO_RegisterOpcode(0x700C, CONVERT_MODEL_COLOR); // 700C=8,%5d% %6d% %7d% = convert_model_color %1d% inputs %2d% %3d% %4d%
-    CLEO_RegisterOpcode(0x700D, IF_TERNARY_INT); // %6d% = int %1d% op %2d% int %3d% ? any_value %4d% : any_value %5d%
-    CLEO_RegisterOpcode(0x700E, IF_TERNARY_FLOAT); // %6d% = float %1d% op %2d% float %3d% ? any_value %4d% : any_value %5d%
+    CLEO_RegisterOpcode(0x700D, IF_TERNARY_INT); // 700D=6,%6d% = int %1d% op %2d% int %3d% ? any_value %4d% : any_value %5d%
+    CLEO_RegisterOpcode(0x700E, IF_TERNARY_FLOAT); // 700E=6,%6d% = float %1d% op %2d% float %3d% ? any_value %4d% : any_value %5d%
     CLEO_RegisterOpcode(0x700F, PACK_SET_BYTE); // 700F=5,%5d% = pack_set_byte %1d% byteIndex %2d% newValue %3d% isSigned %4b%
     CLEO_RegisterOpcode(0x7010, PACK_GET_BYTE); // 7010=4,%4d% = pack_get_byte %1d% byteIndex %2d% isSigned %3b%
     CLEO_RegisterOpcode(0x7011, PACK_ROTATE); // 7011=4,%4d% = pack_rotate %1d% direction %2b% amount %3d%
@@ -1618,10 +1792,12 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x701D, ORBIT_POLYGON);   // 701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
     CLEO_RegisterOpcode(0x701E, ORBIT_CUBE);   // 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
     CLEO_RegisterOpcode(0x701F, ORBIT_SQUARE);   // 701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
-    CLEO_RegisterOpcode(0x7020, MOVE_LERP);   // 7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% end %4d% %5d% %6d% deltatime %7d% speed %8d%
+    CLEO_RegisterOpcode(0x7020, MOVE_LERP);   // 7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
     CLEO_RegisterOpcode(0x7021, MOVE_LERP_CONTINUOUS);   // 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-    CLEO_RegisterOpcode(0x7022, MOVE_LERP_CONTINUOUS_LOOP);   // 7022=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous_loop %1d% %2d% %3d% to %4d% %5d% %6d% deltaTime %7d% speed %8d%
-    CLEO_RegisterOpcode(0x7023, VALUE_LERP);   // 7023=6,%5d% progress %6d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
-    CLEO_RegisterOpcode(0x7024, VALUE_LERP_CONTINUOUS);   // 7024=6,%5d% progress %6d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
-    CLEO_RegisterOpcode(0x7025, VALUE_LERP_CONTINUOUS_LOOP);   // 7025=6,%5d% progress %6d% = value_lerp_continuous_loop %1d% to %2d% deltatime %3d% speed %4d%
+    CLEO_RegisterOpcode(0x7022, LERP_IS_FINISHED);   // 7022=1,  lerp_is_finished %1d%
+    CLEO_RegisterOpcode(0x7023, VALUE_LERP);   // 7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+    CLEO_RegisterOpcode(0x7024, VALUE_LERP_CONTINUOUS);   // 7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
+    CLEO_RegisterOpcode(0x7025, LERP_MAINTAIN_LOOP);   // 7025=1,  lerp_maintain_loop %1d%
+    CLEO_RegisterOpcode(0x7026, VALUE_LERP_CONTINUOUS_CURVED);   // 7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+    CLEO_RegisterOpcode(0x7027, MOVE_LERP_CONTINUOUS_CURVED);   // 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
 }

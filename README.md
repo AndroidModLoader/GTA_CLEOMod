@@ -278,12 +278,13 @@ This is a pack of opcodes to reduce lines of code that are commonly repeated in 
   <summary>For your Sanny Builder</summary>
 
 SASCM.ini
-```
+```ini
+; widgets
 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
 7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
 7003=2,file_rename %1d% to %2d%
 7004=1,create_file_or_directory %1d%
-
+; aritmetics
 7005=3,%3d% = angle_diff %1d% %2d%
 701C=2,%2d% = !! %1d%
 7006=2,%2d% = ! %1d%
@@ -294,11 +295,11 @@ SASCM.ini
 700A=3,%3d% = %1d% - %2d% ; float
 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
 700C=8,%5d% %6d% %7d% = convert_model_color %1d% inputs %2d% %3d% %4d%
-
+; operators
 700D=6,%6d% = int %1d% op %2d% int %3d% ? any_value %4d% : any_value %5d%
 700E=6,%6d% = float %1d% op %2d% float %3d% ? any_value %4d% : any_value %5d%
 7014=4,%4d% = is_truthy %1d% ? any_value %2d% : any_value %3d%
-
+; bits packs
 700F=5,%5d% = pack_set_byte %1d% byteIndex %2d% newValue %3d% isSigned %4b%
 7010=4,%4d% = pack_get_byte %1d% byteIndex %2d% isSigned %3b%
 7011=4,%4d% = pack_rotate %1d% direction %2b% amount %3d%
@@ -306,7 +307,7 @@ SASCM.ini
 7013=6,%6d% = pack_swap_custom %1d% i3 %2d% i2 %3d% i1 %4d% i0 %5d%
 7015=6,%6d% = pack_4dec_to_int32 %1d% %2d% %3d% %4d% flags %5d%
 7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
-
+; orbits
 7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
 7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
 701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
@@ -315,21 +316,23 @@ SASCM.ini
 701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
 701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
-
-7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+; lerp X deltaTime
+7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% end %4d% %5d% %6d% deltatime %7d% speed %8d%
 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-7022=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous_loop %1d% %2d% %3d% to %4d% %5d% %6d% deltaTime %7d% speed %8d%
+7022=1,  lerp_is_finished %1d%
 7023=6,%5d% progress %6d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
 7024=6,%5d% progress %6d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
-7025=6,%5d% progress %6d% = value_lerp_continuous_loop %1d% to %2d% deltatime %3d% speed %4d%
+7025=1,  lerp_maintain_loop %1d%
+7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
 ```
 
 consts.txt
-```
+```pascal
 const
-    // Red Green Blue
-    // Hue Saturation Value
-    // Hue Saturation Lightness
+    // RGB (Red Green Blue)
+    // HSV (Hue Saturation Value)
+    // HSL (Hue Saturation Lightness)
     COLOR_RGB_TO_HSV = 0
     COLOR_RGB_TO_HSL = 1
     COLOR_HSL_TO_HSV = 2
@@ -349,6 +352,19 @@ const
 
     MODE_AND = 0
     MODE_OR = 1
+
+    CURVE_MODE_LINEAR = 0
+    CURVE_MODE_SMOOTHSTEP = 1
+    CURVE_MODE_EASE_IN = 2
+    CURVE_MODE_EASE_OUT = 3
+    CURVE_MODE_EASE_IN_OUT = 4
+    CURVE_MODE_POWER_GENERAL = 5
+    CURVE_MODE_CUBIC_BEZIER = 6
+    CURVE_MODE_SPRING = 7
+    CURVE_MODE_ELASTIC = 8
+    CURVE_MODE_BOUNCE = 9
+    CURVE_MODE_STEPPED = 10
+    CURVE_MODE_OVERSHOOT_SPRING = 11
 end
 ```
 
@@ -389,10 +405,12 @@ keywords.txt
 701F=ORBIT_SQUARE
 7020=MOVE_LERP
 7021=MOVE_LERP_CONTINUOUS
-7022=MOVE_LERP_CONTINUOUS_LOOP
+7022=LERP_IS_FINISHED
 7023=VALUE_LERP
 7024=VALUE_LERP_CONTINUOUS
-7025=VALUE_LERP_CONTINUOUS_LOOP
+7025=LERP_MAINTAIN_LOOP
+7026=VALUE_LERP_CONTINUOUS_CURVED
+7027=MOVE_LERP_CONTINUOUS_CURVED
 ```
 
 </details>
@@ -503,7 +521,7 @@ The difference between each opcode lies mainly in the type of comparison that is
 
 However, assignments are treated as uint32 to ensure that what we want to pass is the exact same value.
 
-## Widgets
+## 👊 Widgets
 
 Working with widgets has never been easier than this.
 ```js
@@ -511,7 +529,7 @@ Working with widgets has never been easier than this.
 7001: get_widget_transform 50 coords 0@ 1@ scales 2@ 3@
 ```
 
-## Lerp Movement
+## 😺 Lerp Movement
 
 These commands are used to move a point from initial coordinates to final coordinates at a constant speed, using `deltaTime` to ensure smooth animation that is dependent on the frame rate.
 
@@ -523,7 +541,7 @@ These commands are used to move a point from initial coordinates to final coordi
 Perform an interpolation from one point to another, increasing the progress from `0.0 → 1.0` according to speed and `deltaTime`.
 When it reaches `1.0`: it stops.
 
-```js
+```pascal
 0@ = 0.0
 1@ = 0.0
 2@ = 0.0
@@ -536,7 +554,7 @@ repeat
   7020: 0@ 1@ 2@ progress 3@ = move_lerp 0@ 1@ 2@ to 10.0 10.0 10.0 deltatime 4@ speed 1.0
 
   Object.SetPosition($obj, 0@, 1@, 2@)
-until 3@ <= 1.0
+until 7026:  lerp_is_finished 3@
 ```
 
 You must always pass the new coordinates within the opcode for the animation to be performed.
@@ -545,7 +563,7 @@ You must always pass the new coordinates within the opcode for the animation to 
 
 Unlike the previous command, this one first reads the progress, then applies the calculations, and rewrites the progress variable.
 
-```js
+```pascal
 3@ = 0.0
 repeat
   wait 0
@@ -555,35 +573,100 @@ repeat
   7021: 0@ 1@ 2@ progress 3@ = move_lerp_continuous 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0
 
   Object.SetPosition($obj, 0@, 1@, 2@)
-until 3@ <= 1.0
+until lerp_is_finished 3@
 ```
 
 Here, the progress variable must always be defined from the outset with a value between `0.0` and `1.0`. If you enter a number such as `0.5`, you will obtain a number halfway between the initial and final values.
 
-### `move_lerp_continuous_loop`
+### `move_lerp_continuous_curved`
 
-This version does not stop; once it reaches the end, it returns to the starting point.
+Adds a curve to the interpolation for non-linear easing effects, making movements feel more organic (e.g., accelerating at the start or overshooting the end).
 
-```js
-while true
+```pascal
+3@ = 0.0
+repeat
   wait 0
   4@ = 0.0
   0079: 4@ += frame_delta_time * 1.0 // (float)
 
-  7022: 0@ 1@ 2@ progress 3@ = move_lerp_continuous_loop 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0
+  7027: 0@ 1@ 2@ progress 3@ = move_lerp_continuous_curved 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0 mode 2 params 2.0 0.0 0.0 0.0 overshoot false
+
+  Object.SetPosition($obj, 0@, 1@, 2@)
+until lerp_is_finished 3@
+```
+
+Use this instead of plain Lerp when linear motion feels too robotic—curves simulate physics-like behaviors. It's better for UI animations, character jumps, or easing in/out effects without custom math.
+
+```js
+CURVE_MODE_LINEAR = 0
+CURVE_MODE_SMOOTHSTEP = 1
+CURVE_MODE_EASE_IN = 2
+CURVE_MODE_EASE_OUT = 3
+CURVE_MODE_EASE_IN_OUT = 4
+CURVE_MODE_POWER_GENERAL = 5
+CURVE_MODE_CUBIC_BEZIER = 6
+CURVE_MODE_SPRING = 7
+CURVE_MODE_ELASTIC = 8
+CURVE_MODE_BOUNCE = 9
+CURVE_MODE_STEPPED = 10
+CURVE_MODE_OVERSHOOT_SPRING = 11
+```
+
+### `lerp_maintain_loop`
+
+This version does not stop; once it reaches the end, it returns to the starting point.
+
+```pascal
+while true
+  wait 0
+  4@ = 0.0
+  4@ = 0.0
+  0079: 4@ += frame_delta_time * 1.0 // (float)
+
+  7021: 0@ 1@ 2@ progress 3@ = move_lerp_continuous 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0
+  lerp_maintain_loop 3@ 
 
   Object.SetPosition($obj, 0@, 1@, 2@)
 end
 ```
 
 For a value, use
+
 ```js
 7023: 0@ progress 1@ = value_lerp 0.0 to 10.0 deltatime 8@ speed 1.0
 7024: 0@ progress 1@ = value_lerp_continuous 0.0 to 10.0 deltatime 8@ speed 1.0
-7025: 0@ progress 1@ = value_lerp_continuous_loop 0.0 to 10.0 deltatime 8@ speed 1.0
+7026: 0@ progress 1@ = value_lerp_continuous_curved 0.0 to 10.0 deltatime 4@ speed 1.0 mode 2 params 2.0 0.0 0.0 0.0 overshoot false
 ```
 
-## File system
+This opcode is equivalent to `1@ >= 1.0`.
+
+```cs
+lerp_is_finished 1@
+```
+
+and
+
+```cs
+lerp_maintain_loop 1@
+```
+
+to `1@ = (1@ >= 1.0) ? 0.0 : 1@`
+
+### When to Use Basic Lerp vs. Advanced Commands
+
+| Scenario | Basic lerp()	| Advanced Lerp Commands |
+|----------|--------------|----------------|
+|Simple value transition between known percentages|✅ Good	|✅ Good|
+|Frame-rate independent animation|❌ Poor|✅ Excellent|
+|Natural-looking motion with acceleration|❌ Poor|✅ Excellent|
+|Physics-based effects (bounce, spring)|❌ Impossible|✅ Perfect|
+|Maintaining consistent speed over varying distances|❌ Manual calculation|✅ Automatic|
+|Complex easing with multiple parameters|❌ Very difficult|✅ Built-in|
+|Animation that needs to pause/resume|❌ Manual state tracking|✅ Built-in progress variable|
+
+
+
+## 📁 File system
 
 Renaming files, nothing more to say.
 ```js
@@ -601,7 +684,7 @@ If they already exist, they are not replaced; they are only created if they do n
 7004: create_file_or_directory "/pop.bin/" // create folder
 ```
 
-## Others
+## 👀 Others
 
 Find the difference between the closest distances between two angles in degrees.
 The results remain within a range of 180 to -180 degrees.
@@ -631,7 +714,7 @@ These are just operations that should have been added in the early stages of CSM
 7002: 0@ = 44 || 3.3 // 0@ = 44
 
 7007: 0@ = 1@ / 1.22    // float
-7008: 0@ = 2.2 * 3.14   // float
+7008: 0@ = 2.2 * 6.28   // float
 7009: 0@ = $x + MATH_PI // float
 700A: 0@ = &0 - 22.2    // float
 ```
@@ -657,4 +740,73 @@ COLOR_HSV_TO_RGB = 5
 // 0@ = 255
 // 0@ = 0
 // 0@ = 0
+```
+
+## OPCODES IN POSSIBLE DESTRUCTION
+```
+7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+```
+
+# ChangeLog
+
+## Grimoire v.1.2.0
+```ini
+7022=1,  lerp_is_finished %1d%
+7025=1,  lerp_maintain_loop %1d%
+7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+```
+## Grimoire v.1.1.0
+```ini
+7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+7022=1,  lerp_is_finished %1d%
+7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
+7025=1,  lerp_maintain_loop %1d%
+```
+## Grimoire v.1.0.0
+Rename `CLEO Utils` to `Grimoire`.
+
+```ini
+7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+7022=1,  lerp_is_finished %1d%
+7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
+7025=1,  lerp_maintain_loop %1d%
+```
+
+## CLEO Utils v0.1.0
+```js
+7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
+7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
+7002=3,%1d% = %1d% || %2d%
+7003=2,file_rename %1d% to %2d%
+7004=1,create_file_or_directory %1d%
+7005=3,%3d% = angle_diff %1d% %2d%
+7006=2,%2d% = !%1d% ; boolean
+7007=3,%3d% = %1d% / %2d% ; float
+7008=3,%3d% = %1d% * %2d% ; float
+7009=3,%3d% = %1d% + %2d% ; float
+700A=3,%3d% = %1d% - %2d% ; float
+700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
+700C=8,%5d% %6d% %7d% = convert_model_color %1d% inputs %2d% %3d% %4d%
+700D=6,%6d% = int %1d% op %2d% int %3d% ? any_value %4d% : any_value %5d%
+700E=6,%6d% = float %1d% op %2d% float %3d% ? any_value %4d% : any_value %5d%
+700F=5,%5d% = pack_set_byte %1d% byteIndex %2d% newValue %3d% isSigned %4b%
+7010=4,%4d% = pack_get_byte %1d% byteIndex %2d% isSigned %3b%
+7011=4,%4d% = pack_rotate %1d% direction %2b% amount %3d%
+7012=4,%4d% = pack_check_truthy %1d% mask %2d% mode %3b% // IF SET
+7013=6,%6d% = pack_swap_custom %1d% i3 %2d% i2 %3d% i1 %4d% i0 %5d%
+7014=4,%4d% = is_truthy %1d% ? any_value %2d% : any_value %3d%
+7015=6,%6d% = pack_4dec_to_int32 %1d% %2d% %3d% %4d% flags %5d%
+7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
+7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
+7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
+7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
+701A=15,%13d% %14d% %15d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
+701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
+701C=2,%2d% = !!%1d%
 ```

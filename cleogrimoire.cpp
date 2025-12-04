@@ -1522,11 +1522,11 @@ CLEO_Fn(VALUE_LERP_CONTINUOUS)
     cleo->GetPointerToScriptVar(handle)->f = result;
 }
 
-// 7025=1,  lerp_maintain_loop %1d%
+// 7025=1,lerp_maintain_loop %1d%
 CLEO_Fn(LERP_MAINTAIN_LOOP)
 {
     float* progress = &cleo->GetPointerToScriptVar(handle)->f;
-    *progress = (*progress > 1.0f) ? 0.0f : *progress;
+    *progress = (*progress >= 1.0f) ? 0.0f : *progress;
 }
 
 

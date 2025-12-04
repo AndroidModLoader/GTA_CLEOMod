@@ -1768,6 +1768,16 @@ CLEO_Fn(MOVE_LERP_CONTINUOUS_CURVED) {
     *resultZPtr = result.z;
 }
 
+// 7028=1,toggle_lerp_reverse %1d%
+CLEO_Fn(TOGGLE_LERP_REVERSE)
+{
+    float* t = &cleo->GetPointerToScriptVar(handle)->f;
+
+    uint32_t bits = *(uint32_t*)t;
+    bits ^= 0x80000000;           // flip sign bit
+    *t = *(float*)&bits;
+}
+
 
 ///////////////////////////////////////////////////
 //////////// END OPCODES by MatiDragon ////////////
@@ -1789,6 +1799,7 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x7007, FLOAT_DIV); // 7007=3,%3d% = %1d% / %2d% ; float
     CLEO_RegisterOpcode(0x7008, FLOAT_MUL); // 7008=3,%3d% = %1d% * %2d% ; float
     CLEO_RegisterOpcode(0x7009, FLOAT_SUM); // 7009=3,%3d% = %1d% + %2d% ; float
+    // 10 OPCODES ADDED
     CLEO_RegisterOpcode(0x700A, FLOAT_SUB); // 700A=3,%3d% = %1d% - %2d% ; float
     CLEO_RegisterOpcode(0x700B, SPLIT_FLOAT_TO_SIGNED_PARTS); // 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
     CLEO_RegisterOpcode(0x700C, CONVERT_MODEL_COLOR); // 700C=8,%5d% %6d% %7d% = convert_model_color %1d% inputs %2d% %3d% %4d%
@@ -1799,6 +1810,7 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x7011, PACK_ROTATE); // 7011=4,%4d% = pack_rotate %1d% direction %2b% amount %3d%
     CLEO_RegisterOpcode(0x7012, PACK_CHECK_TRUTHY); // 7012=4,%4d% = pack_check_truthy %1d% mask %2d% mode %3b% //IF/SET
     CLEO_RegisterOpcode(0x7013, PACK_SWAP_CUSTOM); // 7013=6,%6d% = pack_swap_custom %1d% i3 %2d% i2 %3d% i1 %4d% i0 %5d%
+    // 20 OPCODES ADDED
     CLEO_RegisterOpcode(0x7014, IF_TERNARY); // 7014=4,%4d% = is_truthy %1d% ? any_value %2d% : any_value %3d%
     CLEO_RegisterOpcode(0x7015, PACK_4DEC_TO_INT32); // 7015=6,%6d% = pack_4dec_to_int32 %1d% %2d% %3d% %4d% flags %5d%
     CLEO_RegisterOpcode(0x7016, UNPACK_INT32_TO_4DEC); // 7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
@@ -1809,6 +1821,7 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x701B, ORBIT_CYLINDER); // 701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
     CLEO_RegisterOpcode(0x701C, TOGGLE_BOOLEAN_REAL); // 701C=2,%2d% = !!%1d%
     CLEO_RegisterOpcode(0x701D, ORBIT_POLYGON);   // 701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
+    // 30 OPCODES ADDED
     CLEO_RegisterOpcode(0x701E, ORBIT_CUBE);   // 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
     CLEO_RegisterOpcode(0x701F, ORBIT_SQUARE);   // 701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
     CLEO_RegisterOpcode(0x7020, MOVE_LERP);   // 7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
@@ -1816,7 +1829,9 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x7022, LERP_IS_FINISHED);   // 7022=1,  lerp_is_finished %1d%
     CLEO_RegisterOpcode(0x7023, VALUE_LERP);   // 7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
     CLEO_RegisterOpcode(0x7024, VALUE_LERP_CONTINUOUS);   // 7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
-    CLEO_RegisterOpcode(0x7025, LERP_MAINTAIN_LOOP);   // 7025=1,  lerp_maintain_loop %1d%
+    CLEO_RegisterOpcode(0x7025, LERP_MAINTAIN_LOOP);   // 7025=1,lerp_maintain_loop %1d%
     CLEO_RegisterOpcode(0x7026, VALUE_LERP_CONTINUOUS_CURVED);   // 7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
     CLEO_RegisterOpcode(0x7027, MOVE_LERP_CONTINUOUS_CURVED);   // 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+    // 40 OPCODES ADDED
+    CLEO_RegisterOpcode(0x7028, TOGGLE_LERP_REVERSE);   // 7028=1,toggle_lerp_reverse %1d%
 }

@@ -1325,6 +1325,18 @@ CLEO_Fn(ORBIT_SQUARE)
 /////////////////// ANIMATION /////////////////////
 ///////////////////////////////////////////////////
 
+// Helpers: reinterpret float bits
+inline bool FloatIsNegative(float v) {
+    uint32_t bits = *(uint32_t*)&v;
+    return (bits >> 31) != 0;      // sign bit
+}
+
+inline float FloatAbsRaw(float v) {
+    uint32_t bits = *(uint32_t*)&v;
+    bits &= 0x7FFFFFFF;            // clear sign bit
+    return *(float*)&bits;
+}
+
 
 // 7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
 CLEO_Fn(MOVE_LERP)
@@ -1367,7 +1379,6 @@ CLEO_Fn(MOVE_LERP)
     cleo->GetPointerToScriptVar(handle)->f = outZ;
     cleo->GetPointerToScriptVar(handle)->f = tStep;
 }
-
 // 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
 CLEO_Fn(MOVE_LERP_CONTINUOUS)
 {
@@ -1380,51 +1391,59 @@ CLEO_Fn(MOVE_LERP_CONTINUOUS)
     float y1 = cleo->ReadParam(handle)->f;
     float z1 = cleo->ReadParam(handle)->f;
 
-    float dt    = cleo->ReadParam(handle)->f;   // delta time
-    float speed = cleo->ReadParam(handle)->f;   // units/sec
+    float dt    = cleo->ReadParam(handle)->f;   // seconds
+    float speed = cleo->ReadParam(handle)->f;   // meters/sec
 
-    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f; // progress storage
-    float t = *tPtr;
+    // RAW pointer to progress
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
 
-    // If already completed, return final coordinates immediately
-    if (t >= 1.0f) {
-        cleo->GetPointerToScriptVar(handle)->f = x1;
-        cleo->GetPointerToScriptVar(handle)->f = y1;
-        cleo->GetPointerToScriptVar(handle)->f = z1;
-        return;
-    }
+    float rawT   = *tPtr;
+    bool reverse = FloatIsNegative(rawT);
+    float t      = FloatAbsRaw(rawT);
 
-    // Total distance
+    // distance in meters
     float dx = x1 - x0;
     float dy = y1 - y0;
     float dz = z1 - z0;
     float dist = sqrtf(dx*dx + dy*dy + dz*dz);
 
+    // no movement
     if (dist <= 0.000001f) {
-        *tPtr = 1.0f;
-        cleo->GetPointerToScriptVar(handle)->f = x1;
-        cleo->GetPointerToScriptVar(handle)->f = y1;
-        cleo->GetPointerToScriptVar(handle)->f = z1;
+        float finalT = reverse ? -1.0f : 1.0f;
+        *tPtr = finalT;
+
+        float* outX = &cleo->GetPointerToScriptVar(handle)->f;
+        outX[0] = x1;
+        outX[1] = y1;
+        outX[2] = z1;
         return;
     }
 
-    // Calculate delta progress
+    // PROGRESS DELTA (correct physical interpretation)
     float dtProgress = (speed * dt) / dist;
-    t += dtProgress;
+
+    // Apply reverse logic
+    t += reverse ? -dtProgress : dtProgress;
+
+    // Clamp
     if (t > 1.0f) t = 1.0f;
+    if (t < 0.0f) t = 0.0f;
 
-    // Save updated progress
-    *tPtr = t;
+    // store signed t
+    *tPtr = reverse ? -t : t;
 
-    // Interpolated coordinates
-    float x = x0 + dx * t;
-    float y = y0 + dy * t;
-    float z = z0 + dz * t;
+    // actual interpolation param
+    float tActual = reverse ? (1.0f - t) : t;
 
-    // RETURN VALUES
-    cleo->GetPointerToScriptVar(handle)->f = x;
-    cleo->GetPointerToScriptVar(handle)->f = y;
-    cleo->GetPointerToScriptVar(handle)->f = z;
+    // final coords
+    float x = x0 + dx * tActual;
+    float y = y0 + dy * tActual;
+    float z = z0 + dz * tActual;
+
+    float* out = &cleo->GetPointerToScriptVar(handle)->f;
+    out[0] = x;
+    out[1] = y;
+    out[2] = z;
 }
 
 // 7022=1,  lerp_is_finished %1d%

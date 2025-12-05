@@ -1337,50 +1337,15 @@ inline float FloatAbsRaw(float v) {
     return *(float*)&bits;
 }
 
-
-// 7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-CLEO_Fn(MOVE_LERP)
-{
-    float x0 = cleo->ReadParam(handle)->f;
-    float y0 = cleo->ReadParam(handle)->f;
-    float z0 = cleo->ReadParam(handle)->f;
-    
-    float x1 = cleo->ReadParam(handle)->f;
-    float y1 = cleo->ReadParam(handle)->f;
-    float z1 = cleo->ReadParam(handle)->f;
-
-    float dt = cleo->ReadParam(handle)->f;     // delta time
-    float speed = cleo->ReadParam(handle)->f;  // units/sec
-
-    // convertir dt a segundos
-    float dtSec = dt * 0.001f;
-
-    // distancia total de A → B
-    float dx = x1 - x0;
-    float dy = y1 - y0;
-    float dz = z1 - z0;
-    float dist = sqrtf(dx*dx + dy*dy + dz*dz);
-
-    // cuanto t avanza este frame
-    float tStep = 0.0f;
-    if (dist > 0.0f)
-        tStep = (speed * dtSec) / dist;
-
-    // clamping
-    if (tStep > 1.0f) tStep = 1.0f;
-
-    // interpolación lineal
-    float outX = x0 + dx * tStep;
-    float outY = y0 + dy * tStep;
-    float outZ = z0 + dz * tStep;
-
-    cleo->GetPointerToScriptVar(handle)->f = outX;
-    cleo->GetPointerToScriptVar(handle)->f = outY;
-    cleo->GetPointerToScriptVar(handle)->f = outZ;
-    cleo->GetPointerToScriptVar(handle)->f = tStep;
+inline float FloatSetSign(float v, bool negative) {
+    uint32_t bits = *(uint32_t*)&v;
+    if (negative) bits |= 0x80000000;
+    else bits &= 0x7FFFFFFF;
+    return *(float*)&bits;
 }
-// 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-CLEO_Fn(MOVE_LERP_CONTINUOUS)
+
+// 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+CLEO_Fn(MOVE_LERP)
 {
     // PARAMETERS
     float x0 = cleo->ReadParam(handle)->f;
@@ -1391,7 +1356,7 @@ CLEO_Fn(MOVE_LERP_CONTINUOUS)
     float y1 = cleo->ReadParam(handle)->f;
     float z1 = cleo->ReadParam(handle)->f;
 
-    float dt    = cleo->ReadParam(handle)->f;   // seconds
+    float dt    = cleo->ReadParam(handle)->f;   // delta time in seconds
     float speed = cleo->ReadParam(handle)->f;   // meters/sec
 
     // RAW pointer to progress
@@ -1412,10 +1377,9 @@ CLEO_Fn(MOVE_LERP_CONTINUOUS)
         float finalT = reverse ? -1.0f : 1.0f;
         *tPtr = finalT;
 
-        float* outX = &cleo->GetPointerToScriptVar(handle)->f;
-        outX[0] = x1;
-        outX[1] = y1;
-        outX[2] = z1;
+        cleo->GetPointerToScriptVar(handle)->f = x1; // x
+        cleo->GetPointerToScriptVar(handle)->f = y1; // y
+        cleo->GetPointerToScriptVar(handle)->f = z1; // z
         return;
     }
 
@@ -1440,84 +1404,53 @@ CLEO_Fn(MOVE_LERP_CONTINUOUS)
     float y = y0 + dy * tActual;
     float z = z0 + dz * tActual;
 
-    float* out = &cleo->GetPointerToScriptVar(handle)->f;
-    out[0] = x;
-    out[1] = y;
-    out[2] = z;
+    cleo->GetPointerToScriptVar(handle)->f = x; // x
+    cleo->GetPointerToScriptVar(handle)->f = y; // y
+    cleo->GetPointerToScriptVar(handle)->f = z; // z
 }
 
 // 7022=1,  lerp_is_finished %1d%
 CLEO_Fn(LERP_IS_FINISHED)
 {
     float progress = cleo->ReadParam(handle)->f;
-
-    if (progress >= 1.0f)
-        UpdateCompareFlag(handle, true);
-    else
-        UpdateCompareFlag(handle, false);
+    float absP = FloatAbsRaw(progress);
+    UpdateCompareFlag(handle, absP >= 1.0f);
 }
 
-// 7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+
+// 7024=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
 CLEO_Fn(VALUE_LERP)
 {
     float a = cleo->ReadParam(handle)->f;
     float b = cleo->ReadParam(handle)->f;
 
-    float dt    = cleo->ReadParam(handle)->f;   // delta time (ms)
-    float speed = cleo->ReadParam(handle)->f;   // units/sec
+    float dt    = cleo->ReadParam(handle)->f;   // delta time in seconds
+    float speed = cleo->ReadParam(handle)->f;   // meters/sec
 
-    float dtSec = dt * 0.001f;
-
-    float diff = b - a;
-    float dist = fabsf(diff);
-
-    float tStep = 0.0f;
-    if (dist > 0.0f)
-        tStep = (speed * dtSec) / dist;
-
-    if (tStep > 1.0f)
-        tStep = 1.0f;
-
-    float result = a + diff * tStep;
-
-    cleo->GetPointerToScriptVar(handle)->f = result; // value
-    cleo->GetPointerToScriptVar(handle)->f = tStep;  // t step
-}
-
-// 7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
-CLEO_Fn(VALUE_LERP_CONTINUOUS)
-{
-    float a = cleo->ReadParam(handle)->f;
-    float b = cleo->ReadParam(handle)->f;
-
-    float dt    = cleo->ReadParam(handle)->f;
-    float speed = cleo->ReadParam(handle)->f;
-
-    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
-    float t = *tPtr; // progress
-
-    if (t >= 1.0f) {
-        cleo->GetPointerToScriptVar(handle)->f = b;
-        return;
-    }
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f; // progress storage
+    float rawT = *tPtr;
+    bool reverse = FloatIsNegative(rawT);
+    float t = FloatAbsRaw(rawT);
 
     float diff = b - a;
     float dist = fabsf(diff);
 
     if (dist <= 0.000001f) {
-        *tPtr = 1.0f;
+        *tPtr = reverse ? -1.0f : 1.0f;
         cleo->GetPointerToScriptVar(handle)->f = b;
         return;
     }
 
-    float tAdd = (speed * dt) / dist;
-    t += tAdd;
+    float dtProgress = (speed * dt) / dist;
+    t += reverse ? -dtProgress : dtProgress;
 
     if (t > 1.0f) t = 1.0f;
+    if (t < 0.0f) t = 0.0f;
 
-    *tPtr = t;
+    *tPtr = reverse ? -t : t;
 
-    float result = a + diff * t;
+    float tActual = reverse ? (1.0f - t) : t;
+    float result = a + diff * tActual;
 
     cleo->GetPointerToScriptVar(handle)->f = result;
 }
@@ -1526,7 +1459,15 @@ CLEO_Fn(VALUE_LERP_CONTINUOUS)
 CLEO_Fn(LERP_MAINTAIN_LOOP)
 {
     float* progress = &cleo->GetPointerToScriptVar(handle)->f;
-    *progress = (*progress >= 1.0f) ? 0.0f : *progress;
+    float raw = *progress;
+    bool negative = FloatIsNegative(raw);
+    float absP = FloatAbsRaw(raw);
+
+    // if >=1.0 then wrap to 0.0 and preserve direction
+    if (absP >= 1.0f) {
+        float newP = 0.0f;
+        *progress = FloatSetSign(newP, negative);
+    }
 }
 
 
@@ -1667,12 +1608,12 @@ float distance3D(const Vec3& a, const Vec3& b) {
     return sqrtf(dx*dx + dy*dy + dz*dz);
 }
 
-// 7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
-CLEO_Fn(VALUE_LERP_CONTINUOUS_CURVED) {
+// 7026=12,%12d% progress %11d% = value_lerp_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+CLEO_Fn(VALUE_LERP_CURVED) {
     float a = cleo->ReadParam(handle)->f;
     float b = cleo->ReadParam(handle)->f;
-    float dt = cleo->ReadParam(handle)->f;
-    float speed = cleo->ReadParam(handle)->f;
+    float dt = cleo->ReadParam(handle)->f;        // seconds
+    float speed = cleo->ReadParam(handle)->f;     // units/sec
     int mode = cleo->ReadParam(handle)->i;
     float p1 = cleo->ReadParam(handle)->f;
     float p2 = cleo->ReadParam(handle)->f;
@@ -1681,98 +1622,91 @@ CLEO_Fn(VALUE_LERP_CONTINUOUS_CURVED) {
     bool overshoot = cleo->ReadParam(handle)->i != 0;
 
     float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
-    float t = *tPtr;
+    float rawT = *tPtr;
+    bool reverse = FloatIsNegative(rawT);
+    float t = FloatAbsRaw(rawT);
 
     float diff = b - a;
     float dist = fabsf(diff);
-
     if (dist < 0.000001f) {
-        *tPtr = 1.0f;
+        *tPtr = reverse ? -1.0f : 1.0f;
         cleo->GetPointerToScriptVar(handle)->f = b;
         return;
     }
 
     float tAdd = (speed * dt) / dist;
-    t += tAdd;
+    t += reverse ? -tAdd : tAdd;
 
-    if (!overshoot && t > 1.0f) t = 1.0f;
-    *tPtr = t;
+    if (!overshoot) {
+        if (t > 1.0f) t = 1.0f;
+        if (t < 0.0f) t = 0.0f;
+    }
+    *tPtr = reverse ? -t : t;
 
-    float y = applyCurve(t, mode, p1, p2, p3, p4);
+    float tv = reverse ? (1.0f - t) : t;
+    float y = applyCurve(tv, mode, p1, p2, p3, p4);
     float result = a + diff * y;
-    
+
     cleo->GetPointerToScriptVar(handle)->f = result;
 }
 
-// 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
-CLEO_Fn(MOVE_LERP_CONTINUOUS_CURVED) {
-    // Leer punto inicial
+// 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+CLEO_Fn(MOVE_LERP_CURVED) {
     Vec3 a;
     a.x = cleo->ReadParam(handle)->f;
     a.y = cleo->ReadParam(handle)->f;
     a.z = cleo->ReadParam(handle)->f;
-    
-    // Leer punto final
     Vec3 b;
     b.x = cleo->ReadParam(handle)->f;
     b.y = cleo->ReadParam(handle)->f;
     b.z = cleo->ReadParam(handle)->f;
-    
-    // Leer parámetros de interpolación
-    float dt = cleo->ReadParam(handle)->f;
-    float speed = cleo->ReadParam(handle)->f;
+
+    float dt = cleo->ReadParam(handle)->f;      // seconds
+    float speed = cleo->ReadParam(handle)->f;   // meters/sec
     int mode = cleo->ReadParam(handle)->i;
     float p1 = cleo->ReadParam(handle)->f;
     float p2 = cleo->ReadParam(handle)->f;
     float p3 = cleo->ReadParam(handle)->f;
     float p4 = cleo->ReadParam(handle)->f;
     bool overshoot = cleo->ReadParam(handle)->i != 0;
-    
-    // Obtener punteros a variables de script
-    // t se almacena en la primera variable
-    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
-    float t = *tPtr;
-    
-    // Los resultados se almacenan en las siguientes 3 variables
-    float* resultXPtr = &cleo->GetPointerToScriptVar(handle)->f;
-    float* resultYPtr = &cleo->GetPointerToScriptVar(handle)->f;
-    float* resultZPtr = &cleo->GetPointerToScriptVar(handle)->f;
-    
-    // Calcular distancia 3D
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f; // progress
+    float rawT = *tPtr;
+    bool reverse = FloatIsNegative(rawT);
+    float t = FloatAbsRaw(rawT);
+
     float dist = distance3D(a, b);
-    
     if (dist < 0.000001f) {
-        *tPtr = 1.0f;
-        *resultXPtr = b.x;
-        *resultYPtr = b.y;
-        *resultZPtr = b.z;
+        *tPtr = reverse ? -1.0f : 1.0f;
+        cleo->GetPointerToScriptVar(handle)->f = b.x;
+        cleo->GetPointerToScriptVar(handle)->f = b.y;
+        cleo->GetPointerToScriptVar(handle)->f = b.z;
         return;
     }
-    
-    // Actualizar t basado en la velocidad y distancia
+
     float tAdd = (speed * dt) / dist;
-    t += tAdd;
-    
-    if (!overshoot && t > 1.0f) t = 1.0f;
-    *tPtr = t;
-    
-    // Aplicar curva
-    float curveFactor = applyCurve(t, mode, p1, p2, p3, p4);
-    
-    // Calcular resultado interpolado 3D
-    Vec3 result = lerp3D(a, b, curveFactor);
-    
-    // Escribir resultados
-    *resultXPtr = result.x;
-    *resultYPtr = result.y;
-    *resultZPtr = result.z;
+    t += reverse ? -tAdd : tAdd;
+
+    if (!overshoot) {
+        if (t > 1.0f) t = 1.0f;
+        if (t < 0.0f) t = 0.0f;
+    }
+    *tPtr = reverse ? -t : t;
+
+    float tv = reverse ? (1.0f - t) : t;
+    float curveFactor = applyCurve(tv, mode, p1, p2, p3, p4);
+
+    Vec3 res = lerp3D(a, b, curveFactor);
+
+    cleo->GetPointerToScriptVar(handle)->f = res.x;
+    cleo->GetPointerToScriptVar(handle)->f = res.y;
+    cleo->GetPointerToScriptVar(handle)->f = res.z;
 }
 
 // 7028=1,toggle_lerp_reverse %1d%
 CLEO_Fn(TOGGLE_LERP_REVERSE)
 {
     float* t = &cleo->GetPointerToScriptVar(handle)->f;
-
     uint32_t bits = *(uint32_t*)t;
     bits ^= 0x80000000;           // flip sign bit
     *t = *(float*)&bits;
@@ -1824,14 +1758,14 @@ void InitGrimoireOpcodes()
     // 30 OPCODES ADDED
     CLEO_RegisterOpcode(0x701E, ORBIT_CUBE);   // 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
     CLEO_RegisterOpcode(0x701F, ORBIT_SQUARE);   // 701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
-    CLEO_RegisterOpcode(0x7020, MOVE_LERP);   // 7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-    CLEO_RegisterOpcode(0x7021, MOVE_LERP_CONTINUOUS);   // 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+
+    CLEO_RegisterOpcode(0x7021, MOVE_LERP);   // 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
     CLEO_RegisterOpcode(0x7022, LERP_IS_FINISHED);   // 7022=1,  lerp_is_finished %1d%
-    CLEO_RegisterOpcode(0x7023, VALUE_LERP);   // 7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
-    CLEO_RegisterOpcode(0x7024, VALUE_LERP_CONTINUOUS);   // 7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
+
+    CLEO_RegisterOpcode(0x7024, VALUE_LERP);   // 7024=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
     CLEO_RegisterOpcode(0x7025, LERP_MAINTAIN_LOOP);   // 7025=1,lerp_maintain_loop %1d%
-    CLEO_RegisterOpcode(0x7026, VALUE_LERP_CONTINUOUS_CURVED);   // 7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
-    CLEO_RegisterOpcode(0x7027, MOVE_LERP_CONTINUOUS_CURVED);   // 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+    CLEO_RegisterOpcode(0x7026, VALUE_LERP_CURVED);   // 7026=12,%12d% progress %11d% = value_lerp_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+    CLEO_RegisterOpcode(0x7027, MOVE_LERP_CURVED);   // 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
     // 40 OPCODES ADDED
     CLEO_RegisterOpcode(0x7028, TOGGLE_LERP_REVERSE);   // 7028=1,toggle_lerp_reverse %1d%
 }

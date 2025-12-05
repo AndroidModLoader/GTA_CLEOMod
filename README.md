@@ -742,71 +742,67 @@ COLOR_HSV_TO_RGB = 5
 // 0@ = 0
 ```
 
-## OPCODES IN POSSIBLE DESTRUCTION
-```
-7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
-```
-
 # ChangeLog
 
+## Grimoire v.1.2.1
+```diff
+-7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+-7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+```
+
 ## Grimoire v.1.2.0
-```ini
-7022=1,  lerp_is_finished %1d%
-7025=1,  lerp_maintain_loop %1d%
-7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
-7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+```diff
++7022=1,  lerp_is_finished %1d%
++7025=1,  lerp_maintain_loop %1d%
++7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
++7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
 ```
+
 ## Grimoire v.1.1.0
-```ini
-7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-7022=1,  lerp_is_finished %1d%
-7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
-7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
-7025=1,  lerp_maintain_loop %1d%
+```diff
++7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
++7022=1,  lerp_is_finished %1d%
++7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
++7025=1,  lerp_maintain_loop %1d%
 ```
+
 ## Grimoire v.1.0.0
 Rename `CLEO Utils` to `Grimoire`.
 
-```ini
-7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
-7022=1,  lerp_is_finished %1d%
-7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
-7024=6,%6d% progress %5d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
-7025=1,  lerp_maintain_loop %1d%
+```diff
++7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
++7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
 ```
 
 ## CLEO Utils v0.1.0
-```js
-7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
-7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
-7002=3,%1d% = %1d% || %2d%
-7003=2,file_rename %1d% to %2d%
-7004=1,create_file_or_directory %1d%
-7005=3,%3d% = angle_diff %1d% %2d%
-7006=2,%2d% = !%1d% ; boolean
-7007=3,%3d% = %1d% / %2d% ; float
-7008=3,%3d% = %1d% * %2d% ; float
-7009=3,%3d% = %1d% + %2d% ; float
-700A=3,%3d% = %1d% - %2d% ; float
-700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
-700C=8,%5d% %6d% %7d% = convert_model_color %1d% inputs %2d% %3d% %4d%
-700D=6,%6d% = int %1d% op %2d% int %3d% ? any_value %4d% : any_value %5d%
-700E=6,%6d% = float %1d% op %2d% float %3d% ? any_value %4d% : any_value %5d%
-700F=5,%5d% = pack_set_byte %1d% byteIndex %2d% newValue %3d% isSigned %4b%
-7010=4,%4d% = pack_get_byte %1d% byteIndex %2d% isSigned %3b%
-7011=4,%4d% = pack_rotate %1d% direction %2b% amount %3d%
-7012=4,%4d% = pack_check_truthy %1d% mask %2d% mode %3b% // IF SET
-7013=6,%6d% = pack_swap_custom %1d% i3 %2d% i2 %3d% i1 %4d% i0 %5d%
-7014=4,%4d% = is_truthy %1d% ? any_value %2d% : any_value %3d%
-7015=6,%6d% = pack_4dec_to_int32 %1d% %2d% %3d% %4d% flags %5d%
-7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
-7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
-7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
-7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
-701A=15,%13d% %14d% %15d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
-701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
-701C=2,%2d% = !!%1d%
+```diff
++7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
++7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
++7002=3,%1d% = %1d% || %2d%
++7003=2,file_rename %1d% to %2d%
++7004=1,create_file_or_directory %1d%
++7005=3,%3d% = angle_diff %1d% %2d%
++7006=2,%2d% = !%1d% ; boolean
++7007=3,%3d% = %1d% / %2d% ; float
++7008=3,%3d% = %1d% * %2d% ; float
++7009=3,%3d% = %1d% + %2d% ; float
++700A=3,%3d% = %1d% - %2d% ; float
++700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
++700C=8,%5d% %6d% %7d% = convert_model_color %1d% inputs %2d% %3d% %4d%
++700D=6,%6d% = int %1d% op %2d% int %3d% ? any_value %4d% : any_value %5d%
++700E=6,%6d% = float %1d% op %2d% float %3d% ? any_value %4d% : any_value %5d%
++700F=5,%5d% = pack_set_byte %1d% byteIndex %2d% newValue %3d% isSigned %4b%
++7010=4,%4d% = pack_get_byte %1d% byteIndex %2d% isSigned %3b%
++7011=4,%4d% = pack_rotate %1d% direction %2b% amount %3d%
++7012=4,%4d% = pack_check_truthy %1d% mask %2d% mode %3b% // IF SET
++7013=6,%6d% = pack_swap_custom %1d% i3 %2d% i2 %3d% i1 %4d% i0 %5d%
++7014=4,%4d% = is_truthy %1d% ? any_value %2d% : any_value %3d%
++7015=6,%6d% = pack_4dec_to_int32 %1d% %2d% %3d% %4d% flags %5d%
++7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
++7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
++7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
++7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
++701A=15,%13d% %14d% %15d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
++701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
++701C=2,%2d% = !!%1d%
 ```

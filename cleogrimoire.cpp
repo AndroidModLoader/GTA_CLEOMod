@@ -1320,7 +1320,6 @@ CLEO_Fn(ORBIT_SQUARE)
 }
 
 
-
 ///////////////////////////////////////////////////
 /////////////////// ANIMATION /////////////////////
 ///////////////////////////////////////////////////
@@ -1651,6 +1650,16 @@ CLEO_Fn(VALUE_LERP_CURVED) {
 }
 
 // 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+// params:
+// 1,2,3: position A (x,y,z)
+// 4,5,6: position B (x,y,z)
+// 7: delta time (seconds)
+// 8: speed (meters/sec)
+// 9: curve mode
+// 10,11,12,13: curve params (p1,p2,p3,p4)
+// 14: overshoot (bool)
+// 15: progress storage (float)
+// 16,17,18: result position (x,y,z)
 CLEO_Fn(MOVE_LERP_CURVED) {
     Vec3 a;
     a.x = cleo->ReadParam(handle)->f;
@@ -1712,6 +1721,191 @@ CLEO_Fn(TOGGLE_LERP_REVERSE)
     *t = *(float*)&bits;
 }
 
+// Shortest signed angle delta (from -> to) in degrees, range [-180, 180)
+static inline float AngleDeltaSigned(float from, float to) {
+    float diff = fmodf(to - from + 180.0f, 360.0f);
+    if (diff < 0.0f) diff += 360.0f;
+    diff -= 180.0f;
+    return diff;
+}
+
+// 7020=6,%6d% progress %5d% = rotate_lerp %1d% %2d% dt %3d% speed %4d%
+CLEO_Fn(ROTATE_LERP)
+{
+    float a0    = cleo->ReadParam(handle)->f; // start angle (deg)
+    float a1    = cleo->ReadParam(handle)->f; // end angle   (deg)
+    float dt    = cleo->ReadParam(handle)->f; // seconds
+    float speed = cleo->ReadParam(handle)->f; // degrees / sec
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    float rawT  = *tPtr;
+    bool reverse = FloatIsNegative(rawT);
+    float t = FloatAbsRaw(rawT);
+
+    float diff = AngleDeltaSigned(a0, a1);
+    float dist = fabsf(diff);
+
+    if (dist < 1e-6f) {
+        *tPtr = reverse ? -1.0f : 1.0f;
+        cleo->GetPointerToScriptVar(handle)->f = a1;
+        return;
+    }
+
+    float tAdd = (speed * dt) / dist;
+    t += reverse ? -tAdd : tAdd;
+
+    if (t > 1.0f) t = 1.0f;
+    if (t < 0.0f) t = 0.0f;
+
+    *tPtr = reverse ? -t : t;
+
+    float tActual = reverse ? (1.0f - t) : t;
+
+    float outAngle = a0 + diff * tActual;
+
+    cleo->GetPointerToScriptVar(handle)->f = outAngle;
+}
+
+// 7028=12,%12d% progress %11d% = rotate_lerp_curved %1d% %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+CLEO_Fn(ROTATE_LERP_CURVED)
+{
+    float a0    = cleo->ReadParam(handle)->f;
+    float a1    = cleo->ReadParam(handle)->f;
+    float dt    = cleo->ReadParam(handle)->f;    // seconds
+    float speed = cleo->ReadParam(handle)->f;    // degrees/sec
+
+    int mode    = cleo->ReadParam(handle)->i;
+    float p1    = cleo->ReadParam(handle)->f;
+    float p2    = cleo->ReadParam(handle)->f;
+    float p3    = cleo->ReadParam(handle)->f;
+    float p4    = cleo->ReadParam(handle)->f;
+    bool overshoot = cleo->ReadParam(handle)->i != 0;
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f; // progress storage
+    float rawT  = *tPtr;
+    bool reverse = FloatIsNegative(rawT);
+    float t = FloatAbsRaw(rawT);
+
+    float diff = AngleDeltaSigned(a0, a1);
+    float dist = fabsf(diff);
+
+    if (dist < 1e-6f) {
+        *tPtr = reverse ? -1.0f : 1.0f;
+        cleo->GetPointerToScriptVar(handle)->f = a1;
+        return;
+    }
+
+    float tAdd = (speed * dt) / dist;
+    t += reverse ? -tAdd : tAdd;
+
+    if (!overshoot) {
+        if (t > 1.0f) t = 1.0f;
+        if (t < 0.0f) t = 0.0f;
+    }
+
+    *tPtr = reverse ? -t : t;
+
+    float tv = reverse ? (1.0f - t) : t;
+    float curveFactor = applyCurve(tv, mode, p1, p2, p3, p4);
+
+    float outAngle = a0 + diff * curveFactor;
+
+    cleo->GetPointerToScriptVar(handle)->f = outAngle;
+}
+
+/*
+70XX=??, x %out% y %out% z %out% progress %p%
+= quadratic_lerp_curved
+
+P0_1(xyz) P1_1(xyz) P2_1(xyz)
+P0_2(xyz) P1_2(xyz) P2_2(xyz)
+P0_3(xyz) P1_3(xyz) P2_3(xyz)
+
+dt %dt%
+speed %speed%
+mode %mode%
+params %pA% %pB% %pC% %pD%
+overshoot %over%
+ */
+
+//---------------------------------------------------
+
+
+// 7029=21,%19d% %20d% %21d% progress %18d% = quadratic_lerp_curved %1d% %2d% %3d% per %4d% %5d% %6d% to %7d% %8d% %9d% dt %10d% speed %11d% mode %12d% params %13d% %14d% %15d% %16d% overshoot %17d%
+// params:
+// 1,2,3: position A (x,y,z)
+// 4,5,6: position B (x,y,z)
+// 7,8,9: position C (x,y,z)
+// 10: delta time (seconds)
+// 11: speed (meters/sec)
+// 12: curve mode
+// 13,14,15,16: curve params (p1,p2,p3,p4)
+// 17: overshoot (bool)
+// 18: progress storage (float)
+// 19,20,21: result position (x,y,z)
+CLEO_Fn(QUADRATIC_LERP_CURVED)
+{
+    Vec3 P0, P1, P2;
+
+    P0.x = cleo->ReadParam(handle)->f;
+    P0.y = cleo->ReadParam(handle)->f;
+    P0.z = cleo->ReadParam(handle)->f;
+
+    P1.x = cleo->ReadParam(handle)->f;
+    P1.y = cleo->ReadParam(handle)->f;
+    P1.z = cleo->ReadParam(handle)->f;
+
+    P2.x = cleo->ReadParam(handle)->f;
+    P2.y = cleo->ReadParam(handle)->f;
+    P2.z = cleo->ReadParam(handle)->f;
+
+    float dt    = cleo->ReadParam(handle)->f;
+    float speed = cleo->ReadParam(handle)->f;
+    int mode    = cleo->ReadParam(handle)->i;
+
+    float pA = cleo->ReadParam(handle)->f;
+    float pB = cleo->ReadParam(handle)->f;
+    float pC = cleo->ReadParam(handle)->f;
+    float pD = cleo->ReadParam(handle)->f;
+
+    bool overshoot = cleo->ReadParam(handle)->i != 0;
+
+    float* pProg = &cleo->GetPointerToScriptVar(handle)->f;
+    float rawT = *pProg;
+    bool reverse = FloatIsNegative(rawT);
+    float t = FloatAbsRaw(rawT);
+
+    float approxLen = distance3D(P0, P1) + distance3D(P1, P2);
+    if (approxLen < 1e-6f) approxLen = 1e-6f;
+
+    float tAdd = (speed * dt) / approxLen;
+    t += reverse ? -tAdd : tAdd;
+
+    if (!overshoot) {
+        if (t < 0.0f) t = 0.0f;
+        if (t > 1.0f) t = 1.0f;
+    }
+
+    *pProg = reverse ? -t : t;
+
+    float tv = reverse ? (1.0f - t) : t;
+    float curvedT = applyCurve(tv, mode, pA, pB, pC, pD);
+
+    float u  = 1.0f - curvedT;
+    float u2 = u*u;
+    float t2 = curvedT*curvedT;
+
+    Vec3 out;
+    out.x = u2*P0.x + 2*u*curvedT*P1.x + t2*P2.x;
+    out.y = u2*P0.y + 2*u*curvedT*P1.y + t2*P2.y;
+    out.z = u2*P0.z + 2*u*curvedT*P1.z + t2*P2.z;
+
+    cleo->GetPointerToScriptVar(handle)->f = out.x;
+    cleo->GetPointerToScriptVar(handle)->f = out.y;
+    cleo->GetPointerToScriptVar(handle)->f = out.z;
+}
+
+
 
 ///////////////////////////////////////////////////
 //////////// END OPCODES by MatiDragon ////////////
@@ -1758,14 +1952,15 @@ void InitGrimoireOpcodes()
     // 30 OPCODES ADDED
     CLEO_RegisterOpcode(0x701E, ORBIT_CUBE);   // 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
     CLEO_RegisterOpcode(0x701F, ORBIT_SQUARE);   // 701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
-
+    CLEO_RegisterOpcode(0x7020, ROTATE_LERP);   // 7020=6,%6d% progress %5d% = rotate_lerp %1d% %2d% dt %3d% speed %4d%
     CLEO_RegisterOpcode(0x7021, MOVE_LERP);   // 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
     CLEO_RegisterOpcode(0x7022, LERP_IS_FINISHED);   // 7022=1,  lerp_is_finished %1d%
-
+    CLEO_RegisterOpcode(0x7023, ROTATE_LERP_CURVED);   // 7023=12,%12d% progress %11d% = rotate_lerp_curved %1d% %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
     CLEO_RegisterOpcode(0x7024, VALUE_LERP);   // 7024=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
     CLEO_RegisterOpcode(0x7025, LERP_MAINTAIN_LOOP);   // 7025=1,lerp_maintain_loop %1d%
     CLEO_RegisterOpcode(0x7026, VALUE_LERP_CURVED);   // 7026=12,%12d% progress %11d% = value_lerp_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
     CLEO_RegisterOpcode(0x7027, MOVE_LERP_CURVED);   // 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
     // 40 OPCODES ADDED
     CLEO_RegisterOpcode(0x7028, TOGGLE_LERP_REVERSE);   // 7028=1,toggle_lerp_reverse %1d%
+    CLEO_RegisterOpcode(0x7029, QUADRATIC_LERP_CURVED);   // 7029=21,%19d% %20d% %21d% progress %18d% = quadratic_lerp_curved %1d% %2d% %3d% per %4d% %5d% %6d% to %7d% %8d% %9d% dt %10d% speed %11d% mode %12d% params %13d% %14d% %15d% %16d% overshoot %17d%
 }

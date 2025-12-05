@@ -316,15 +316,17 @@ SASCM.ini
 701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
 701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
-; lerp X deltaTime
-7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% end %4d% %5d% %6d% deltatime %7d% speed %8d%
-7021=12,%10d% %11d% %12d% progress %9d% = move_lerp_continuous %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
+; animations
+7020=6,%6d% progress %5d% = rotate_lerp %1d% %2d% dt %3d% speed %4d%
+7021=12,%10d% %11d% %12d% progress %9d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
 7022=1,  lerp_is_finished %1d%
-7023=6,%5d% progress %6d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
-7024=6,%5d% progress %6d% = value_lerp_continuous %1d% to %2d% deltatime %3d% speed %4d%
+7023=12,%12d% progress %11d% = rotate_lerp_curved %1d% %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+7024=6,%5d% progress %6d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
 7025=1,  lerp_maintain_loop %1d%
-7026=12,%12d% progress %11d% = value_lerp_continuous_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
-7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_continuous_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+7026=12,%12d% progress %11d% = value_lerp_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+7028=1,toggle_lerp_reverse %1d%
+7029=21,%19d% %20d% %21d% progress %18d% = quadratic_lerp_curved %1d% %2d% %3d% per %4d% %5d% %6d% to %7d% %8d% %9d% dt %10d% speed %11d% mode %12d% params %13d% %14d% %15d% %16d% overshoot %17d%
 ```
 
 consts.txt
@@ -403,14 +405,16 @@ keywords.txt
 701D=ORBIT_POLYGON
 701E=ORBIT_CUBE
 701F=ORBIT_SQUARE
-7020=MOVE_LERP
-7021=MOVE_LERP_CONTINUOUS
+7020=ROTATE_LERP
+7021=MOVE_LERP
 7022=LERP_IS_FINISHED
-7023=VALUE_LERP
-7024=VALUE_LERP_CONTINUOUS
+7023=ROTATE_LERP_CURVED
+7024=VALUE_LERP
 7025=LERP_MAINTAIN_LOOP
-7026=VALUE_LERP_CONTINUOUS_CURVED
-7027=MOVE_LERP_CONTINUOUS_CURVED
+7026=VALUE_LERP_CURVED
+7027=MOVE_LERP_CURVED
+7028=TOGGLE_LERP_REVERSE
+7029=QUADRATIC_LERP_CURVED
 ```
 
 </details>
@@ -541,27 +545,7 @@ These commands are used to move a point from initial coordinates to final coordi
 Perform an interpolation from one point to another, increasing the progress from `0.0 → 1.0` according to speed and `deltaTime`.
 When it reaches `1.0`: it stops.
 
-```pascal
-0@ = 0.0
-1@ = 0.0
-2@ = 0.0
-
-repeat
-  wait 0
-  4@ = 0.0
-  0079: 4@ += frame_delta_time * 1.0 // (float)
-
-  7020: 0@ 1@ 2@ progress 3@ = move_lerp 0@ 1@ 2@ to 10.0 10.0 10.0 deltatime 4@ speed 1.0
-
-  Object.SetPosition($obj, 0@, 1@, 2@)
-until 7026:  lerp_is_finished 3@
-```
-
-You must always pass the new coordinates within the opcode for the animation to be performed.
-
-### `move_lerp_continuous`
-
-Unlike the previous command, this one first reads the progress, then applies the calculations, and rewrites the progress variable.
+First reads the progress, then applies the calculations, and rewrites the progress variable.
 
 ```pascal
 3@ = 0.0
@@ -570,7 +554,7 @@ repeat
   4@ = 0.0
   0079: 4@ += frame_delta_time * 1.0 // (float)
 
-  7021: 0@ 1@ 2@ progress 3@ = move_lerp_continuous 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0
+  7021: 0@ 1@ 2@ progress 3@ = move_lerp 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0
 
   Object.SetPosition($obj, 0@, 1@, 2@)
 until lerp_is_finished 3@
@@ -578,7 +562,7 @@ until lerp_is_finished 3@
 
 Here, the progress variable must always be defined from the outset with a value between `0.0` and `1.0`. If you enter a number such as `0.5`, you will obtain a number halfway between the initial and final values.
 
-### `move_lerp_continuous_curved`
+### `move_lerp_curved`
 
 Adds a curve to the interpolation for non-linear easing effects, making movements feel more organic (e.g., accelerating at the start or overshooting the end).
 
@@ -589,7 +573,7 @@ repeat
   4@ = 0.0
   0079: 4@ += frame_delta_time * 1.0 // (float)
 
-  7027: 0@ 1@ 2@ progress 3@ = move_lerp_continuous_curved 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0 mode 2 params 2.0 0.0 0.0 0.0 overshoot false
+  7027: 0@ 1@ 2@ progress 3@ = move_lerp_curved 0.0 0.0 0.0 to 10.0 10.0 10.0 deltatime 4@ speed 1.0 mode 2 params 2.0 0.0 0.0 0.0 overshoot false
 
   Object.SetPosition($obj, 0@, 1@, 2@)
 until lerp_is_finished 3@
@@ -634,23 +618,29 @@ For a value, use
 
 ```js
 7023: 0@ progress 1@ = value_lerp 0.0 to 10.0 deltatime 8@ speed 1.0
-7024: 0@ progress 1@ = value_lerp_continuous 0.0 to 10.0 deltatime 8@ speed 1.0
-7026: 0@ progress 1@ = value_lerp_continuous_curved 0.0 to 10.0 deltatime 4@ speed 1.0 mode 2 params 2.0 0.0 0.0 0.0 overshoot false
+7024: 0@ progress 1@ = value_lerp 0.0 to 10.0 deltatime 8@ speed 1.0
+7026: 0@ progress 1@ = value_lerp_curved 0.0 to 10.0 deltatime 4@ speed 1.0 mode 2 params 2.0 0.0 0.0 0.0 overshoot false
 ```
 
-This opcode is equivalent to `1@ >= 1.0`.
+This opcode is similar to `1@ >= 1.0`:
 
 ```cs
 lerp_is_finished 1@
 ```
 
-and
+and this is `1@ = (1@ >= 1.0) ? 0.0 : 1@`:
 
 ```cs
 lerp_maintain_loop 1@
 ```
 
-to `1@ = (1@ >= 1.0) ? 0.0 : 1@`
+
+Finally, this command reverses the direction in which our animation plays.
+Internally, it simply adds or removes the minus sign from FLOAT, and the other functions interpret this to determine the direction the animation should go: from point A to point B, or from point B to point A.
+
+```cs
+7028: toggle_lerp_reverse 1@
+```
 
 ### When to Use Basic Lerp vs. Advanced Commands
 

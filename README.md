@@ -279,54 +279,64 @@ This is a pack of opcodes to reduce lines of code that are commonly repeated in 
 
 SASCM.ini
 ```ini
-; widgets
 7000=5,set_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
 7001=1,get_widget_transform %1d% coords %2d% %3d% scales %4d% %5d%
+7002=3,%1d% = %1d% || %2d%
 7003=2,file_rename %1d% to %2d%
 7004=1,create_file_or_directory %1d%
-; aritmetics
 7005=3,%3d% = angle_diff %1d% %2d%
-701C=2,%2d% = !! %1d%
-7006=2,%2d% = ! %1d%
-7002=3,%1d% = %1d% || %2d%
+7006=2,%2d% = !%1d% ; boolean
 7007=3,%3d% = %1d% / %2d% ; float
 7008=3,%3d% = %1d% * %2d% ; float
 7009=3,%3d% = %1d% + %2d% ; float
 700A=3,%3d% = %1d% - %2d% ; float
 700B=4,%3d% %4d% = split_float_to_signed_parts %1d% decimals %2d%
 700C=8,%5d% %6d% %7d% = convert_model_color %1d% inputs %2d% %3d% %4d%
-; operators
 700D=6,%6d% = int %1d% op %2d% int %3d% ? any_value %4d% : any_value %5d%
 700E=6,%6d% = float %1d% op %2d% float %3d% ? any_value %4d% : any_value %5d%
-7014=4,%4d% = is_truthy %1d% ? any_value %2d% : any_value %3d%
-; bits packs
 700F=5,%5d% = pack_set_byte %1d% byteIndex %2d% newValue %3d% isSigned %4b%
 7010=4,%4d% = pack_get_byte %1d% byteIndex %2d% isSigned %3b%
 7011=4,%4d% = pack_rotate %1d% direction %2b% amount %3d%
 7012=4,%4d% = pack_check_truthy %1d% mask %2d% mode %3b% //IF/SET
 7013=6,%6d% = pack_swap_custom %1d% i3 %2d% i2 %3d% i1 %4d% i0 %5d%
+7014=4,%4d% = is_truthy %1d% ? any_value %2d% : any_value %3d%
 7015=6,%6d% = pack_4dec_to_int32 %1d% %2d% %3d% %4d% flags %5d%
 7016=6,%3d% %4d% %5d% %6d% = unpack_int32_to_4dec %1d% flags %2d%
-; orbits
 7017=7,%6d% %7d% = orbit_circle %1b:angle/radian% angle %2d% radius %3d% coords %4d% %5d%
-7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
-701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
 7018=10,%8d% %9d% %10d% = orbit_sphere %1b:angle/radian% angles %2d% %3d% radius %4d% coords %5d% %6d% %7d%
+7019=9,%8d% %9d% = orbit_oval %1b:angle/radian% angle %2d% radius %3d% %4d% rotation %5d% coords %6d% %7d%
 701A=15,%13d% %14d% %15d% = orbit_ovoid %1b:angle/radian% angles %2d% %3d% radius %4d% %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
 701B=15,%13d% %14d% %15d% = orbit_cylinder %1b:angle/radian% angle %2d% level %3d% height %4d% radii %5d% %6d% rotation %7d% %8d% %9d% coords %10d% %11d% %12d%
+701C=2,%2d% = !!%1d%
 701D=14,%12d% %13d% %14d% = orbit_polygon %1b:angle/radian% angle %2d% sides %3d% radius %4d% smooth %5d% rotation %6d% %7d% %8d% coords %9d% %10d% %11d%
 701E=16,%14d% %15d% %16d% = orbit_cube %1b:angle/radian% angles %2d% %3d% size %4d% %5d% %6d% smooth %7d% rotation %8d% %9d% %10d% coords %11d% %12d% %13d%
-; animations
+701F=11,%9d% %10d% = orbit_square %1b:angle/radian% angle %2d% size %3d% %4d% smooth %5d% rotZ %6d% coords %7d% %8d%
 7020=6,%6d% progress %5d% = rotate_lerp %1d% %2d% dt %3d% speed %4d%
 7021=12,%10d% %11d% %12d% progress %9d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
 7022=1,  lerp_is_finished %1d%
 7023=12,%12d% progress %11d% = rotate_lerp_curved %1d% %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
-7024=6,%5d% progress %6d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
-7025=1,  lerp_maintain_loop %1d%
+7024=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
+7025=1,lerp_maintain_loop %1d%
 7026=12,%12d% progress %11d% = value_lerp_curved  %1d% to %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
 7027=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% speed %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
 7028=1,toggle_lerp_reverse %1d%
 7029=21,%19d% %20d% %21d% progress %18d% = quadratic_lerp_curved %1d% %2d% %3d% per %4d% %5d% %6d% to %7d% %8d% %9d% dt %10d% speed %11d% mode %12d% params %13d% %14d% %15d% %16d% overshoot %17d%
+702A=10,%8d% %9d% %10d% = blend_vec3 %1d% %2d% %3d% to %4d% %5d% %6d% blend %7d%
+702B=7,%6d% %7d% = blend_vec2 %1d% %2d% to %3d% %4d% blend %5d%
+702C=1,  is_lerp_overshooting %1d%
+702D=4,write_array_safe %1d% length %2d% index %3d% value %4d%
+702E=4,%4d% = read_array_safe %1d% length %2d% index %3d%
+702F=4,count_array_slots %1d% length %2d% empty %3d% used %4d%
+7030=3,%3d% = find_first_empty %1d% length %2d%
+7031=4,clear_range %1d% length %2d% start %3d% count %4d%
+7032=4,insert_at %1d% length %2d% index %3d% value %4d%
+7033=3,remove_at %1d% length %2d% index %3d%
+7034=2,initialize_array_negzero %1d% length %2d%
+7035=4,%4d% = stack_push %1d% length %2d% value %3d%
+7036=3,%3d% = stack_pop %1d% length %2d%
+7037=3,%3d% = shift %1d% length %2d%
+7038=4,unshift %1d% length %2d% value %3d%
+7039=2,reverse %1d% length %2d%
 ```
 
 consts.txt
@@ -415,6 +425,22 @@ keywords.txt
 7027=MOVE_LERP_CURVED
 7028=TOGGLE_LERP_REVERSE
 7029=QUADRATIC_LERP_CURVED
+702A=BLEND_VEC3
+702B=BLEND_VEC2
+702C=IS_LERP_OVERSHOOTING
+702D=WRITE_ARRAY_SAFE
+702E=READ_ARRAY_SAFE
+702F=COUNT_ARRAY_SLOTS
+7030=FIND_FIRST_EMPTY
+7031=CLEAR_RANGE
+7032=INSERT_AT
+7033=REMOVE_AT
+7034=INITIALIZE_ARRAY_NEGZERO
+7035=STACK_PUSH
+7036=STACK_POP
+7037=SHIFT
+7038=UNSHIFT
+7039=REVERSE
 ```
 
 </details>
@@ -674,6 +700,140 @@ If they already exist, they are not replaced; they are only created if they do n
 7004: create_file_or_directory "/pop.bin/" // create folder
 ```
 
+## 🧱 Array Buffer System (Safe Arrays)
+
+These opcodes allow the creation of safe integer arrays using a special empty-slot marker:
+
+```js
+EMPTY_SLOT = -2147483647
+```
+
+This value indicates an *unused* slot.  
+It is never produced by normal user operations, guaranteeing safe separation between “empty” and “valid”.
+
+### `initialize_array_empty`
+
+Fills the entire array with `EMPTY_SLOT`.
+
+```js
+7040: initialize_array_empty 0@ length 20
+```
+
+### `write_array_safe`
+
+Writes into an index only if it is within the array bounds.
+
+```js
+7041: write_array_safe 0@ length 20 index 5 value 1234
+```
+
+Invalid index → ignored.
+
+### `read_array_safe`
+
+Reads an index safely.
+If invalid, returns -2147483646.
+
+```js
+7042: 1@ = read_array_safe 0@ length 20 index 5
+```
+
+### `count_array_slots`
+
+Returns the number of empty and used slots.
+
+```js
+7043: emptySlots usedSlots = count_array_slots 0@ length 20
+```
+
+### `find_first_empty`
+
+Finds the first slot with EMPTY_SLOT.
+Returns -2147483646 if none exist.
+```js
+7044: i@ = find_first_empty 0@ length 20 start 0
+```
+
+### `insert_at`
+
+Shifts elements to the right and inserts a value at the specified index.
+
+```js
+7046: insert_at 0@ length 20 index 3 value 999
+```
+
+### `remove_at`
+
+Removes a value and shifts the array left, filling the last slot with EMPTY_SLOT.
+
+```js
+7047: remove_at 0@ length 20 index 3
+```
+
+### `array_push`
+
+Adds the value at the first empty slot.
+Returns the index or -2147483646 if full.
+
+```js
+7050: idx@ = array_push 0@ length 20 value 777
+```
+
+### `array_pop`
+
+Removes and returns the last non-empty slot.
+Returns -2147483646 if empty.
+
+```js
+7051: 5@ = array_pop 0@ length 20
+```
+
+### Examples
+
+Initializing and using an array
+```js
+7040: initialize_array_empty 0@ length 10
+7041: write_array_safe 0@ length 10 index 3 value 777
+// offset 0@ + 4 offset = 5@    =>   5@ = 777
+7042: 1@ = read_array_safe 0@ length 10 index 3  // 1@ = 777
+```
+
+Stack example
+```js
+7040: initialize_array_empty 0@ length 10
+
+7050: array_push 0@ length 10 value 111
+7050: array_push 0@ length 10 value 222
+
+7051: 5@ = array_pop 0@ length 10     // 5@ = 222
+7051: 5@ = array_pop 0@ length 10     // 5@ = 111
+```
+
+Buffer example
+```js
+get_var_pointer 0@ = var &0
+0DD0: 1@ = label_addr @valor
+sub_int_lvar_from_int_lvar 1@ -= 0@
+1@ /= 4
+int_add 30@ = 1@ + 64
+
+7040: initialize_array_empty &0(30@,1i) length 4
+7041: write_array_safe &0(30@,1i) length 4 index 0 value 111
+7041: write_array_safe &0(30@,1i) length 4 index 1 value 222
+7041: write_array_safe &0(30@,1i) length 4 index 2 value 333
+7041: write_array_safe &0(30@,1i) length 4 index 3 value 444
+
+:values
+hex
+    00 00 00 00 // replaced by 111
+    00 00 00 00 // replaced by 222
+    00 00 00 00 // replaced by 333
+    00 00 00 00 // replaced by 444
+end
+```
+
+
+
 ## 👀 Others
 
 Find the difference between the closest distances between two angles in degrees.
@@ -737,7 +897,28 @@ COLOR_HSV_TO_RGB = 5
 ## Grimoire v.1.2.1
 ```diff
 -7020=12,%9d% %10d% %11d% progress %12d% = move_lerp %1d% %2d% %3d% to %4d% %5d% %6d% deltatime %7d% speed %8d%
++7020=6,%6d% progress %5d% = rotate_lerp %1d% %2d% dt %3d% speed %4d%
 -7023=6,%6d% progress %5d% = value_lerp %1d% to %2d% deltatime %3d% speed %4d%
++7023=12,%12d% progress %11d% = rotate_lerp_curved %1d% %2d% dt %3d% speed %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+[...]
++7028=1,toggle_lerp_reverse %1d%
++7029=21,%19d% %20d% %21d% progress %18d% = quadratic_lerp_curved %1d% %2d% %3d% per %4d% %5d% %6d% to %7d% %8d% %9d% dt %10d% speed %11d% mode %12d% params %13d% %14d% %15d% %16d% overshoot %17d%
++702A=10,%8d% %9d% %10d% = blend_vec3 %1d% %2d% %3d% to %4d% %5d% %6d% blend %7d%
++702B=7,%6d% %7d% = blend_vec2 %1d% %2d% to %3d% %4d% blend %5d%
++702C=1,  is_lerp_overshooting %1d%
++702D=4,write_array_safe %1d% length %2d% index %3d% value %4d%
++702E=4,%4d% = read_array_safe %1d% length %2d% index %3d%
++702F=4,count_array_slots %1d% length %2d% empty %3d% used %4d%
++7030=3,%3d% = find_first_empty %1d% length %2d%
++7031=4,clear_range %1d% length %2d% start %3d% count %4d%
++7032=4,insert_at %1d% length %2d% index %3d% value %4d%
++7033=3,remove_at %1d% length %2d% index %3d%
++7034=2,initialize_array_negzero %1d% length %2d%
++7035=3,stack_push %1d% length %2d% value %3d%
++7036=3,%3d% = stack_pop %1d% length %2d%
++7037=3,%3d% = shift %1d% length %2d%
++7038=4,unshift %1d% length %2d% value %3d%
++7039=2,reverse %1d% length %2d%
 ```
 
 ## Grimoire v.1.2.0

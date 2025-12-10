@@ -1477,6 +1477,10 @@ struct Vec3 {
     float x, y, z;
 };
 
+struct Vec2 {
+    float x, y;
+};
+
 // ==================== FUNCIONES AUXILIARES ====================
 
 // Interpolación lineal simple entre dos valores
@@ -1905,6 +1909,365 @@ CLEO_Fn(QUADRATIC_LERP_CURVED)
     cleo->GetPointerToScriptVar(handle)->f = out.z;
 }
 
+// 702A=10,%8d% %9d% %10d% = blend_VEC3 %1d% %2d% %3d% to %4d% %5d% %6d% blend %7d%
+CLEO_Fn(BLEND_VEC3)
+{
+    Vec3 A, B;
+
+    A.x = cleo->ReadParam(handle)->f;
+    A.y = cleo->ReadParam(handle)->f;
+    A.z = cleo->ReadParam(handle)->f;
+
+    B.x = cleo->ReadParam(handle)->f;
+    B.y = cleo->ReadParam(handle)->f;
+    B.z = cleo->ReadParam(handle)->f;
+
+    float blend = cleo->ReadParam(handle)->f;
+
+    // Clamp opcional por seguridad
+    if (blend < 0.0f) blend = 0.0f;
+    if (blend > 1.0f) blend = 1.0f;
+
+    Vec3 out;
+    out.x = A.x * (1.0f - blend) + B.x * blend;
+    out.y = A.y * (1.0f - blend) + B.y * blend;
+    out.z = A.z * (1.0f - blend) + B.z * blend;
+
+    cleo->GetPointerToScriptVar(handle)->f = out.x;
+    cleo->GetPointerToScriptVar(handle)->f = out.y;
+    cleo->GetPointerToScriptVar(handle)->f = out.z;
+}
+
+// 702B=7,%6d% %7d% = blend_vec2 %1d% %2d% to %3d% %4d% blend %5d%
+CLEO_Fn(BLEND_VEC2)
+{
+    Vec2 A, B;
+
+    A.x = cleo->ReadParam(handle)->f;
+    A.y = cleo->ReadParam(handle)->f;
+
+    B.x = cleo->ReadParam(handle)->f;
+    B.y = cleo->ReadParam(handle)->f;
+
+    float blend = cleo->ReadParam(handle)->f;
+
+    // Clamp opcional por seguridad
+    if (blend < 0.0f) blend = 0.0f;
+    if (blend > 1.0f) blend = 1.0f;
+
+    Vec2 out;
+    out.x = A.x * (1.0f - blend) + B.x * blend;
+    out.y = A.y * (1.0f - blend) + B.y * blend;
+
+    cleo->GetPointerToScriptVar(handle)->f = out.x;
+    cleo->GetPointerToScriptVar(handle)->f = out.y;
+}
+
+// 702C=1,  is_lerp_overshooting %1d%
+CLEO_Fn(IS_LERP_OVERSHOOTING)
+{
+    float progress = cleo->ReadParam(handle)->f;
+    float absP = FloatAbsRaw(progress);
+    UpdateCompareFlag(handle, absP > 1.0f);
+}
+
+
+///////////////////////////////////////////////////
+///////////////// ARRAY BUFFER ////////////////////
+///////////////////////////////////////////////////
+
+static const int EMPTY_SLOT = -2147483647;
+static const int INVALID_SLOT = -2147483646;
+
+// 702D=4,write_array_safe %1d% length %2d% index %3d% value %4d%
+CLEO_Fn(WRITE_ARRAY_SAFE)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+
+    uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+    int length = cleo->ReadParam(handle)->i;
+    int index  = cleo->ReadParam(handle)->i;
+    uint32_t value = (uint32_t)cleo->ReadParam(handle)->i;
+
+    if (length <= 0) return;
+    if (index < 0 || index >= length) return;
+
+    base[index] = value;
+}
+
+
+// 702E=4,%4d% = read_array_safe %1d% length %2d% index %3d%
+CLEO_Fn(READ_ARRAY_SAFE)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+
+    int result = INVALID_SLOT;
+    uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+    int length = cleo->ReadParam(handle)->i;
+    int index  = cleo->ReadParam(handle)->i;
+
+    if (length > 0 && index >= 0 && index < length)
+    {
+        if (base[index] != EMPTY_SLOT)
+            result = base[index];
+    }
+    
+    UpdateCompareFlag(handle, result != INVALID_SLOT);
+
+    cleo->GetPointerToScriptVar(handle)->i = result;
+}
+
+
+// 702F=4,count_array_slots %1d% length %2d% empty %3d% used %4d%
+CLEO_Fn(COUNT_ARRAY_SLOTS)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+
+    int empty = INVALID_SLOT, used = INVALID_SLOT;
+
+    uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+    int length = cleo->ReadParam(handle)->i;
+
+    if (length > 0)
+    {
+        empty = used = 0;
+
+        for (int i = 0; i < length; i++)
+        {
+            if (base[i] == EMPTY_SLOT) empty++;
+            else used++;
+        }
+    }
+
+    cleo->GetPointerToScriptVar(handle)->i = empty;
+    cleo->GetPointerToScriptVar(handle)->i = used;
+}
+
+
+// 7030=3,%3d% = find_first_empty %1d% length %2d%
+CLEO_Fn(FIND_FIRST_EMPTY)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    int length = cleo->ReadParam(handle)->i;
+    int start  = cleo->ReadParam(handle)->i;
+
+    int found = INVALID_SLOT;
+
+    if (raw && length > 0)
+    {
+        uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+        if (start < 0) start = 0;
+
+        for (int i = start; i < length; i++)
+        {
+            if (base[i] == EMPTY_SLOT)
+            {
+                found = i;
+                break;
+            }
+        }
+    }
+    UpdateCompareFlag(handle, found != INVALID_SLOT);
+
+    cleo->GetPointerToScriptVar(handle)->i = found;
+}
+
+
+// 7031=4,clear_range %1d% length %2d% start %3d% count %4d%
+CLEO_Fn(CLEAR_RANGE)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+
+    uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+
+    int length = cleo->ReadParam(handle)->i;
+    int start  = cleo->ReadParam(handle)->i;
+    int count  = cleo->ReadParam(handle)->i;
+
+    if (length <= 0 || count <= 0) return;
+    if (start < 0 || start >= length) return;
+
+    if (start + count > length)
+        count = length - start;
+
+    for (int i = 0; i < count; i++)
+        base[start + i] = EMPTY_SLOT;
+}
+
+
+// 7032=4,insert_at %1d% length %2d% index %3d% value %4d%
+CLEO_Fn(INSERT_AT)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+
+    uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+
+    int length = cleo->ReadParam(handle)->i;
+    int index  = cleo->ReadParam(handle)->i;
+    uint32_t value = (uint32_t)cleo->ReadParam(handle)->i;
+
+    if (length <= 0) return;
+    if (index < 0) index = 0;
+    if (index >= length) return;
+
+    for (int i = length - 1; i > index; i--)
+        base[i] = base[i - 1];
+
+    base[index] = value;
+}
+
+// 7033=3,remove_at %1d% length %2d% index %3d%
+CLEO_Fn(REMOVE_AT)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+
+    uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+
+    int length = cleo->ReadParam(handle)->i;
+    int index  = cleo->ReadParam(handle)->i;
+
+    if (length <= 0) return;
+    if (index < 0 || index >= length) return;
+
+    for (int i = index; i < length - 1; i++)
+        base[i] = base[i + 1];
+
+    base[length - 1] = EMPTY_SLOT;
+}
+
+// 7034=2,initialize_array_negzero %1d% length %2d%
+CLEO_Fn(INITIALIZE_ARRAY_NEGZERO)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    int length = cleo->ReadParam(handle)->i;
+
+    if (!raw || length <= 0) return;
+
+    uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+
+    for (int i = 0; i < length; i++)
+        base[i] = EMPTY_SLOT;
+}
+
+// 7035=3,stack_push %1d% length %2d% value %3d%
+CLEO_Fn(STACK_PUSH)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+
+    int length = cleo->ReadParam(handle)->i;
+    uint32_t value = (uint32_t)cleo->ReadParam(handle)->i;
+
+    if (!raw || length <= 0) return;
+
+    for (int i = 0; i < length; i++)
+    {
+        if (base[i] == EMPTY_SLOT)
+        {
+            base[i] = value;
+            return;
+        }
+    }
+}
+
+// 7036=3,%3d% = stack_pop %1d% length %2d%
+CLEO_Fn(STACK_POP)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    int result = INVALID_SLOT;
+
+    uint32_t* base = reinterpret_cast<uint32_t*>(raw);
+    int length = cleo->ReadParam(handle)->i;
+
+    if (length > 0)
+    {
+        for (int i = length - 1; i >= 0; i--)
+        {
+            if (base[i] != EMPTY_SLOT)
+            {
+                result = base[i];
+                base[i] = EMPTY_SLOT;
+                break;
+            }
+        }
+    }
+    
+    cleo->GetPointerToScriptVar(handle)->i = result;
+    
+    UpdateCompareFlag(handle, result != INVALID_SLOT);
+}
+
+// 7037=3,%3d% = shift %1d% length %2d%
+CLEO_Fn(SHIFT)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    int result = INVALID_SLOT;
+
+    uint32_t* base = (uint32_t*)raw;
+    int length = cleo->ReadParam(handle)->i;
+
+    if (raw && length > 0)
+    {
+        if (base[0] != EMPTY_SLOT)
+        {
+            result = base[0];
+
+            for (int i = 0; i < length - 1; i++)
+                base[i] = base[i + 1];
+
+            base[length - 1] = EMPTY_SLOT;
+        }
+    }
+
+    cleo->IncPtrToScriptVar(handle)->i = result;
+    UpdateCompareFlag(handle, result != INVALID_SLOT);
+}
+
+// 7038=4,unshift %1d% length %2d% value %3d%
+CLEO_Fn(UNSHIFT)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = (uint32_t*)raw;
+    int length = cleo->ReadParam(handle)->i;
+    int value = cleo->ReadParam(handle)->i;
+
+    if (!raw || length <= 0)
+        return;
+
+    if (base[length - 1] != EMPTY_SLOT)
+        return;
+
+    for (int i = length - 1; i > 0; i--)
+        base[i] = base[i - 1];
+
+    base[0] = value;
+}
+
+// 7039=2,reverse %1d% length %2d%
+CLEO_Fn(REVERSE)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = (uint32_t*)raw;
+    int length = cleo->ReadParam(handle)->i;
+
+    if (!raw || length <= 1)
+        return;
+
+    int left = 0;
+    int right = length - 1;
+
+    while (left < right)
+    {
+        uint32_t tmp = base[left];
+        base[left] = base[right];
+        base[right] = tmp;
+        left++;
+        right--;
+    }
+}
+
+
+
 
 
 ///////////////////////////////////////////////////
@@ -1963,4 +2326,21 @@ void InitGrimoireOpcodes()
     // 40 OPCODES ADDED
     CLEO_RegisterOpcode(0x7028, TOGGLE_LERP_REVERSE);   // 7028=1,toggle_lerp_reverse %1d%
     CLEO_RegisterOpcode(0x7029, QUADRATIC_LERP_CURVED);   // 7029=21,%19d% %20d% %21d% progress %18d% = quadratic_lerp_curved %1d% %2d% %3d% per %4d% %5d% %6d% to %7d% %8d% %9d% dt %10d% speed %11d% mode %12d% params %13d% %14d% %15d% %16d% overshoot %17d%
+    CLEO_RegisterOpcode(0x702A, BLEND_VEC3);   // 702A=10,%8d% %9d% %10d% = blend_vec3 %1d% %2d% %3d% to %4d% %5d% %6d% blend %7d%
+    CLEO_RegisterOpcode(0x702B, BLEND_VEC2);   // 702B=7,%6d% %7d% = blend_vec2 %1d% %2d% to %3d% %4d% blend %5d%
+    CLEO_RegisterOpcode(0x702C, IS_LERP_OVERSHOOTING);   // 702C=1,  is_lerp_overshooting %1d%
+    CLEO_RegisterOpcode(0x702D, WRITE_ARRAY_SAFE);   // 702D=4,write_array_safe %1d% length %2d% index %3d% value %4d%
+    CLEO_RegisterOpcode(0x702E, READ_ARRAY_SAFE);   // 702E=4,%4d% = read_array_safe %1d% length %2d% index %3d%
+    CLEO_RegisterOpcode(0x702F, COUNT_ARRAY_SLOTS);   // 702F=4,count_array_slots %1d% length %2d% empty %3d% used %4d%
+    CLEO_RegisterOpcode(0x7030, FIND_FIRST_EMPTY);   // 7030=3,%3d% = find_first_empty %1d% length %2d%
+    CLEO_RegisterOpcode(0x7031, CLEAR_RANGE);   // 7031=4,clear_range %1d% length %2d% start %3d% count %4d%
+    // 50 OPCODES ADDED
+    CLEO_RegisterOpcode(0x7032, INSERT_AT);   // 7032=4,insert_at %1d% length %2d% index %3d% value %4d%
+    CLEO_RegisterOpcode(0x7033, REMOVE_AT);   // 7033=3,remove_at %1d% length %2d% index %3d%
+    CLEO_RegisterOpcode(0x7034, INITIALIZE_ARRAY_NEGZERO);   // 7034=2,initialize_array_negzero %1d% length %2d%
+    CLEO_RegisterOpcode(0x7035, STACK_PUSH);   // 7035=3,stack_push %1d% length %2d% value %3d%
+    CLEO_RegisterOpcode(0x7036, STACK_POP);   // 7036=3,%3d% = stack_pop %1d% length %2d%
+    CLEO_RegisterOpcode(0x7037, SHIFT);   // 7037=3,%3d% = shift %1d% length %2d%
+    CLEO_RegisterOpcode(0x7038, UNSHIFT);   // 7038=4,unshift %1d% length %2d% value %3d%
+    CLEO_RegisterOpcode(0x7039, REVERSE);   // 7039=2,reverse %1d% length %2d%
 }

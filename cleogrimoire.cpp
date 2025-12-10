@@ -2218,8 +2218,8 @@ CLEO_Fn(SHIFT)
             base[length - 1] = EMPTY_SLOT;
         }
     }
-
-    cleo->IncPtrToScriptVar(handle)->i = result;
+    
+    cleo->GetPointerToScriptVar(handle)->i = result;
     UpdateCompareFlag(handle, result != INVALID_SLOT);
 }
 

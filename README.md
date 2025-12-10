@@ -706,6 +706,7 @@ These opcodes allow the creation of safe integer arrays using a special empty-sl
 
 ```js
 EMPTY_SLOT = -2147483647
+INVALID_SLOT = -2147483646
 ```
 
 This value indicates an *unused* slot.  

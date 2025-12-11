@@ -1874,8 +1874,8 @@ CLEO_Fn(QUADRATIC_LERP_CURVED)
 
     bool overshoot = cleo->ReadParam(handle)->i != 0;
 
-    float* pProg = &cleo->GetPointerToScriptVar(handle)->f;
-    float rawT = *pProg;
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    float rawT = *tPtr;
     bool reverse = FloatIsNegative(rawT);
     float t = FloatAbsRaw(rawT);
 
@@ -1890,7 +1890,7 @@ CLEO_Fn(QUADRATIC_LERP_CURVED)
         if (t > 1.0f) t = 1.0f;
     }
 
-    *pProg = reverse ? -t : t;
+    *tPtr = reverse ? -t : t;
 
     float tv = reverse ? (1.0f - t) : t;
     float curvedT = applyCurve(tv, mode, pA, pB, pC, pD);
@@ -1979,8 +1979,8 @@ CLEO_Fn(IS_LERP_OVERSHOOTING)
 static const int EMPTY_SLOT = -2147483647;
 static const int INVALID_SLOT = -2147483646;
 
-// 702D=4,write_array_safe %1d% length %2d% index %3d% value %4d%
-CLEO_Fn(WRITE_ARRAY_SAFE)
+// 702D=4,array_write_value %1d% length %2d% index %3d% value %4d%
+CLEO_Fn(ARRAY_WRITE_VALUE)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
 
@@ -1996,8 +1996,8 @@ CLEO_Fn(WRITE_ARRAY_SAFE)
 }
 
 
-// 702E=4,%4d% = read_array_safe %1d% length %2d% index %3d%
-CLEO_Fn(READ_ARRAY_SAFE)
+// 702E=4,%4d% = array_read_value %1d% length %2d% index %3d%
+CLEO_Fn(ARRAY_READ_VALUE)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
 
@@ -2018,8 +2018,8 @@ CLEO_Fn(READ_ARRAY_SAFE)
 }
 
 
-// 702F=4,count_array_slots %1d% length %2d% empty %3d% used %4d%
-CLEO_Fn(COUNT_ARRAY_SLOTS)
+// 702F=4,array_count_slots %1d% length %2d% empty %3d% used %4d%
+CLEO_Fn(ARRAY_COUNT_SLOTS)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
 
@@ -2044,8 +2044,8 @@ CLEO_Fn(COUNT_ARRAY_SLOTS)
 }
 
 
-// 7030=3,%3d% = find_first_empty %1d% length %2d%
-CLEO_Fn(FIND_FIRST_EMPTY)
+// 7030=3,%3d% = array_find_first_empty %1d% length %2d%
+CLEO_Fn(ARRAY_FIND_FIRST_EMPTY)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
     int length = cleo->ReadParam(handle)->i;
@@ -2073,8 +2073,8 @@ CLEO_Fn(FIND_FIRST_EMPTY)
 }
 
 
-// 7031=4,clear_range %1d% length %2d% start %3d% count %4d%
-CLEO_Fn(CLEAR_RANGE)
+// 7031=4,array_clear_range %1d% length %2d% start %3d% count %4d%
+CLEO_Fn(ARRAY_CLEAR_RANGE)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
 
@@ -2095,8 +2095,8 @@ CLEO_Fn(CLEAR_RANGE)
 }
 
 
-// 7032=4,insert_at %1d% length %2d% index %3d% value %4d%
-CLEO_Fn(INSERT_AT)
+// 7032=4,array_insert_at %1d% length %2d% index %3d% value %4d%
+CLEO_Fn(ARRAY_INSERT_AT)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
 
@@ -2116,8 +2116,8 @@ CLEO_Fn(INSERT_AT)
     base[index] = value;
 }
 
-// 7033=3,remove_at %1d% length %2d% index %3d%
-CLEO_Fn(REMOVE_AT)
+// 7033=3,array_remove_at %1d% length %2d% index %3d%
+CLEO_Fn(ARRAY_REMOVE_AT)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
 
@@ -2135,8 +2135,8 @@ CLEO_Fn(REMOVE_AT)
     base[length - 1] = EMPTY_SLOT;
 }
 
-// 7034=2,initialize_array_negzero %1d% length %2d%
-CLEO_Fn(INITIALIZE_ARRAY_NEGZERO)
+// 7034=2,array_initialize_empty %1d% length %2d%
+CLEO_Fn(ARRAY_INITIALIZE_EMPTY)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
     int length = cleo->ReadParam(handle)->i;
@@ -2149,8 +2149,8 @@ CLEO_Fn(INITIALIZE_ARRAY_NEGZERO)
         base[i] = EMPTY_SLOT;
 }
 
-// 7035=3,stack_push %1d% length %2d% value %3d%
-CLEO_Fn(STACK_PUSH)
+// 7035=3,array_push %1d% length %2d% value %3d%
+CLEO_Fn(ARRAY_PUSH)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
     uint32_t* base = reinterpret_cast<uint32_t*>(raw);
@@ -2170,8 +2170,8 @@ CLEO_Fn(STACK_PUSH)
     }
 }
 
-// 7036=3,%3d% = stack_pop %1d% length %2d%
-CLEO_Fn(STACK_POP)
+// 7036=3,%3d% = array_pop %1d% length %2d%
+CLEO_Fn(ARRAY_POP)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
     int result = INVALID_SLOT;
@@ -2197,8 +2197,8 @@ CLEO_Fn(STACK_POP)
     UpdateCompareFlag(handle, result != INVALID_SLOT);
 }
 
-// 7037=3,%3d% = shift %1d% length %2d%
-CLEO_Fn(SHIFT)
+// 7037=3,%3d% = array_shift %1d% length %2d%
+CLEO_Fn(ARRAY_SHIFT)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
     int result = INVALID_SLOT;
@@ -2223,8 +2223,8 @@ CLEO_Fn(SHIFT)
     UpdateCompareFlag(handle, result != INVALID_SLOT);
 }
 
-// 7038=4,unshift %1d% length %2d% value %3d%
-CLEO_Fn(UNSHIFT)
+// 7038=4,array_unshift %1d% length %2d% value %3d%
+CLEO_Fn(ARRAY_UNSHIFT)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
     uint32_t* base = (uint32_t*)raw;
@@ -2243,8 +2243,8 @@ CLEO_Fn(UNSHIFT)
     base[0] = value;
 }
 
-// 7039=2,reverse %1d% length %2d%
-CLEO_Fn(REVERSE)
+// 7039=2,array_reverse %1d% length %2d%
+CLEO_Fn(ARRAY_REVERSE)
 {
     void* raw = (void*)cleo->GetPointerToScriptVar(handle);
     uint32_t* base = (uint32_t*)raw;
@@ -2266,8 +2266,543 @@ CLEO_Fn(REVERSE)
     }
 }
 
+// 703A=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved_time %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% duration %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+CLEO_Fn(MOVE_LERP_CURVED_TIME)
+{
+    Vec3 a;
+    a.x = cleo->ReadParam(handle)->f;
+    a.y = cleo->ReadParam(handle)->f;
+    a.z = cleo->ReadParam(handle)->f;
+
+    Vec3 b;
+    b.x = cleo->ReadParam(handle)->f;
+    b.y = cleo->ReadParam(handle)->f;
+    b.z = cleo->ReadParam(handle)->f;
+
+    float dt = cleo->ReadParam(handle)->f;
+    float durationMs = cleo->ReadParam(handle)->f;
+
+    int mode = cleo->ReadParam(handle)->i;
+    float p1 = cleo->ReadParam(handle)->f;
+    float p2 = cleo->ReadParam(handle)->f;
+    float p3 = cleo->ReadParam(handle)->f;
+    float p4 = cleo->ReadParam(handle)->f;
+
+    bool overshoot = cleo->ReadParam(handle)->i != 0;
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
+
+    float rawT = *tPtr;
+    bool reverse = FloatIsNegative(rawT);
+    float t = FloatAbsRaw(rawT);
+
+    if (durationMs < 0.0001f) durationMs = 0.0001f;
+
+    float tAdd = (dt * 1000.0f) / durationMs;
+    t += reverse ? -tAdd : tAdd;
+
+    if (!overshoot) {
+        if (t > 1.0f) t = 1.0f;
+        if (t < 0.0f) t = 0.0f;
+    }
+
+    *tPtr = reverse ? -t : t;
+
+    float tv = reverse ? (1.0f - t) : t;
+
+    float curveFactor = applyCurve(tv, mode, p1, p2, p3, p4);
+
+    Vec3 res = lerp3D(a, b, curveFactor);
+
+    cleo->GetPointerToScriptVar(handle)->f = res.x;
+    cleo->GetPointerToScriptVar(handle)->f = res.y;
+    cleo->GetPointerToScriptVar(handle)->f = res.z;
+}
+
+// 703B=12,%12d% progress %11d% = value_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+CLEO_Fn(VALUE_LERP_CURVED_TIME)
+{
+    float a = cleo->ReadParam(handle)->f;
+    float b = cleo->ReadParam(handle)->f;
+
+    float dt = cleo->ReadParam(handle)->f;
+    float durationMs = cleo->ReadParam(handle)->f;
+
+    int mode = cleo->ReadParam(handle)->i;
+    float p1 = cleo->ReadParam(handle)->f;
+    float p2 = cleo->ReadParam(handle)->f;
+    float p3 = cleo->ReadParam(handle)->f;
+    float p4 = cleo->ReadParam(handle)->f;
+    bool overshoot = cleo->ReadParam(handle)->i != 0;
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
+
+    float rawT = *tPtr;
+    bool reverse = FloatIsNegative(rawT);
+    float t = FloatAbsRaw(rawT);
+
+    if (durationMs < 0.0001f) durationMs = 0.0001f;
+
+    float tAdd = (dt * 1000.0f) / durationMs;
+    t += reverse ? -tAdd : tAdd;
+
+    if (!overshoot) {
+        if (t > 1.0f) t = 1.0f;
+        if (t < 0.0f) t = 0.0f;
+    }
+
+    *tPtr = reverse ? -t : t;
+
+    float tv = reverse ? (1.0f - t) : t;
+
+    float y = applyCurve(tv, mode, p1, p2, p3, p4);
+    float result = a + (b - a) * y;
+
+    cleo->GetPointerToScriptVar(handle)->f = result;
+}
+
+// 702C=12,%12d% progress %11d% = rotate_lerp_curved_time %1d% %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+CLEO_Fn(ROTATE_LERP_CURVED_TIME)
+{
+    float a0        = cleo->ReadParam(handle)->f;
+    float a1        = cleo->ReadParam(handle)->f;
+
+    float dt        = cleo->ReadParam(handle)->f;
+    float durationMs= cleo->ReadParam(handle)->f;
+
+    int   mode      = cleo->ReadParam(handle)->i;
+    float p1        = cleo->ReadParam(handle)->f;
+    float p2        = cleo->ReadParam(handle)->f;
+    float p3        = cleo->ReadParam(handle)->f;
+    float p4        = cleo->ReadParam(handle)->f;
+
+    bool overshoot  = cleo->ReadParam(handle)->i != 0;
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    float rawT  = *tPtr;
+
+    bool reverse = FloatIsNegative(rawT);
+    float t      = FloatAbsRaw(rawT);
+
+    float diff = AngleDeltaSigned(a0, a1);
+    float dist = fabsf(diff);
+
+    // If no rotation needed, snap instantly.
+    if (dist < 1e-6f) {
+        *tPtr = reverse ? -1.0f : 1.0f;
+        cleo->GetPointerToScriptVar(handle)->f = a1;
+        return;
+    }
+
+    // Duration normalization
+    if (durationMs < 0.0001f) durationMs = 0.0001f;
+
+    // Time-based interpolation increment
+    float tAdd = (dt * 1000.0f) / durationMs;
+    t += reverse ? -tAdd : tAdd;
+
+    if (!overshoot) {
+        if (t > 1.0f) t = 1.0f;
+        if (t < 0.0f) t = 0.0f;
+    }
+
+    *tPtr = reverse ? -t : t;
+
+    float tv = reverse ? (1.0f - t) : t;
+
+    float curveFactor = applyCurve(tv, mode, p1, p2, p3, p4);
+
+    float outAngle = a0 + diff * curveFactor;
+
+    cleo->GetPointerToScriptVar(handle)->f = outAngle;
+}
+
+// 703C=6,array_write_vec3 %1d% length %2d% index %3d% vec3 %4d% %5d% %6d%
+CLEO_Fn(ARRAY_WRITE_VEC3)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+
+    uint32_t* base = (uint32_t*)raw;
+    int length = cleo->ReadParam(handle)->i;  // cantidad de VEC3, no floats
+    int index  = cleo->ReadParam(handle)->i;
+
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    float z = cleo->ReadParam(handle)->f;
+
+    if (length <= 0) return;
+    if (index < 0 || index >= length) return;
+
+    int i = index * 3;
+    base[i + 0] = *(uint32_t*)&x;
+    base[i + 1] = *(uint32_t*)&y;
+    base[i + 2] = *(uint32_t*)&z;
+}
+
+// 703D=6,%4d% %5d% %6d% = array_read_vec3 %1d% length %2d% index %3d%
+CLEO_Fn(ARRAY_READ_VEC3)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+
+    uint32_t* base = (uint32_t*)raw;
+    int length = cleo->ReadParam(handle)->i;
+    int index  = cleo->ReadParam(handle)->i;
+
+    float x=0, y=0, z=0;
+
+    if (length > 0 && index >= 0 && index < length)
+    {
+        int i = index * 3;
+        x = *(float*)&base[i + 0];
+        y = *(float*)&base[i + 1];
+        z = *(float*)&base[i + 2];
+    }
+
+    cleo->GetPointerToScriptVar(handle)->f = x;
+    cleo->GetPointerToScriptVar(handle)->f = y;
+    cleo->GetPointerToScriptVar(handle)->f = z;
+}
 
 
+// 703E=16,%14d% %15d% %16d% progress %13d% = route_follow %1d% points %2d% dt %3d% use %4d% ms %5d% or_speed %6d% curve %7d% params %8d% %9d% %10d% %11d% overshoot %12d%
+CLEO_Fn(ROUTE_FOLLOW)
+{
+    // === parameters ===
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    int numPoints = cleo->ReadParam(handle)->i;
+    float dt      = cleo->ReadParam(handle)->f;
+
+    bool useDuration = cleo->ReadParam(handle)->i != 0;
+
+    int durationMs    = cleo->ReadParam(handle)->i;
+    float speed       = cleo->ReadParam(handle)->f;
+
+    int mode = cleo->ReadParam(handle)->i;
+    float p1 = cleo->ReadParam(handle)->f;
+    float p2 = cleo->ReadParam(handle)->f;
+    float p3 = cleo->ReadParam(handle)->f;
+    float p4 = cleo->ReadParam(handle)->f;
+
+    bool overshoot = cleo->ReadParam(handle)->i != 0;
+
+    float* tPtr  = &cleo->GetPointerToScriptVar(handle)->f;
+
+    // result
+    float* outX = &cleo->GetPointerToScriptVar(handle)->f;
+    float* outY = &cleo->GetPointerToScriptVar(handle)->f;
+    float* outZ = &cleo->GetPointerToScriptVar(handle)->f;
+
+    // segurity
+    if (!raw || numPoints < 2) {
+        *outX = *outY = *outZ = 0.0f;
+        return;
+    }
+
+    uint32_t* base = (uint32_t*)raw;
+
+    // === decodificar progress ===
+    float rawP = *tPtr;
+    bool reverse = FloatIsNegative(rawP);
+    float absP = FloatAbsRaw(rawP);
+
+    int segment = (int)floorf(absP);
+    float t = absP - (float)segment;
+
+    // clamp al último segmento válido
+    if (segment >= numPoints - 1) {
+        segment = numPoints - 2;
+        t = 1.0f;
+    }
+
+    // === avanzar t ===
+    if (useDuration) {
+        if (durationMs < 1) durationMs = 1;
+        float dtNorm = (dt * 1000.0f) / (float)durationMs;
+        t += reverse ? -dtNorm : dtNorm;
+    } else {
+        float ax = *(float*)&base[segment*3 + 0];
+        float ay = *(float*)&base[segment*3 + 1];
+        float az = *(float*)&base[segment*3 + 2];
+        float bx = *(float*)&base[(segment+1)*3 + 0];
+        float by = *(float*)&base[(segment+1)*3 + 1];
+        float bz = *(float*)&base[(segment+1)*3 + 2];
+
+        float dx = bx - ax;
+        float dy = by - ay;
+        float dz = bz - az;
+        float dist = sqrtf(dx*dx + dy*dy + dz*dz);
+        if (dist < 0.000001f) dist = 1.0f;
+
+        float dtProg = (speed * dt) / dist;
+        t += reverse ? -dtProg : dtProg;
+    }
+
+    // === avanzar de segmento ===
+    while (t >= 1.0f && segment < numPoints - 2) {
+        t -= 1.0f;
+        segment++;
+    }
+    while (t < 0.0f && segment > 0) {
+        t += 1.0f;
+        segment--;
+    }
+
+    // === si llegamos al final, nos quedamos ahí ===
+    if (segment >= numPoints - 1) {
+        segment = numPoints - 2;
+        t = 1.0f;
+    }
+    if (segment < 0) {
+        segment = 0;
+        t = 0.0f;
+    }
+
+    // === guardar nuevo progress ===
+    float newAbs = (float)segment + t;
+    *tPtr = FloatSetSign(newAbs, reverse);
+
+    // === leer puntos A y B ===
+    float ax = *(float*)&base[segment*3 + 0];
+    float ay = *(float*)&base[segment*3 + 1];
+    float az = *(float*)&base[segment*3 + 2];
+
+    float bx = *(float*)&base[(segment+1)*3 + 0];
+    float by = *(float*)&base[(segment+1)*3 + 1];
+    float bz = *(float*)&base[(segment+1)*3 + 2];
+
+    // curva
+    float tv = reverse ? (1.0f - t) : t;
+    float ct = applyCurve(tv, mode, p1, p2, p3, p4);
+
+    // === interpolación final ===
+    *outX = ax + (bx - ax) * ct;
+    *outY = ay + (by - ay) * ct;
+    *outZ = az + (bz - az) * ct;
+}
+
+// 703F=6,vec3_insert_at %1d% length %2d% index %3d% vec3 %4d% %5d% %6d%
+CLEO_Fn(VEC3_INSERT_AT)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = (uint32_t*)raw;
+
+    int length = cleo->ReadParam(handle)->i;
+    int index  = cleo->ReadParam(handle)->i;
+
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    float z = cleo->ReadParam(handle)->f;
+
+    if (!raw || length <= 0) return;
+    if (index < 0) index = 0;
+    if (index >= length) return;
+
+    for (int i = length-1; i > index; i--)
+    {
+        int to = i*3;
+        int from = (i-1)*3;
+        base[to+0] = base[from+0];
+        base[to+1] = base[from+1];
+        base[to+2] = base[from+2];
+    }
+
+    int o = index * 3;
+    base[o+0] = *(uint32_t*)&x;
+    base[o+1] = *(uint32_t*)&y;
+    base[o+2] = *(uint32_t*)&z;
+}
+
+// 7040=3,vec3_remove_at %1d% length %2d% index %3d%
+CLEO_Fn(VEC3_REMOVE_AT)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = (uint32_t*)raw;
+
+    int length = cleo->ReadParam(handle)->i;
+    int index  = cleo->ReadParam(handle)->i;
+
+    if (!raw || length <= 0 || index < 0 || index >= length)
+        return;
+
+    for (int i = index; i < length - 1; i++)
+    {
+        int to = i*3;
+        int from = (i+1)*3;
+        base[to+0] = base[from+0];
+        base[to+1] = base[from+1];
+        base[to+2] = base[from+2];
+    }
+
+    // último queda vacío
+    int end = (length - 1) * 3;
+    base[end+0] = EMPTY_SLOT;
+    base[end+1] = EMPTY_SLOT;
+    base[end+2] = EMPTY_SLOT;
+}
+
+// 7041=5,vec3_push %1d% length %2d% vec3 %3d% %4d% %5d%
+CLEO_Fn(VEC3_PUSH)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = (uint32_t*)raw;
+
+    int length = cleo->ReadParam(handle)->i;
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    float z = cleo->ReadParam(handle)->f;
+
+    if (!raw || length <= 0) return;
+
+    for (int i = 0; i < length; i++)
+    {
+        int o = i*3;
+        if (base[o+0] == EMPTY_SLOT && base[o+1] == EMPTY_SLOT && base[o+2] == EMPTY_SLOT)
+        {
+            base[o+0] = *(uint32_t*)&x;
+            base[o+1] = *(uint32_t*)&y;
+            base[o+2] = *(uint32_t*)&z;
+            return;
+        }
+    }
+}
+
+// 7042=5,%3d% %4d% %5d% = vec3_pop %1d% length %2d%
+CLEO_Fn(VEC3_POP)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = (uint32_t*)raw;
+
+    int length = cleo->ReadParam(handle)->i;
+
+    float* outX = &cleo->GetPointerToScriptVar(handle)->f;
+    float* outY = &cleo->GetPointerToScriptVar(handle)->f;
+    float* outZ = &cleo->GetPointerToScriptVar(handle)->f;
+
+    *outX = *outY = *outZ = 0.0f;
+
+    if (!raw || length <= 0) return;
+
+    for (int i = length - 1; i >= 0; i--)
+    {
+        int o = i*3;
+        if (base[o+0] != EMPTY_SLOT ||
+            base[o+1] != EMPTY_SLOT ||
+            base[o+2] != EMPTY_SLOT)
+        {
+            *outX = *(float*)&base[o+0];
+            *outY = *(float*)&base[o+1];
+            *outZ = *(float*)&base[o+2];
+
+            base[o+0] = EMPTY_SLOT;
+            base[o+1] = EMPTY_SLOT;
+            base[o+2] = EMPTY_SLOT;
+            return;
+        }
+    }
+}
+
+// 7043=5,%3d% %4d% %5d% = vec3_shift %1d% length %2d%
+CLEO_Fn(VEC3_SHIFT)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = (uint32_t*)raw;
+
+    int length = cleo->ReadParam(handle)->i;
+
+    float* outX = &cleo->GetPointerToScriptVar(handle)->f;
+    float* outY = &cleo->GetPointerToScriptVar(handle)->f;
+    float* outZ = &cleo->GetPointerToScriptVar(handle)->f;
+
+    *outX = *outY = *outZ = 0.0f;
+
+    if (!raw || length <= 0) return;
+
+    int o = 0;
+    if (base[o+0] != EMPTY_SLOT ||
+        base[o+1] != EMPTY_SLOT ||
+        base[o+2] != EMPTY_SLOT)
+    {
+        *outX = *(float*)&base[o+0];
+        *outY = *(float*)&base[o+1];
+        *outZ = *(float*)&base[o+2];
+    }
+
+    for (int i = 0; i < length - 1; i++)
+    {
+        int to   = i * 3;
+        int from = (i+1) * 3;
+        base[to+0] = base[from+0];
+        base[to+1] = base[from+1];
+        base[to+2] = base[from+2];
+    }
+
+    int last = (length-1) * 3;
+    base[last+0] = EMPTY_SLOT;
+    base[last+1] = EMPTY_SLOT;
+    base[last+2] = EMPTY_SLOT;
+}
+
+// 7044=5,vec3_unshift %1d% length %2d% vec3 %3d% %4d% %5d%
+CLEO_Fn(VEC3_UNSHIFT)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = (uint32_t*)raw;
+
+    int length = cleo->ReadParam(handle)->i;
+    float x = cleo->ReadParam(handle)->f;
+    float y = cleo->ReadParam(handle)->f;
+    float z = cleo->ReadParam(handle)->f;
+
+    if (!raw || length <= 0) return;
+
+    int last = (length-1) * 3;
+    if (base[last+0] != EMPTY_SLOT ||
+        base[last+1] != EMPTY_SLOT ||
+        base[last+2] != EMPTY_SLOT)
+        return;
+
+    for (int i = length - 1; i > 0; i--)
+    {
+        int to = i*3;
+        int from = (i-1)*3;
+        base[to+0] = base[from+0];
+        base[to+1] = base[from+1];
+        base[to+2] = base[from+2];
+    }
+
+    base[0] = *(uint32_t*)&x;
+    base[1] = *(uint32_t*)&y;
+    base[2] = *(uint32_t*)&z;
+}
+
+// 7045=2,vec3_reverse %1d% length %2d%
+CLEO_Fn(VEC3_REVERSE)
+{
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    uint32_t* base = (uint32_t*)raw;
+
+    int length = cleo->ReadParam(handle)->i;
+    if (!raw || length <= 1) return;
+
+    int left = 0;
+    int right = length - 1;
+
+    while (left < right)
+    {
+        int lo = left * 3;
+        int ro = right * 3;
+
+        for (int c = 0; c < 3; c++)
+        {
+            uint32_t tmp = base[lo + c];
+            base[lo + c] = base[ro + c];
+            base[ro + c] = tmp;
+        }
+
+        left++;
+        right--;
+    }
+}
 
 
 ///////////////////////////////////////////////////
@@ -2329,18 +2864,32 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x702A, BLEND_VEC3);   // 702A=10,%8d% %9d% %10d% = blend_vec3 %1d% %2d% %3d% to %4d% %5d% %6d% blend %7d%
     CLEO_RegisterOpcode(0x702B, BLEND_VEC2);   // 702B=7,%6d% %7d% = blend_vec2 %1d% %2d% to %3d% %4d% blend %5d%
     CLEO_RegisterOpcode(0x702C, IS_LERP_OVERSHOOTING);   // 702C=1,  is_lerp_overshooting %1d%
-    CLEO_RegisterOpcode(0x702D, WRITE_ARRAY_SAFE);   // 702D=4,write_array_safe %1d% length %2d% index %3d% value %4d%
-    CLEO_RegisterOpcode(0x702E, READ_ARRAY_SAFE);   // 702E=4,%4d% = read_array_safe %1d% length %2d% index %3d%
-    CLEO_RegisterOpcode(0x702F, COUNT_ARRAY_SLOTS);   // 702F=4,count_array_slots %1d% length %2d% empty %3d% used %4d%
-    CLEO_RegisterOpcode(0x7030, FIND_FIRST_EMPTY);   // 7030=3,%3d% = find_first_empty %1d% length %2d%
-    CLEO_RegisterOpcode(0x7031, CLEAR_RANGE);   // 7031=4,clear_range %1d% length %2d% start %3d% count %4d%
+    CLEO_RegisterOpcode(0x702D, ARRAY_WRITE_VALUE);   // 702D=4,array_write_value %1d% length %2d% index %3d% value %4d%
+    CLEO_RegisterOpcode(0x702E, ARRAY_READ_VALUE);   // 702E=4,%4d% = array_read_value %1d% length %2d% index %3d%
+    CLEO_RegisterOpcode(0x702F, ARRAY_COUNT_SLOTS);   // 702F=4,array_count_slots %1d% length %2d% empty %3d% used %4d%
+    CLEO_RegisterOpcode(0x7030, ARRAY_FIND_FIRST_EMPTY);   // 7030=3,%3d% = array_find_first_empty %1d% length %2d%
+    CLEO_RegisterOpcode(0x7031, ARRAY_CLEAR_RANGE);   // 7031=4,array_clear_range %1d% length %2d% start %3d% count %4d%
     // 50 OPCODES ADDED
-    CLEO_RegisterOpcode(0x7032, INSERT_AT);   // 7032=4,insert_at %1d% length %2d% index %3d% value %4d%
-    CLEO_RegisterOpcode(0x7033, REMOVE_AT);   // 7033=3,remove_at %1d% length %2d% index %3d%
-    CLEO_RegisterOpcode(0x7034, INITIALIZE_ARRAY_NEGZERO);   // 7034=2,initialize_array_negzero %1d% length %2d%
-    CLEO_RegisterOpcode(0x7035, STACK_PUSH);   // 7035=3,stack_push %1d% length %2d% value %3d%
-    CLEO_RegisterOpcode(0x7036, STACK_POP);   // 7036=3,%3d% = stack_pop %1d% length %2d%
-    CLEO_RegisterOpcode(0x7037, SHIFT);   // 7037=3,%3d% = shift %1d% length %2d%
-    CLEO_RegisterOpcode(0x7038, UNSHIFT);   // 7038=4,unshift %1d% length %2d% value %3d%
-    CLEO_RegisterOpcode(0x7039, REVERSE);   // 7039=2,reverse %1d% length %2d%
+    CLEO_RegisterOpcode(0x7032, ARRAY_INSERT_AT);   // 7032=4,array_insert_at %1d% length %2d% index %3d% value %4d%
+    CLEO_RegisterOpcode(0x7033, ARRAY_REMOVE_AT);   // 7033=3,array_remove_at %1d% length %2d% index %3d%
+    CLEO_RegisterOpcode(0x7034, ARRAY_INITIALIZE_EMPTY);   // 7034=2,array_initialize_empty %1d% length %2d%
+    CLEO_RegisterOpcode(0x7035, ARRAY_PUSH);   // 7035=3,array_push %1d% length %2d% value %3d%
+    CLEO_RegisterOpcode(0x7036, ARRAY_POP);   // 7036=3,%3d% = array_pop %1d% length %2d%
+    CLEO_RegisterOpcode(0x7037, ARRAY_SHIFT);   // 7037=3,%3d% = array_shift %1d% length %2d%
+    CLEO_RegisterOpcode(0x7038, ARRAY_UNSHIFT);   // 7038=4,array_unshift %1d% length %2d% value %3d%
+    CLEO_RegisterOpcode(0x7039, ARRAY_REVERSE);   // 7039=2,array_reverse %1d% length %2d%
+    CLEO_RegisterOpcode(0x703A, MOVE_LERP_CURVED_TIME);   // 703A=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved_time %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% duration %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+    CLEO_RegisterOpcode(0x703B, VALUE_LERP_CURVED_TIME);   // 703B=12,%12d% progress %11d% = value_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+    // 60 OPCODES ADDED
+    CLEO_RegisterOpcode(0x703C, ARRAY_WRITE_VEC3);   // 703C=5,array_write_vec3 %1d% length %2d% index %3d% %4d% %5d%
+    CLEO_RegisterOpcode(0x703D, ARRAY_READ_VEC3);   // 703D=5,%3d% %4d% %5d% = array_read_vec3 %1d% length %2d% index %3d%
+    CLEO_RegisterOpcode(0x703E, ROUTE_FOLLOW);   // 703E=16,%14d% %15d% %16d% progress %13d% = route_follow %1d% points %2d% dt %3d% use %4d% ms %5d% or_speed %6d% curve %7d% params %8d% %9d% %10d% %11d% overshoot %12d%
+    CLEO_RegisterOpcode(0x703F, VEC3_INSERT_AT);   // 703F=6,vec3_insert_at %1d% length %2d% index %3d% vec3 %4d% %5d% %6d%
+    CLEO_RegisterOpcode(0x7040, VEC3_REMOVE_AT);   // 7040=3,vec3_remove_at %1d% length %2d% index %3d%
+    CLEO_RegisterOpcode(0x7041, VEC3_PUSH);   // 7041=5,vec3_push %1d% length %2d% vec3 %3d% %4d% %5d%
+    CLEO_RegisterOpcode(0x7042, VEC3_POP);   // 7042=5,%3d% %4d% %5d% = vec3_pop %1d% length %2d%
+    CLEO_RegisterOpcode(0x7043, VEC3_SHIFT);   // 7043=5,%3d% %4d% %5d% = vec3_shift %1d% length %2d%
+    CLEO_RegisterOpcode(0x7044, VEC3_UNSHIFT);   // 7044=5,vec3_unshift %1d% length %2d% vec3 %3d% %4d% %5d%
+    CLEO_RegisterOpcode(0x7045, VEC3_REVERSE);   // 7045=2,vec3_reverse %1d% length %2d%
+    // 70 OPCODES ADDED
 }

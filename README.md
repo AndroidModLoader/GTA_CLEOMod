@@ -324,19 +324,31 @@ SASCM.ini
 702A=10,%8d% %9d% %10d% = blend_vec3 %1d% %2d% %3d% to %4d% %5d% %6d% blend %7d%
 702B=7,%6d% %7d% = blend_vec2 %1d% %2d% to %3d% %4d% blend %5d%
 702C=1,  is_lerp_overshooting %1d%
-702D=4,write_array_safe %1d% length %2d% index %3d% value %4d%
-702E=4,%4d% = read_array_safe %1d% length %2d% index %3d%
-702F=4,count_array_slots %1d% length %2d% empty %3d% used %4d%
-7030=3,%3d% = find_first_empty %1d% length %2d%
-7031=4,clear_range %1d% length %2d% start %3d% count %4d%
-7032=4,insert_at %1d% length %2d% index %3d% value %4d%
-7033=3,remove_at %1d% length %2d% index %3d%
-7034=2,initialize_array_negzero %1d% length %2d%
-7035=4,%4d% = stack_push %1d% length %2d% value %3d%
-7036=3,%3d% = stack_pop %1d% length %2d%
-7037=3,%3d% = shift %1d% length %2d%
-7038=4,unshift %1d% length %2d% value %3d%
-7039=2,reverse %1d% length %2d%
+702D=4,array_write_value %1d% length %2d% index %3d% value %4d%
+702E=4,%4d% = array_read_value %1d% length %2d% index %3d%
+702F=4,array_count_slots %1d% length %2d% empty %3d% used %4d%
+7030=3,%3d% = array_find_first_empty %1d% length %2d%
+7031=4,array_clear_range %1d% length %2d% start %3d% count %4d%
+7032=4,array_insert_at %1d% length %2d% index %3d% value %4d%
+7033=3,array_remove_at %1d% length %2d% index %3d%
+7034=2,array_initialize_empty %1d% length %2d%
+7035=3,array_push %1d% length %2d% value %3d%
+7036=3,%3d% = array_pop %1d% length %2d%
+7037=3,%3d% = array_shift %1d% length %2d%
+7038=4,array_unshift %1d% length %2d% value %3d%
+7039=2,array_reverse %1d% length %2d%
+703A=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved_time %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% duration %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
+703B=12,%12d% progress %11d% = value_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+703C=5,array_write_vec3 %1d% length %2d% index %3d% %4d% %5d%
+703D=5,%3d% %4d% %5d% = array_read_vec3 %1d% length %2d% index %3d%
+703E=16,%14d% %15d% %16d% progress %13d% = route_follow %1d% points %2d% dt %3d% use %4d% ms %5d% or_speed %6d% curve %7d% params %8d% %9d% %10d% %11d% overshoot %12d%
+703F=6,vec3_insert_at %1d% length %2d% index %3d% vec3 %4d% %5d% %6d%
+7040=3,vec3_remove_at %1d% length %2d% index %3d%
+7041=5,vec3_push %1d% length %2d% vec3 %3d% %4d% %5d%
+7042=5,%3d% %4d% %5d% = vec3_pop %1d% length %2d%
+7043=5,%3d% %4d% %5d% = vec3_shift %1d% length %2d%
+7044=5,vec3_unshift %1d% length %2d% vec3 %3d% %4d% %5d%
+7045=2,vec3_reverse %1d% length %2d%
 ```
 
 consts.txt
@@ -803,33 +815,40 @@ Stack example
 ```js
 7040: initialize_array_empty 0@ length 10
 
-7050: array_push 0@ length 10 value 111
-7050: array_push 0@ length 10 value 222
+7050: array_push 0@ length 10 value 111 // 0@ = 111
+7050: array_push 0@ length 10 value 222 // 1@ = 222
 
-7051: 5@ = array_pop 0@ length 10     // 5@ = 222
-7051: 5@ = array_pop 0@ length 10     // 5@ = 111
+7051: 5@ = array_pop 0@ length 10       // 5@ = 222
+7051: 5@ = array_pop 0@ length 10       // 5@ = 111
 ```
 
 Buffer example
 ```js
 get_var_pointer 0@ = var &0
-0DD0: 1@ = label_addr @valor
+0DD0: 1@ = label_addr @values
 sub_int_lvar_from_int_lvar 1@ -= 0@
 1@ /= 4
 int_add 30@ = 1@ + 64
 
-7040: initialize_array_empty &0(30@,1i) length 4
-7041: write_array_safe &0(30@,1i) length 4 index 0 value 111
-7041: write_array_safe &0(30@,1i) length 4 index 1 value 222
-7041: write_array_safe &0(30@,1i) length 4 index 2 value 333
-7041: write_array_safe &0(30@,1i) length 4 index 3 value 444
+initialize_array_empty &0(30@,1i) length 4
+
+write_array_safe &0(30@,1i) length 4 index 0 value 1.1
+write_array_safe &0(30@,1i) length 4 index 1 value -2.2
+write_array_safe &0(30@,1i) length 4 index 2 value 333
+write_array_safe &0(30@,1i) length 4 index 3 value -444
+
+while true
+wait 0
+    read_array_safe 20@ = &0(30@,1i) length 4 index 3
+    printf "%i" 10 20@ // -444
+end
 
 :values
 hex
-    00 00 00 00 // replaced by 111
-    00 00 00 00 // replaced by 222
+    00 00 00 00 // replaced by 1.1
+    00 00 00 00 // replaced by -2.2
     00 00 00 00 // replaced by 333
-    00 00 00 00 // replaced by 444
+    00 00 00 00 // replaced by -444
 end
 ```
 

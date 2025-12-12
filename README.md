@@ -341,7 +341,7 @@ SASCM.ini
 703B=12,%12d% progress %11d% = value_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
 703C=5,array_write_vec3 %1d% length %2d% index %3d% %4d% %5d%
 703D=5,%3d% %4d% %5d% = array_read_vec3 %1d% length %2d% index %3d%
-703E=16,%14d% %15d% %16d% progress %13d% = route_follow %1d% points %2d% dt %3d% use %4d% ms %5d% or_speed %6d% curve %7d% params %8d% %9d% %10d% %11d% overshoot %12d%
+703E=15,%13d% %14d% %15d% progress %12d% = route_follow %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% curve %6d% params %7d% %8d% %9d% %10d% overshoot %11d%
 703F=6,vec3_insert_at %1d% length %2d% index %3d% vec3 %4d% %5d% %6d%
 7040=3,vec3_remove_at %1d% length %2d% index %3d%
 7041=5,vec3_push %1d% length %2d% vec3 %3d% %4d% %5d%
@@ -349,6 +349,8 @@ SASCM.ini
 7043=5,%3d% %4d% %5d% = vec3_shift %1d% length %2d%
 7044=5,vec3_unshift %1d% length %2d% vec3 %3d% %4d% %5d%
 7045=2,vec3_reverse %1d% length %2d%
+7046=17,%15d% %16d% %17d% progress %14d% = route_follow_chaikin %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% nIterations %6d% preserveEndPoints %7d% curve %8d% params %9d% %10d% %11d% %12d% overshoot %13d%
+7047=12,%12d% progress %11d% = rotate_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
 ```
 
 consts.txt
@@ -389,70 +391,10 @@ const
     CURVE_MODE_BOUNCE = 9
     CURVE_MODE_STEPPED = 10
     CURVE_MODE_OVERSHOOT_SPRING = 11
-end
-```
 
-keywords.txt
-```ini
-; Grimoire
-7000=SET_WIDGET_TRANSFORM
-7001=GET_WIDGET_TRANSFORM
-7002=LOGICAL_OR
-7003=FILE_RENAME
-7004=CREATE_FILE_OR_DIRECTORY
-7005=ANGLE_DIFF
-7006=TOGGLE_BOOLEAN_VAR
-7007=FLOAT_DIV
-7008=FLOAT_MUL
-7009=FLOAT_SUM
-700A=FLOAT_SUB
-700B=SPLIT_FLOAT_TO_SIGNED_PARTS
-700C=CONVERT_MODEL_COLOR
-700D=IF_TERNARY_INT
-700E=IF_TERNARY_FLOAT
-700F=PACK_SET_BYTE
-7010=PACK_GET_BYTE
-7011=PACK_ROTATE
-7012=PACK_CHECK_TRUTHY
-7013=PACK_SWAP_CUSTOM
-7014=IF_TERNARY
-7015=PACK_4DEC_TO_INT32
-7016=UNPACK_INT32_TO_4DEC
-7017=ORBIT_CIRCLE
-7018=ORBIT_SPHERE
-7019=ORBIT_OVAL
-701A=ORBIT_OVOID
-701B=ORBIT_CYLINDER
-701C=TOGGLE_BOOLEAN_REAL
-701D=ORBIT_POLYGON
-701E=ORBIT_CUBE
-701F=ORBIT_SQUARE
-7020=ROTATE_LERP
-7021=MOVE_LERP
-7022=LERP_IS_FINISHED
-7023=ROTATE_LERP_CURVED
-7024=VALUE_LERP
-7025=LERP_MAINTAIN_LOOP
-7026=VALUE_LERP_CURVED
-7027=MOVE_LERP_CURVED
-7028=TOGGLE_LERP_REVERSE
-7029=QUADRATIC_LERP_CURVED
-702A=BLEND_VEC3
-702B=BLEND_VEC2
-702C=IS_LERP_OVERSHOOTING
-702D=WRITE_ARRAY_SAFE
-702E=READ_ARRAY_SAFE
-702F=COUNT_ARRAY_SLOTS
-7030=FIND_FIRST_EMPTY
-7031=CLEAR_RANGE
-7032=INSERT_AT
-7033=REMOVE_AT
-7034=INITIALIZE_ARRAY_NEGZERO
-7035=STACK_PUSH
-7036=STACK_POP
-7037=SHIFT
-7038=UNSHIFT
-7039=REVERSE
+    USE_DURATION = 0
+    USE_SPEED = 1
+end
 ```
 
 </details>
@@ -913,6 +855,24 @@ COLOR_HSV_TO_RGB = 5
 ```
 
 # ChangeLog
+
+## Grimoire v.1.2.2
+```diff
++703A=18,%16d% %17d% %18d% progress %15d% = move_lerp_curved_time %1d% %2d% %3d% to %4d% %5d% %6d% dt %7d% duration %8d% mode %9d% params %10d% %11d% %12d% %13d% overshoot %14d%
++703B=12,%12d% progress %11d% = value_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
++703C=5,array_write_vec3 %1d% length %2d% index %3d% %4d% %5d%
++703D=5,%3d% %4d% %5d% = array_read_vec3 %1d% length %2d% index %3d%
++703E=15,%13d% %14d% %15d% progress %12d% = route_follow %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% curve %6d% params %7d% %8d% %9d% %10d% overshoot %11d%
++703F=6,vec3_insert_at %1d% length %2d% index %3d% vec3 %4d% %5d% %6d%
++7040=3,vec3_remove_at %1d% length %2d% index %3d%
++7041=5,vec3_push %1d% length %2d% vec3 %3d% %4d% %5d%
++7042=5,%3d% %4d% %5d% = vec3_pop %1d% length %2d%
++7043=5,%3d% %4d% %5d% = vec3_shift %1d% length %2d%
++7044=5,vec3_unshift %1d% length %2d% vec3 %3d% %4d% %5d%
++7045=2,vec3_reverse %1d% length %2d%
++7046=17,%15d% %16d% %17d% progress %14d% = route_follow_chaikin %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% nIterations %6d% preserveEndPoints %7d% curve %8d% params %9d% %10d% %11d% %12d% overshoot %13d%
++7047=12,%12d% progress %11d% = rotate_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+```
 
 ## Grimoire v.1.2.1
 ```diff

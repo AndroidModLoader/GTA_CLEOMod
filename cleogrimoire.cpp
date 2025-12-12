@@ -2361,62 +2361,6 @@ CLEO_Fn(VALUE_LERP_CURVED_TIME)
     cleo->GetPointerToScriptVar(handle)->f = result;
 }
 
-// 702C=12,%12d% progress %11d% = rotate_lerp_curved_time %1d% %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
-CLEO_Fn(ROTATE_LERP_CURVED_TIME)
-{
-    float a0        = cleo->ReadParam(handle)->f;
-    float a1        = cleo->ReadParam(handle)->f;
-
-    float dt        = cleo->ReadParam(handle)->f;
-    float durationMs= cleo->ReadParam(handle)->f;
-
-    int   mode      = cleo->ReadParam(handle)->i;
-    float p1        = cleo->ReadParam(handle)->f;
-    float p2        = cleo->ReadParam(handle)->f;
-    float p3        = cleo->ReadParam(handle)->f;
-    float p4        = cleo->ReadParam(handle)->f;
-
-    bool overshoot  = cleo->ReadParam(handle)->i != 0;
-
-    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
-    float rawT  = *tPtr;
-
-    bool reverse = FloatIsNegative(rawT);
-    float t      = FloatAbsRaw(rawT);
-
-    float diff = AngleDeltaSigned(a0, a1);
-    float dist = fabsf(diff);
-
-    // If no rotation needed, snap instantly.
-    if (dist < 1e-6f) {
-        *tPtr = reverse ? -1.0f : 1.0f;
-        cleo->GetPointerToScriptVar(handle)->f = a1;
-        return;
-    }
-
-    // Duration normalization
-    if (durationMs < 0.0001f) durationMs = 0.0001f;
-
-    // Time-based interpolation increment
-    float tAdd = (dt * 1000.0f) / durationMs;
-    t += reverse ? -tAdd : tAdd;
-
-    if (!overshoot) {
-        if (t > 1.0f) t = 1.0f;
-        if (t < 0.0f) t = 0.0f;
-    }
-
-    *tPtr = reverse ? -t : t;
-
-    float tv = reverse ? (1.0f - t) : t;
-
-    float curveFactor = applyCurve(tv, mode, p1, p2, p3, p4);
-
-    float outAngle = a0 + diff * curveFactor;
-
-    cleo->GetPointerToScriptVar(handle)->f = outAngle;
-}
-
 // 703C=6,array_write_vec3 %1d% length %2d% index %3d% vec3 %4d% %5d% %6d%
 CLEO_Fn(ARRAY_WRITE_VEC3)
 {
@@ -2464,7 +2408,7 @@ CLEO_Fn(ARRAY_READ_VEC3)
 }
 
 
-// 703E=16,%14d% %15d% %16d% progress %13d% = route_follow %1d% points %2d% dt %3d% use %4d% ms %5d% or_speed %6d% curve %7d% params %8d% %9d% %10d% %11d% overshoot %12d%
+// 703E=15,%13d% %14d% %15d% progress %12d% = route_follow %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% curve %6d% params %7d% %8d% %9d% %10d% overshoot %11d%
 CLEO_Fn(ROUTE_FOLLOW)
 {
     // === parameters ===
@@ -2474,8 +2418,14 @@ CLEO_Fn(ROUTE_FOLLOW)
 
     bool useDuration = cleo->ReadParam(handle)->i != 0;
 
-    int durationMs    = cleo->ReadParam(handle)->i;
-    float speed       = cleo->ReadParam(handle)->f;
+    int durationMs;
+    float speed;
+
+    if (useDuration){
+        durationMs = cleo->ReadParam(handle)->i;
+    } else {
+        speed = cleo->ReadParam(handle)->f;
+    }
 
     int mode = cleo->ReadParam(handle)->i;
     float p1 = cleo->ReadParam(handle)->f;
@@ -2804,6 +2754,268 @@ CLEO_Fn(VEC3_REVERSE)
     }
 }
 
+// 7046=17,%15d% %16d% %17d% progress %14d% = route_follow_chaikin
+//    %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d%
+//    nIterations %6d% preserveEndPoints %7d%
+//    curve %8d% params %9d% %10d% %11d% %12d% overshoot %13d%
+CLEO_Fn(ROUTE_FOLLOW_CHAIKIN)
+{
+    // === parameters ===
+    void* raw = (void*)cleo->GetPointerToScriptVar(handle);
+    int numPoints = cleo->ReadParam(handle)->i;
+    float dt      = cleo->ReadParam(handle)->f;
+
+    bool useDuration = cleo->ReadParam(handle)->i != 0;
+
+    int durationMs;
+    float speed;
+
+    if (useDuration){
+        durationMs = cleo->ReadParam(handle)->i;
+    } else {
+        speed = cleo->ReadParam(handle)->f;
+    }
+
+    int nIter = cleo->ReadParam(handle)->i;
+    bool preserve = cleo->ReadParam(handle)->i != 0;
+
+    int mode = cleo->ReadParam(handle)->i;
+    float p1 = cleo->ReadParam(handle)->f;
+    float p2 = cleo->ReadParam(handle)->f;
+    float p3 = cleo->ReadParam(handle)->f;
+    float p4 = cleo->ReadParam(handle)->f;
+
+    bool overshoot = cleo->ReadParam(handle)->i != 0;
+
+    float* tPtr  = &cleo->GetPointerToScriptVar(handle)->f;
+
+    // result
+    float* outX = &cleo->GetPointerToScriptVar(handle)->f;
+    float* outY = &cleo->GetPointerToScriptVar(handle)->f;
+    float* outZ = &cleo->GetPointerToScriptVar(handle)->f;
+
+    if (!raw || numPoints < 2) {
+        *outX = *outY = *outZ = 0.0f;
+        return;
+    }
+
+    uint32_t* base = (uint32_t*)raw;
+
+    // === decode progress ===
+    float rawP = *tPtr;
+    bool reverse = FloatIsNegative(rawP);
+    float absP = FloatAbsRaw(rawP);
+
+    int segment = (int)floorf(absP);
+    float t = absP - (float)segment;
+
+    if (segment >= numPoints - 1) {
+        segment = numPoints - 2;
+        t = 1.0f;
+    }
+
+    // === advance t ===
+    if (useDuration) {
+        if (durationMs < 1) durationMs = 1;
+        float dtNorm = (dt * 1000.0f) / (float)durationMs;
+        t += reverse ? -dtNorm : dtNorm;
+    } else {
+        float ax = *(float*)&base[segment*3 + 0];
+        float ay = *(float*)&base[segment*3 + 1];
+        float az = *(float*)&base[segment*3 + 2];
+
+        float bx = *(float*)&base[(segment+1)*3 + 0];
+        float by = *(float*)&base[(segment+1)*3 + 1];
+        float bz = *(float*)&base[(segment+1)*3 + 2];
+
+        float dx = bx - ax;
+        float dy = by - ay;
+        float dz = bz - az;
+        float dist = sqrtf(dx*dx + dy*dy + dz*dz);
+        if (dist < 0.000001f) dist = 1.0f;
+
+        float dtProg = (speed * dt) / dist;
+        t += reverse ? -dtProg : dtProg;
+    }
+
+    while (t >= 1.0f && segment < numPoints - 2) {
+        t -= 1.0f;
+        segment++;
+    }
+    while (t < 0.0f && segment > 0) {
+        t += 1.0f;
+        segment--;
+    }
+
+    if (segment >= numPoints - 1) {
+        segment = numPoints - 2;
+        t = 1.0f;
+    }
+    if (segment < 0) {
+        segment = 0;
+        t = 0.0f;
+    }
+
+    // === save new progress ===
+    float newAbs = (float)segment + t;
+    *tPtr = FloatSetSign(newAbs, reverse);
+
+    // ================  CHAIIIKIN WINDOW ================
+    int context = 2; // ventana mínima: +-2 puntos
+    int start = segment - context;
+    int end   = segment + context;
+
+    if (start < 0) {
+        end += (-start);
+        start = 0;
+    }
+    if (end >= numPoints) {
+        int diff = end - (numPoints - 1);
+        start -= diff;
+        if (start < 0) start = 0;
+        end = numPoints - 1;
+    }
+
+    int count = end - start + 1;
+    if (count < 2) count = 2;
+
+    // copiar ventana
+    static float px[32], py[32], pz[32];
+    if (count > 32) count = 32;
+
+    for (int i = 0; i < count; i++) {
+        int idx = (start + i) * 3;
+        px[i] = *(float*)&base[idx+0];
+        py[i] = *(float*)&base[idx+1];
+        pz[i] = *(float*)&base[idx+2];
+    }
+
+    // === Chaikin iterations ===
+    nIter = max(1, min(nIter,5));
+
+    for (int it = 0; it < nIter; it++) {
+        static float nx[32], ny[32], nz[32];
+        int outN = 0;
+
+        if (preserve) {
+            nx[outN] = px[0];
+            ny[outN] = py[0];
+            nz[outN] = pz[0];
+            outN++;
+        }
+
+        for (int i = 0; i < count - 1; i++) {
+            float ax = px[i];
+            float ay = py[i];
+            float az = pz[i];
+            float bx = px[i+1];
+            float by = py[i+1];
+            float bz = pz[i+1];
+
+            float qx = ax + 0.25f*(bx-ax);
+            float qy = ay + 0.25f*(by-ay);
+            float qz = az + 0.25f*(bz-az);
+
+            float rx = ax + 0.75f*(bx-ax);
+            float ry = ay + 0.75f*(by-ay);
+            float rz = az + 0.75f*(bz-az);
+
+            nx[outN] = qx; ny[outN] = qy; nz[outN] = qz; outN++;
+            nx[outN] = rx; ny[outN] = ry; nz[outN] = rz; outN++;
+        }
+
+        if (preserve) {
+            nx[outN] = px[count-1];
+            ny[outN] = py[count-1];
+            nz[outN] = pz[count-1];
+            outN++;
+        }
+
+        // replace
+        count = outN;
+        for (int i=0;i<count;i++) {
+            px[i]=nx[i]; py[i]=ny[i]; pz[i]=nz[i];
+        }
+    }
+
+    // === ahora solo interpolamos dentro de la ventana suavizada ===
+    int localIndex = segment - start;
+    if (localIndex < 0) localIndex = 0;
+    if (localIndex >= count-1) localIndex = count-2;
+
+    float tv = reverse ? (1.0f - t) : t;
+    float ct = applyCurve(tv, mode, p1, p2, p3, p4);
+
+    float ax = px[localIndex];
+    float ay = py[localIndex];
+    float az = pz[localIndex];
+
+    float bx = px[localIndex+1];
+    float by = py[localIndex+1];
+    float bz = pz[localIndex+1];
+
+    *outX = ax + (bx - ax)*ct;
+    *outY = ay + (by - ay)*ct;
+    *outZ = az + (bz - az)*ct;
+}
+
+
+// 7047=12,%12d% progress %11d% = rotate_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+CLEO_Fn(ROTATE_LERP_CURVED_TIME)
+{
+    float a0        = cleo->ReadParam(handle)->f;
+    float a1        = cleo->ReadParam(handle)->f;
+
+    float dt        = cleo->ReadParam(handle)->f;
+    float durationMs= cleo->ReadParam(handle)->f;
+
+    int   mode      = cleo->ReadParam(handle)->i;
+    float p1        = cleo->ReadParam(handle)->f;
+    float p2        = cleo->ReadParam(handle)->f;
+    float p3        = cleo->ReadParam(handle)->f;
+    float p4        = cleo->ReadParam(handle)->f;
+
+    bool overshoot  = cleo->ReadParam(handle)->i != 0;
+
+    float* tPtr = &cleo->GetPointerToScriptVar(handle)->f;
+    float rawT  = *tPtr;
+
+    bool reverse = FloatIsNegative(rawT);
+    float t      = FloatAbsRaw(rawT);
+
+    float diff = AngleDeltaSigned(a0, a1);
+    float dist = fabsf(diff);
+
+    // If no rotation needed, snap instantly.
+    if (dist < 1e-6f) {
+        *tPtr = reverse ? -1.0f : 1.0f;
+        cleo->GetPointerToScriptVar(handle)->f = a1;
+        return;
+    }
+
+    // Duration normalization
+    if (durationMs < 0.0001f) durationMs = 0.0001f;
+
+    // Time-based interpolation increment
+    float tAdd = (dt * 1000.0f) / durationMs;
+    t += reverse ? -tAdd : tAdd;
+
+    if (!overshoot) {
+        if (t > 1.0f) t = 1.0f;
+        if (t < 0.0f) t = 0.0f;
+    }
+
+    *tPtr = reverse ? -t : t;
+
+    float tv = reverse ? (1.0f - t) : t;
+
+    float curveFactor = applyCurve(tv, mode, p1, p2, p3, p4);
+
+    float outAngle = a0 + diff * curveFactor;
+
+    cleo->GetPointerToScriptVar(handle)->f = outAngle;
+}
+
 
 ///////////////////////////////////////////////////
 //////////// END OPCODES by MatiDragon ////////////
@@ -2883,7 +3095,7 @@ void InitGrimoireOpcodes()
     // 60 OPCODES ADDED
     CLEO_RegisterOpcode(0x703C, ARRAY_WRITE_VEC3);   // 703C=5,array_write_vec3 %1d% length %2d% index %3d% %4d% %5d%
     CLEO_RegisterOpcode(0x703D, ARRAY_READ_VEC3);   // 703D=5,%3d% %4d% %5d% = array_read_vec3 %1d% length %2d% index %3d%
-    CLEO_RegisterOpcode(0x703E, ROUTE_FOLLOW);   // 703E=16,%14d% %15d% %16d% progress %13d% = route_follow %1d% points %2d% dt %3d% use %4d% ms %5d% or_speed %6d% curve %7d% params %8d% %9d% %10d% %11d% overshoot %12d%
+    CLEO_RegisterOpcode(0x703E, ROUTE_FOLLOW);   // 703E=15,%13d% %14d% %15d% progress %12d% = route_follow %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% curve %6d% params %7d% %8d% %9d% %10d% overshoot %11d%
     CLEO_RegisterOpcode(0x703F, VEC3_INSERT_AT);   // 703F=6,vec3_insert_at %1d% length %2d% index %3d% vec3 %4d% %5d% %6d%
     CLEO_RegisterOpcode(0x7040, VEC3_REMOVE_AT);   // 7040=3,vec3_remove_at %1d% length %2d% index %3d%
     CLEO_RegisterOpcode(0x7041, VEC3_PUSH);   // 7041=5,vec3_push %1d% length %2d% vec3 %3d% %4d% %5d%
@@ -2892,4 +3104,6 @@ void InitGrimoireOpcodes()
     CLEO_RegisterOpcode(0x7044, VEC3_UNSHIFT);   // 7044=5,vec3_unshift %1d% length %2d% vec3 %3d% %4d% %5d%
     CLEO_RegisterOpcode(0x7045, VEC3_REVERSE);   // 7045=2,vec3_reverse %1d% length %2d%
     // 70 OPCODES ADDED
+    CLEO_RegisterOpcode(0x7046, ROUTE_FOLLOW_CHAIKIN);   // 7046=17,%15d% %16d% %17d% progress %14d% = route_follow_chaikin %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% nIterations %6d% preserveEndPoints %7d% curve %8d% params %9d% %10d% %11d% %12d% overshoot %13d%
+    CLEO_RegisterOpcode(0x7047, ROTATE_LERP_CURVED_TIME);   // 7047=12,%12d% progress %11d% = rotate_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
 }

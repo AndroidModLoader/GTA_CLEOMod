@@ -2754,6 +2754,9 @@ CLEO_Fn(VEC3_REVERSE)
     }
 }
 
+
+static inline int max(int x, int y) { return (x > y) ? x : y; }
+static inline int min(int x, int y) { return (x < y) ? x : y; }
 // 7046=17,%15d% %16d% %17d% progress %14d% = route_follow_chaikin
 //    %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d%
 //    nIterations %6d% preserveEndPoints %7d%

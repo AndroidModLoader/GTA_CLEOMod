@@ -10,6 +10,8 @@
 #include <math.h>
 #include <cstdint>
 
+std::set<void*> gAllocationsMap;
+std::set<FILE*> gFilesMap;
 
 int (*TouchInterface_PositionWidgets)();
 
@@ -3019,6 +3021,139 @@ CLEO_Fn(ROTATE_LERP_CURVED_TIME)
     cleo->GetPointerToScriptVar(handle)->f = outAngle;
 }
 
+////////////////////////////////////////
+///////// FILES OPS ////////////////////
+////////////////////////////////////////
+
+static void ReadBytesFromParam(CCustomScript* handle, int size, uint8_t* out)
+{
+    int v = cleo->ReadParam(handle)->i;
+
+    switch(size)
+    {
+        case 1: out[0] = (uint8_t)v; break;
+        case 2: *(uint16_t*)out = (uint16_t)v; break;
+        case 4: *(uint32_t*)out = (uint32_t)v; break;
+        default: memset(out, 0, size); break;
+    }
+}
+static bool LoadFile(FILE* f, std::vector<uint8_t>& out)
+{
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    out.resize(size);
+    return fread(out.data(), 1, size, f) == size;
+}
+
+static bool SaveFile(FILE* f, const std::vector<uint8_t>& buf)
+{
+    fseek(f, 0, SEEK_SET);
+    bool ok = fwrite(buf.data(), 1, buf.size(), f) == buf.size();
+    fflush(f);
+    return ok;
+}
+
+
+// 7048=4,insert_file %1d% offset %2d% size %3d% data %4d%
+CLEO_Fn(INSERT_FILE)
+{
+    FILE* file = (FILE*)cleo->ReadParam(handle)->i;
+    int offset   = cleo->ReadParam(handle)->i;
+    int datasize = cleo->ReadParam(handle)->i;
+
+    if(!file || offset < 0 || datasize <= 0 || datasize > 4)
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    uint8_t data[4];
+    ReadBytesFromParam(handle, datasize, data);
+
+    std::vector<uint8_t> buf;
+    if(!LoadFile(file, buf))
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    if(offset > (int)buf.size())
+        offset = buf.size();
+
+    buf.insert(buf.begin() + offset, data, data + datasize);
+    UpdateCompareFlag(handle, SaveFile(file, buf));
+}
+
+
+// 7049=5,replace_file %1d% offset %2d% delete_size %3d% data_size %4d% data %5d%
+CLEO_Fn(REPLACE_FILE)
+{
+    FILE* file = (FILE*)cleo->ReadParam(handle)->i;
+    int offset     = cleo->ReadParam(handle)->i;
+    int deletesize = cleo->ReadParam(handle)->i;
+    int datasize   = cleo->ReadParam(handle)->i;
+
+    if(!file || offset < 0 || deletesize < 0 || datasize <= 0 || datasize > 4)
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    uint8_t data[4];
+    ReadBytesFromParam(handle, datasize, data);
+
+    std::vector<uint8_t> buf;
+    if(!LoadFile(file, buf))
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    if(offset + deletesize > buf.size())
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    buf.erase(buf.begin() + offset, buf.begin() + offset + deletesize);
+    buf.insert(buf.begin() + offset, data, data + datasize);
+
+    UpdateCompareFlag(handle, SaveFile(file, buf));
+}
+
+// 7050=3,delete_file %1d% offset %2d% size %3d%
+CLEO_Fn(DELETE_FILE)
+{
+    FILE* file = (FILE*)cleo->ReadParam(handle)->i;
+    int offset     = cleo->ReadParam(handle)->i;
+    int deletesize = cleo->ReadParam(handle)->i;
+
+    if(!file || offset < 0 || deletesize <= 0)
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    std::vector<uint8_t> buf;
+    if(!LoadFile(file, buf))
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    if(offset + deletesize > buf.size())
+    {
+        UpdateCompareFlag(handle, false);
+        return;
+    }
+
+    buf.erase(buf.begin() + offset, buf.begin() + offset + deletesize);
+    UpdateCompareFlag(handle, SaveFile(file, buf));
+}
+
+
 
 ///////////////////////////////////////////////////
 //////////// END OPCODES by MatiDragon ////////////
@@ -3109,4 +3244,8 @@ void InitGrimoireOpcodes()
     // 70 OPCODES ADDED
     CLEO_RegisterOpcode(0x7046, ROUTE_FOLLOW_CHAIKIN);   // 7046=17,%15d% %16d% %17d% progress %14d% = route_follow_chaikin %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% nIterations %6d% preserveEndPoints %7d% curve %8d% params %9d% %10d% %11d% %12d% overshoot %13d%
     CLEO_RegisterOpcode(0x7047, ROTATE_LERP_CURVED_TIME);   // 7047=12,%12d% progress %11d% = rotate_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+    CLEO_RegisterOpcode(0x7048, INSERT_FILE);   // 7048=4,insert_file %1d% offset %2d% size %3d% data %4d%
+    CLEO_RegisterOpcode(0x7049, REPLACE_FILE);   // 7049=5,replace_file %1d% offset %2d% delete_size %3d% data_size %4d% data %5d%
+    CLEO_RegisterOpcode(0x7050, DELETE_FILE);   // 7050=3,delete_file %1d% offset %2d% size %3d%
+
 }

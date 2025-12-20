@@ -29,7 +29,7 @@ ISAUtils* sautils = nullptr;
 // Size of array
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
-MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.9, Alexander Blade & RusJJ & XMDS)
+MYMODCFG(net.rusjj.cleolib, CLEO Library, 2.0.1.10, Alexander Blade & RusJJ & XMDS)
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.3.0)
 END_DEPLIST()
@@ -69,6 +69,7 @@ void* pCLEO;
 uintptr_t nCLEOAddr, nGameAddr;
 Dl_info pDLInfo;
 eGameIdent* nGameIdent;
+uint8_t newScriptBuffer[16 * 1024 * 1024] { 0 };
 
 // Configs
 ConfigEntry* pCfgCLEOLocation;
@@ -880,6 +881,11 @@ ON_ALL_MODS_LOAD()
             g_nMaxScriptsCount = 256;
         }
     }
+
+    // CLEO Scripts binary storage limit
+    // from 2 megabytes to 16
+    aml->WriteAddr(nCLEOAddr + 0x193AC, (uintptr_t)newScriptBuffer);
+    aml->Write32(nCLEOAddr + 0x6422, 0x9118F8D3);
 
     // CLEO4+5 Opcodes
     sprintf(g_szSavesPath, "%s/sav", cleo->GetCleoStorageDir());

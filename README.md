@@ -351,6 +351,9 @@ SASCM.ini
 7045=2,vec3_reverse %1d% length %2d%
 7046=17,%15d% %16d% %17d% progress %14d% = route_follow_chaikin %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% nIterations %6d% preserveEndPoints %7d% curve %8d% params %9d% %10d% %11d% %12d% overshoot %13d%
 7047=12,%12d% progress %11d% = rotate_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
+7048=4,file_bytes_insert %1d% offset %2d% size %3d% data %4d%
+7049=5,file_bytes_replace %1d% offset %2d% delete_size %3d% data_size %4d% data %5d%
+7050=3,file_bytes_delete %1d% offset %2d% size %3d%
 ```
 
 consts.txt
@@ -872,6 +875,9 @@ COLOR_HSV_TO_RGB = 5
 +7045=2,vec3_reverse %1d% length %2d%
 +7046=17,%15d% %16d% %17d% progress %14d% = route_follow_chaikin %1d% points %2d% dt %3d% use %4d% speed_or_ms %5d% nIterations %6d% preserveEndPoints %7d% curve %8d% params %9d% %10d% %11d% %12d% overshoot %13d%
 +7047=12,%12d% progress %11d% = rotate_lerp_curved_time %1d% to %2d% dt %3d% duration %4d% mode %5d% params %6d% %7d% %8d% %9d% overshoot %10d%
++7048=4,file_bytes_insert %1d% offset %2d% size %3d% data %4d%
++7049=5,file_bytes_replace %1d% offset %2d% delete_size %3d% data_size %4d% data %5d%
++7050=3,file_bytes_delete %1d% offset %2d% size %3d%
 ```
 
 ## Grimoire v.1.2.1

@@ -10,9 +10,6 @@
 #include <math.h>
 #include <cstdint>
 
-std::set<void*> gAllocationsMap;
-std::set<FILE*> gFilesMap;
-
 int (*TouchInterface_PositionWidgets)();
 
 /////////////////////////////////////////////////////

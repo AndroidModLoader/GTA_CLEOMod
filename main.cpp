@@ -1025,6 +1025,10 @@ ON_ALL_MODS_LOAD()
     {
         aml->Write8(nGameAddr + 0x32950A + 0x1, 0x68);
     }
+
+    // CLEO 2.0.1: Fixed 8byte string reading (fixes opcode 0DDE)
+    aml->Write16(nCLEOAddr + 0x689A, 0x1C79);
+    aml->Write16(nCLEOAddr + 0x68A6, 0x3309);
 }
 
 ON_MOD_UNLOAD()

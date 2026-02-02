@@ -100,24 +100,32 @@ struct ScriptAddonInfo
     template<typename T = int>
     inline void PushStack()
     {
-        scriptVarStackPtr -= sizeof(T);
+        size_t Tsize = sizeof(T);
+        if(Tsize & 3) Tsize -= (Tsize & 3 - 4);
+        scriptVarStackPtr -= Tsize;
     }
 
     template<typename T = int>
     inline void PopStack()
     {
-        scriptVarStackPtr += sizeof(T);
+        size_t Tsize = sizeof(T);
+        if(Tsize & 3) Tsize -= (Tsize & 3 - 4);
+        scriptVarStackPtr += Tsize;
     }
 
     inline char* AllocateFromStack(const int bytes)
     {
-        scriptVarStackPtr -= bytes;
+        size_t Tsize = bytes;
+        if(Tsize & 3) Tsize -= (Tsize & 3 - 4);
+        scriptVarStackPtr -= Tsize;
         return scriptVarStackPtr;
     }
 
     inline void DeallocateFromStack(const int bytes)
     {
-        scriptVarStackPtr += bytes;
+        size_t Tsize = bytes;
+        if(Tsize & 3) Tsize -= (Tsize & 3 - 4);
+        scriptVarStackPtr += Tsize;
     }
 
     // GetInterfaceVersion() == 1

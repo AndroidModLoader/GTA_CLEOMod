@@ -856,6 +856,12 @@ CLEO_Fn(AML_STACK_DEALLOC)
     int bytes = cleo->ReadParam(handle)->i;
     GetAddonInfo(handle).DeallocateFromStack(bytes);
 }
+CLEO_Fn(AML_GET_ALIGNED_VALUE)
+{
+    int value = cleo->ReadParam(handle)->i;
+    if(value & 3) value -= (value & 3 - 4);
+    cleo->GetPointerToScriptVar(handle)->i = value;
+}
 
 void Init201Opcodes();
 void Init4Opcodes();
@@ -903,6 +909,7 @@ ON_ALL_MODS_LOAD()
     CLEO_RegisterOpcode(0x3A1D, AML_STACK_ONLYPOP); // 3A1D=0,aml_only_pop_stack
     CLEO_RegisterOpcode(0x3A1E, AML_STACK_ALLOC); // 3A1E=2,%2d% = aml_alloc_stack_bytes %1d%
     CLEO_RegisterOpcode(0x3A1F, AML_STACK_DEALLOC); // 3A1F=1,aml_dealloc_stack_bytes %1d%
+    CLEO_RegisterOpcode(0x3A20, AML_GET_ALIGNED_VALUE); // 3A20=2,%2d% = aml_get_aligned_value %1d%
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;

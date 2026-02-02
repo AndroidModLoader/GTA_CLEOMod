@@ -146,6 +146,7 @@ Here is how to do this:
 3A1D=0,aml_only_pop_stack
 3A1E=2,%2d% = aml_alloc_stack_bytes %1d%
 3A1F=1,aml_dealloc_stack_bytes %1d%
+3A20=2,%2d% = aml_get_aligned_value %1d%
 ```
 
 There is an additional opcodes for GTA:SA Android:

@@ -70,7 +70,7 @@ void* pCLEO;
 uintptr_t nCLEOAddr, nGameAddr;
 Dl_info pDLInfo;
 eGameIdent* nGameIdent;
-uint8_t g_ScriptBytesBuffer[16 * 1024 * 1024] { 0 };
+__attribute__((__aligned__(4))) uint8_t g_ScriptBytesBuffer[16 * 1024 * 1024] { 0 };
 
 // Configs
 ConfigEntry* pCfgCLEOLocation;
@@ -861,10 +861,10 @@ void Init201Opcodes();
 void Init4Opcodes();
 void Init5Opcodes();
 void InitMathOpcodes();
-char g_ScriptStore[256 * 0x100]; // 0x100 is the size of script in GTA:SA
+__attribute__((__aligned__(4))) char g_ScriptStore[256 * 0x100]; // 0x100 is the size of script in GTA:SA
                                  // (VC has smaller size=0x88 so it's fine to use BIGGER static value)
-char g_ScriptSpritesStore[4 * 1024] { 0 }; // 
-char g_ScriptRectsStore[60 * 1024] { 0 }; // 
+__attribute__((__aligned__(4))) char g_ScriptSpritesStore[4 * 1024] { 0 }; // 
+__attribute__((__aligned__(4))) char g_ScriptRectsStore[60 * 1024] { 0 }; // 
 ON_ALL_MODS_LOAD()
 {
     if(!cleo) return;

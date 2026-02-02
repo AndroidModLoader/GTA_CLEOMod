@@ -1,4 +1,4 @@
-#define CLEOADDON_INTERFACE_VER 2
+#define CLEOADDON_INTERFACE_VER 3
 
 #define MAX_STR_LEN 0xFF
 #define MAX_SCRIPT_VARS_TO_SAVE 32
@@ -453,6 +453,54 @@ inline bool IsAnyStringTypeNow(void* handle)
     }
     return false;
 }
+inline bool IsParamString(void* handle, bool checkIfPointer = false)
+{
+    if(Read1Byte_NoSkip(handle) >= SCRIPT_PARAM_STATIC_SHORT_STRING)
+    {
+        return true;
+    }
+    else if(checkIfPointer)
+    {
+        uint8_t* backupPC = GetPC(handle);
+        void* probMem = (void*)cleo->ReadParam(handle)->i;
+        GetPC(handle) = backupPC;
+
+        if(IsAlloced(probMem)) return true;
+    }
+    return false;
+}
+inline bool IsParamVar(void* handle)
+{
+    switch(Read1Byte_NoSkip(handle))
+    {
+        default:
+            return false;
+        
+        case SCRIPT_PARAM_GLOBAL_NUMBER_VARIABLE:
+        case SCRIPT_PARAM_LOCAL_NUMBER_VARIABLE:
+        case SCRIPT_PARAM_GLOBAL_NUMBER_ARRAY:
+        case SCRIPT_PARAM_LOCAL_NUMBER_ARRAY:
+            return true;
+    }
+}
+inline bool IsParamTypeNum(uint8_t type)
+{
+    switch(type)
+    {
+        default:
+            return false;
+        
+        case SCRIPT_PARAM_STATIC_INT_32BITS:
+        case SCRIPT_PARAM_STATIC_INT_8BITS:
+        case SCRIPT_PARAM_STATIC_INT_16BITS:
+        case SCRIPT_PARAM_STATIC_FLOAT:
+            return true;
+    }
+}
+inline bool IsParamNum(void* handle)
+{
+    return IsParamTypeNum(Read1Byte_NoSkip(handle));
+}
 inline char* CLEO_ReadStringEx(void* handle, char* buf = NULL, size_t size = 0)
 {
     uint8_t type = Read1Byte_NoSkip(handle);
@@ -867,6 +915,18 @@ inline int GetVarArgCount(void* handle)
     GetPC(handle) = pcsave;
     return count;
 }
+inline int GetIntArgCount(void* handle)
+{
+    int count = 0;
+    uint8_t* pcsave = GetPC(handle);
+    while(IsParamNum(handle) || IsParamVar(handle))
+    {
+        SkipOpcodeParameters(handle, 1);
+        ++count;
+    }
+    GetPC(handle) = pcsave;
+    return count;
+}
 inline int GetScriptsStorageSize()
 {
     return (*pScriptsStorageEnd - *pScriptsStorage) >> 2; // div by 4
@@ -998,50 +1058,6 @@ inline bool IsInCLEOScripts(void* handle)
 inline bool IsValidScriptHandle(void* handle)
 {
     return IsInActiveScripts(handle) || IsInPausedScripts(handle) || IsInCLEOScripts(handle);
-}
-inline bool IsParamString(void* handle, bool checkIfPointer = false)
-{
-    if(Read1Byte_NoSkip(handle) >= SCRIPT_PARAM_STATIC_SHORT_STRING)
-    {
-        return true;
-    }
-    else if(checkIfPointer)
-    {
-        uint8_t* backupPC = GetPC(handle);
-        void* probMem = (void*)cleo->ReadParam(handle)->i;
-        GetPC(handle) = backupPC;
-
-        if(IsAlloced(probMem)) return true;
-    }
-    return false;
-}
-inline bool IsParamVar(void* handle)
-{
-    switch(Read1Byte_NoSkip(handle))
-    {
-        default:
-            return false;
-        
-        case SCRIPT_PARAM_GLOBAL_NUMBER_VARIABLE:
-        case SCRIPT_PARAM_LOCAL_NUMBER_VARIABLE:
-        case SCRIPT_PARAM_GLOBAL_NUMBER_ARRAY:
-        case SCRIPT_PARAM_LOCAL_NUMBER_ARRAY:
-            return true;
-    }
-}
-inline bool IsParamNum(void* handle)
-{
-    switch(Read1Byte_NoSkip(handle))
-    {
-        default:
-            return false;
-        
-        case SCRIPT_PARAM_STATIC_INT_32BITS:
-        case SCRIPT_PARAM_STATIC_INT_8BITS:
-        case SCRIPT_PARAM_STATIC_INT_16BITS:
-        case SCRIPT_PARAM_STATIC_FLOAT:
-            return true;
-    }
 }
 
 // CLEO5
@@ -1186,6 +1202,16 @@ inline int8_t CallDefaultOpcode(void* handle, uint16_t opcode)
     GetNotFlag(handle) = (opcode & 0x8000);
     opcode &= 0x7FFF;
     return (m_aDefaultOpcodeFuncs[opcode / 0x100].func)(handle, opcode);
+}
+
+inline void SetPrivateVar(void* handle, int idx, cleo_ifs_t::data_t value)
+{
+    GetAddonInfo(handle).privateVars[idx] = value;
+}
+
+inline cleo_ifs_t::data_t GetPrivateVar(void* handle, int idx)
+{
+    return GetAddonInfo(handle).privateVars[idx];
 }
 
 inline uint32_t GetAddonIncludeInterfaceVersion()

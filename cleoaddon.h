@@ -93,6 +93,9 @@ struct ScriptAddonInfo
     CustomScriptRect scriptRects[64];
 
     // GetInterfaceVersion() == 3
+    cleo_ifs_t::data_t privateVars[32];
+
+    // GetInterfaceVersion() == 4
     // To Be Added (c)
 };
 
@@ -160,6 +163,10 @@ struct cleo_addon_ifs_t
     int8_t          (*CallDefaultOpcode)(void* handle, uint16_t opcode);
 
     // Interface ver 3
+    void            (*SetPrivateVar)(void* handle, int idx, cleo_ifs_t::data_t value);
+    cleo_ifs_t::data_t (*GetPrivateVar)(void* handle, int idx);
+
+    // Interface ver 4
     // To Be Added (c)
 };
 

@@ -119,7 +119,7 @@ CLEO_Fn(INT_ADD)
 
 CLEO_Fn(INT_SUB)
 {
-    if(GetVarArgCount(handle) > 0)
+    if(GetIntArgCount(handle) == 3)
     {
         int a = cleo->ReadParam(handle)->i;
         int b = cleo->ReadParam(handle)->i;
@@ -134,15 +134,16 @@ CLEO_Fn(INT_SUB)
 
 CLEO_Fn(INT_MUL)
 {
-    int a = cleo->ReadParam(handle)->i;
-    if(a == 0)
+    if(GetIntArgCount(handle) == 3)
     {
-        UpdateCompareFlag(handle, IsHIDPressed(a, NULL));
-    }
-    else
-    {
+        int a = cleo->ReadParam(handle)->i;
         int b = cleo->ReadParam(handle)->i;
         cleo->GetPointerToScriptVar(handle)->i = a * b;
+    }
+    else // default opcode (screw you WarDrum)
+    {
+        int hid = cleo->ReadParam(handle)->i;
+        UpdateCompareFlag(handle, IsHIDPressed(hid, NULL));
     }
 }
 
@@ -524,13 +525,13 @@ CLEO_Fn(SET_CLEO_SHARED_VAR)
 {
     int varId = cleo->ReadParam(handle)->i;
     int value = cleo->ReadParam(handle)->i;
-    if(varId >= 0 && varId < 1024) CleoVariables[varId] = value;
+    if(varId >= 0 && varId < 0x400) CleoVariables[varId] = value;
 }
 
 CLEO_Fn(GET_CLEO_SHARED_VAR)
 {
     int varId = cleo->ReadParam(handle)->i;
-    cleo->GetPointerToScriptVar(handle)->i = (varId >= 0 && varId < 1024) ? CleoVariables[varId] : 0;
+    cleo->GetPointerToScriptVar(handle)->i = (varId >= 0 && varId < 0x400) ? CleoVariables[varId] : 0;
 }
 
 CLEO_Fn(STORE_CLOSEST_ENTITIES)

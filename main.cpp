@@ -69,7 +69,7 @@ void* pCLEO;
 uintptr_t nCLEOAddr, nGameAddr;
 Dl_info pDLInfo;
 eGameIdent* nGameIdent;
-uint8_t newScriptBuffer[16 * 1024 * 1024] { 0 };
+uint8_t g_ScriptBytesBuffer[16 * 1024 * 1024] { 0 };
 
 // Configs
 ConfigEntry* pCfgCLEOLocation;
@@ -558,6 +558,10 @@ ON_MOD_PRELOAD()
     cleo_addon_ifs.IsScriptCustom =         IsScriptCustom;
     cleo_addon_ifs.CallDefaultOpcode =      CallDefaultOpcode;
 
+    // CleoAddon interface == 3
+    cleo_addon_ifs.SetPrivateVar =          SetPrivateVar;
+    cleo_addon_ifs.GetPrivateVar =          GetPrivateVar;
+
     // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
     logger->Info("CLEO Addon Initialized!");
@@ -814,13 +818,26 @@ CLEO_Fn(AML_READ_HEX)
         }
     }
 }
+CLEO_Fn(AML_SET_PRIVATE_VAR)
+{
+    cleo_ifs_t::data_t value = *(cleo->ReadParam(handle));
+    int idx = cleo->ReadParam(handle)->i;
+    SetPrivateVar(handle, idx, value);
+}
+CLEO_Fn(AML_GET_PRIVATE_VAR)
+{
+    int idx = cleo->ReadParam(handle)->i;
+    *(cleo->GetPointerToScriptVar(handle)) = GetPrivateVar(handle, idx);
+}
 
 void Init201Opcodes();
 void Init4Opcodes();
 void Init5Opcodes();
 void InitMathOpcodes();
-char g_szScriptStore[256 * 0x100]; // 0x100 is the size of script in GTA:SA
-                                   // (VC has smaller size=0x88 so it's fine to use BIGGER static value)
+char g_ScriptStore[256 * 0x100]; // 0x100 is the size of script in GTA:SA
+                                 // (VC has smaller size=0x88 so it's fine to use BIGGER static value)
+char g_ScriptSpritesStore[4 * 1024] { 0 }; // 
+char g_ScriptRectsStore[60 * 1024] { 0 }; // 
 ON_ALL_MODS_LOAD()
 {
     if(!cleo) return;
@@ -851,6 +868,8 @@ ON_ALL_MODS_LOAD()
     CLEO_RegisterOpcode(0x3A15, AML_ANDROID_SDK_INT); // 3A15=1,%1d% = aml_get_android_ver
     CLEO_RegisterOpcode(0x3A16, AML_WRITE_HEX); // 3A16=4,aml_write_hex_at %1d% add_ib %2d% from_label %3d% size %4d%
     CLEO_RegisterOpcode(0x3A17, AML_READ_HEX); // 3A17=4,aml_read_hex_at %1d% add_ib %2d% to_label %3d% size %4d%
+    CLEO_RegisterOpcode(0x3A18, AML_SET_PRIVATE_VAR); // 3A18=2,aml_set_private_var %2d% = %1d%
+    CLEO_RegisterOpcode(0x3A19, AML_GET_PRIVATE_VAR); // 3A19=2,%2d% = aml_get_private_var %1d%
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;
@@ -864,9 +883,25 @@ ON_ALL_MODS_LOAD()
         if(cfg->GetBool("BumpScriptsLimit", true) &&
            *(uintptr_t*)(nGameAddr + 0x679658) == (nGameAddr + 0x7B778C))
         {
-            aml->WriteAddr(nGameAddr + 0x679658, &g_szScriptStore[0]);
+            aml->WriteAddr(nGameAddr + 0x679658, &g_ScriptStore[0]);
             aml->Write32(nGameAddr + 0x329F88, 0x3F80F5B5);
             g_nMaxScriptsCount = 256;
+        }
+
+        // We're gonna force that patch. More textures, more possibilities (before we get stuff per script)
+        /*if(cfg->GetBool("BumpScriptTexturesLimit", true) &&
+           *(uintptr_t*)(nGameAddr + 0x678EAC) == (nGameAddr + 0x8194DC))*/
+        {
+            aml->WriteAddr(nGameAddr + 0x678EAC, &g_ScriptSpritesStore[0]);
+            aml->WriteAddr(nGameAddr + 0x67915C, &g_ScriptRectsStore[0]);
+            aml->Write32(nGameAddr + 0x327E6E, 0x5F80F5B6); // CMissionCleanup::Process
+            aml->Write32(nGameAddr + 0x328298, 0x5F80F5B4); // CTheScripts::RemoveScriptTextureDictionary
+            aml->Write32(nGameAddr + 0x32A638, 0x5F80F5B4); // CTheScripts::Init
+            aml->Write32(nGameAddr + 0x1A3736, 0x74FCF640); // sub_1A3730
+            aml->Write32(nGameAddr + 0x1A37F4, 0x5F80F5B5); // sub_1A3750
+            aml->Write32(nGameAddr + 0x329E6C, 0x4F70F5B8); // CTheScripts::DrawScriptSpritesAndRectangles
+            aml->Write32(nGameAddr + 0x32A5FC, 0x4F70F5B6); // CTheScripts::Init
+            aml->Write32(nGameAddr + 0x32B040, 0x4F70F5B2); // CTheScripts::Process
         }
     }
     else if(*nGameIdent == GTAVC)
@@ -876,7 +911,7 @@ ON_ALL_MODS_LOAD()
         if(cfg->GetBool("BumpScriptsLimit", true) &&
            *(uintptr_t*)(nGameAddr + 0x395C48) == (nGameAddr + 0x58F018))
         {
-            aml->WriteAddr(nGameAddr + 0x395C48, &g_szScriptStore[0]);
+            aml->WriteAddr(nGameAddr + 0x395C48, &g_ScriptStore[0]);
             aml->Write32(nGameAddr + 0x10B658, 0x4708F504);
             g_nMaxScriptsCount = 256;
         }
@@ -884,7 +919,7 @@ ON_ALL_MODS_LOAD()
 
     // CLEO Scripts binary storage limit
     // from 2 megabytes to 16
-    aml->WriteAddr(nCLEOAddr + 0x193AC, (uintptr_t)newScriptBuffer);
+    aml->WriteAddr(nCLEOAddr + 0x193AC, (uintptr_t)&g_ScriptBytesBuffer[0]);
     aml->Write32(nCLEOAddr + 0x6422, 0x9118F8D3);
 
     // CLEO4+5 Opcodes

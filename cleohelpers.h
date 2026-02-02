@@ -821,20 +821,21 @@ inline uint16_t& GetAddonInfoId(void* handle)
 }
 extern uint16_t FreeScriptAddonInfoId;
 extern ScriptAddonInfo ScriptAddonInfosStorage[ScriptAddonInfo::allocSize];
+extern char ScriptAddonVarStackStorage[ScriptAddonInfo::allocSize][ScriptAddonInfo::scriptStackSize];
 inline ScriptAddonInfo& GetAddonInfo(void* handle)
 {
     return ScriptAddonInfosStorage[GetAddonInfoId(handle)];
 }
 inline void AssignAddonInfo(void* handle)
 {
-    uint16_t newAddonId = FreeScriptAddonInfoId++;
+    uint16_t newAddonId = FreeScriptAddonInfoId;
     if(newAddonId >= ScriptAddonInfo::allocSize)
     {
-        newAddonId = 1;
-        FreeScriptAddonInfoId = 2;
+        FreeScriptAddonInfoId = newAddonId = 1;
     }
     GetAddonInfoId(handle) = newAddonId;
-    GetAddonInfo(handle).Reset();
+    GetAddonInfo(handle).Reset(ScriptAddonVarStackStorage[newAddonId + 1]);
+    ++FreeScriptAddonInfoId;
 }
 inline uint16_t GetScmFunc(void* handle)
 {

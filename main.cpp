@@ -18,6 +18,7 @@ cleo_ifs_t* cleo = nullptr;
 cleo_addon_ifs_t cleo_addon_ifs;
 uint16_t FreeScriptAddonInfoId = 1; // 0 is "not assigned" (used for dumbo scripts without that info)
 ScriptAddonInfo ScriptAddonInfosStorage[ScriptAddonInfo::allocSize];
+char ScriptAddonVarStackStorage[ScriptAddonInfo::allocSize][ScriptAddonInfo::scriptStackSize] { 0 };
 
 char g_szSavesPath[256] { 0 };
 char szCLEOVer[64] { 0 };
@@ -829,6 +830,32 @@ CLEO_Fn(AML_GET_PRIVATE_VAR)
     int idx = cleo->ReadParam(handle)->i;
     *(cleo->GetPointerToScriptVar(handle)) = GetPrivateVar(handle, idx);
 }
+CLEO_Fn(AML_GET_STACK_POINTER)
+{
+    cleo->GetPointerToScriptVar(handle)->i = (int)( GetAddonInfo(handle).GetVarStack() );
+}
+CLEO_Fn(AML_STACK_PUSH)
+{
+    GetAddonInfo(handle).PushVarToStack( cleo->ReadParam(handle)->i );
+}
+CLEO_Fn(AML_STACK_POP)
+{
+    GetAddonInfo(handle).PopVarFromStack( cleo->GetPointerToScriptVar(handle)->i );
+}
+CLEO_Fn(AML_STACK_ONLYPOP)
+{
+    GetAddonInfo(handle).PopStack();
+}
+CLEO_Fn(AML_STACK_ALLOC)
+{
+    int bytes = cleo->ReadParam(handle)->i;
+    cleo->GetPointerToScriptVar(handle)->i = (int)( GetAddonInfo(handle).AllocateFromStack(bytes) );
+}
+CLEO_Fn(AML_STACK_DEALLOC)
+{
+    int bytes = cleo->ReadParam(handle)->i;
+    GetAddonInfo(handle).DeallocateFromStack(bytes);
+}
 
 void Init201Opcodes();
 void Init4Opcodes();
@@ -870,6 +897,12 @@ ON_ALL_MODS_LOAD()
     CLEO_RegisterOpcode(0x3A17, AML_READ_HEX); // 3A17=4,aml_read_hex_at %1d% add_ib %2d% to_label %3d% size %4d%
     CLEO_RegisterOpcode(0x3A18, AML_SET_PRIVATE_VAR); // 3A18=2,aml_set_private_var %2d% = %1d%
     CLEO_RegisterOpcode(0x3A19, AML_GET_PRIVATE_VAR); // 3A19=2,%2d% = aml_get_private_var %1d%
+    CLEO_RegisterOpcode(0x3A1A, AML_GET_STACK_POINTER); // 3A1A=1,%1d% = aml_get_stack_ptr
+    CLEO_RegisterOpcode(0x3A1B, AML_STACK_PUSH); // 3A1B=1,aml_push_stack %1d%
+    CLEO_RegisterOpcode(0x3A1C, AML_STACK_POP); // 3A1C=1,%1d% = aml_pop_stack
+    CLEO_RegisterOpcode(0x3A1D, AML_STACK_ONLYPOP); // 3A1D=0,aml_only_pop_stack
+    CLEO_RegisterOpcode(0x3A1E, AML_STACK_ALLOC); // 3A1E=2,%2d% = aml_alloc_stack_bytes %1d%
+    CLEO_RegisterOpcode(0x3A1F, AML_STACK_DEALLOC); // 3A1F=1,aml_dealloc_stack_bytes %1d%
 
     // Fix Alexander Blade's ass code (returns NULL!!! BRUH)
     cleo->GetCleoStorageDir = GetCLEODir;

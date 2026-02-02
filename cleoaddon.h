@@ -37,9 +37,10 @@ struct CustomScriptRect
 struct ScriptAddonInfo
 {
     static const int allocSize = 0x400;
+    static const int scriptStackSize = 0x200;
 
-    ScriptAddonInfo() { Reset(); }
-    inline void Reset()
+    ScriptAddonInfo() { Reset(NULL); }
+    inline void Reset(char* stackPtr)
     {
         unused = 0xFFFF;
 
@@ -53,6 +54,8 @@ struct ScriptAddonInfo
         enableThreadSaving = false;
         scriptTextures.clear();
         scriptRectsThisFrame = 0;
+
+        scriptVarStackPtr = stackPtr;
     }
 
     inline void* GetScriptTexture(int id)
@@ -75,6 +78,48 @@ struct ScriptAddonInfo
         scriptRectsThisFrame = 0;
     }
 
+    inline char* GetVarStack()
+    {
+        return scriptVarStackPtr;
+    }
+
+    template<typename T>
+    inline void PushVarToStack(T var)
+    {
+        PushStack<T>();
+        *(T*)scriptVarStackPtr = var;
+    }
+
+    template<typename T>
+    inline void PopVarFromStack(T& var)
+    {
+        var = *(T*)scriptVarStackPtr;
+        PopStack<T>();
+    }
+
+    template<typename T = int>
+    inline void PushStack()
+    {
+        scriptVarStackPtr -= sizeof(T);
+    }
+
+    template<typename T = int>
+    inline void PopStack()
+    {
+        scriptVarStackPtr += sizeof(T);
+    }
+
+    inline char* AllocateFromStack(const int bytes)
+    {
+        scriptVarStackPtr -= bytes;
+        return scriptVarStackPtr;
+    }
+
+    inline void DeallocateFromStack(const int bytes)
+    {
+        scriptVarStackPtr += bytes;
+    }
+
     // GetInterfaceVersion() == 1
     std::string workDir;
     std::list<void*> childThreads;
@@ -94,6 +139,7 @@ struct ScriptAddonInfo
 
     // GetInterfaceVersion() == 3
     cleo_ifs_t::data_t privateVars[32];
+    char* scriptVarStackPtr;
 
     // GetInterfaceVersion() == 4
     // To Be Added (c)

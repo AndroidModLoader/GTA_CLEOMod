@@ -138,6 +138,14 @@ Here is how to do this:
 3A15=1,%1d% = aml_get_android_ver
 3A16=4,aml_write_hex_at %1d% add_ib %2d% from_label %3d% size %4d%
 3A17=4,aml_read_hex_at %1d% add_ib %2d% to_label %3d% size %4d%
+3A18=2,aml_set_private_var %2d% = %1d%
+3A19=2,%2d% = aml_get_private_var %1d%
+3A1A=1,%1d% = aml_get_stack_ptr
+3A1B=1,aml_push_stack %1d%
+3A1C=1,%1d% = aml_pop_stack
+3A1D=0,aml_only_pop_stack
+3A1E=2,%2d% = aml_alloc_stack_bytes %1d%
+3A1F=1,aml_dealloc_stack_bytes %1d%
 ```
 
 There is an additional opcodes for GTA:SA Android:

@@ -665,12 +665,12 @@ CLEO_Fn(EXPORT_SCM_LABEL)
 }
 CLEO_Fn(EXPORT_SCM_VALUE)
 {
-    int labelOffset = cleo->ReadParam(handle)->i;
+    uintptr_t variableOffset = (uintptr_t)cleo->GetPointerToScriptVar(handle);
 
     char strExportName[256];
     CLEO_ReadStringEx(handle, strExportName, sizeof(strExportName));
 
-    g_listExports.insert(std::pair<std::string, uintptr_t>(strExportName, (uintptr_t)( cleo->GetPointerToScriptVar(handle) )));
+    g_listExports.insert(std::pair<std::string, uintptr_t>(strExportName, variableOffset));
 }
 
 // Default scripting funcs

@@ -665,6 +665,15 @@ CLEO_Fn(EXPORT_SCM_LABEL)
 }
 CLEO_Fn(EXPORT_SCM_VALUE)
 {
+    uintptr_t value = (uintptr_t)cleo->ReadParam(handle)->i;
+
+    char strExportName[256];
+    CLEO_ReadStringEx(handle, strExportName, sizeof(strExportName));
+
+    g_listExports.insert(std::pair<std::string, uintptr_t>(strExportName, value);
+}
+CLEO_Fn(EXPORT_SCM_VAR)
+{
     uintptr_t variableOffset = (uintptr_t)cleo->GetPointerToScriptVar(handle);
 
     char strExportName[256];
@@ -947,9 +956,10 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0CD1, HAS_VEHICLE_STRUCT_RADIO); // 0CD1=1,has_vehicle_struct_radio %1d% // IF and SET
     CLEO_RegisterOpcode(0x0CD2, GET_RAM_MEGABYTES); // 0CD2=1,%1d% = get_ram_megabytes
     CLEO_RegisterOpcode(0x0CD3, GET_FREE_RAM_MEGABYTES); // 0CD3=1,%1d% = get_free_ram_megabytes
-    CLEO_RegisterOpcode(0x0CD4, IMPORT_SCM_ADDR); // 0CD4=2,%2d% = import_scm_addr %1d%
+    CLEO_RegisterOpcode(0x0CD4, IMPORT_SCM_ADDR); // 0CD4=2,%2d% = import_scm_addr %1d% // IF and SET
     CLEO_RegisterOpcode(0x0CD5, EXPORT_SCM_LABEL); // 0CD5=2,export_scm_label %1d% as %2d%
     CLEO_RegisterOpcode(0x0CD6, EXPORT_SCM_VALUE); // 0CD6=2,export_scm_value %1d% as %2d%
+    CLEO_RegisterOpcode(0x0CD7, EXPORT_SCM_VAR); // 0CD7=2,export_scm_var %1d% as %2d%
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS

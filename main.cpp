@@ -275,7 +275,6 @@ DECL_HOOKb(CLEO_OnOpcodeCall, int self, uint16_t opcode)
             }
         }
     }*/
-    g_pLastCustomScriptHandle = 0;
     return ret;
 }
 

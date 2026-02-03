@@ -670,7 +670,7 @@ CLEO_Fn(EXPORT_SCM_VALUE)
     char strExportName[256];
     CLEO_ReadStringEx(handle, strExportName, sizeof(strExportName));
 
-    g_listExports.insert(std::pair<std::string, uintptr_t>(strExportName, value);
+    g_listExports.insert(std::pair<std::string, uintptr_t>(strExportName, value));
 }
 CLEO_Fn(EXPORT_SCM_VAR)
 {

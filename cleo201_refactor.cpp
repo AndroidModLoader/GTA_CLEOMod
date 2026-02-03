@@ -613,6 +613,56 @@ CLEO_Fn(HAS_VEHICLE_STRUCT_RADIO)
     }
     UpdateCompareFlag(handle, false);
 }
+CLEO_Fn(GET_RAM_MEGABYTES)
+{
+    static int totalMem = 0;
+    if(totalMem)
+    {
+        cleo->GetPointerToScriptVar(handle)->i = totalMem;
+        return;
+    }
+
+    FILE* f = fopen("/proc/meminfo", "r");
+    if(f)
+    {
+        char line[64];
+        while(fgets(line, sizeof(line), f))
+        {
+            if(!strncmp(line, "MemTotal:", 9))
+            {
+                totalMem = (int)(atol(line + 9) / 1024L);
+                break;
+            }
+        }
+        fclose(f);
+    }
+    cleo->GetPointerToScriptVar(handle)->i = totalMem;
+}
+CLEO_Fn(GET_FREE_RAM_MEGABYTES)
+{
+    /*static*/ int totalMem = 0;
+    if(totalMem)
+    {
+        cleo->GetPointerToScriptVar(handle)->i = totalMem;
+        return;
+    }
+
+    FILE* f = fopen("/proc/meminfo", "r");
+    if(f)
+    {
+        char line[64];
+        while(fgets(line, sizeof(line), f))
+        {
+            if(!strncmp(line, "MemAvailable:", 13))
+            {
+                totalMem = (int)(atol(line + 13) / 1024L);
+                break;
+            }
+        }
+        fclose(f);
+    }
+    cleo->GetPointerToScriptVar(handle)->i = totalMem;
+}
 
 // Default scripting funcs
 
@@ -886,6 +936,8 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0CBD, IS_FINGER_NUM_IN_AREA_TIMED); // 0CBD=5,is_finger %1d% in_area_timed %2d% %3d% radius %4d% time_ms %5d% // IF and SET
     CLEO_RegisterOpcode(0x0CD0, HAS_VEHICLE_RADIO); // 0CD0=1,has_vehicle_radio %1d% // IF and SET
     CLEO_RegisterOpcode(0x0CD1, HAS_VEHICLE_STRUCT_RADIO); // 0CD1=1,has_vehicle_struct_radio %1d% // IF and SET
+    CLEO_RegisterOpcode(0x0CD2, GET_RAM_MEGABYTES); // 0CD2=1,%1d% = get_ram_megabytes
+    CLEO_RegisterOpcode(0x0CD3, GET_FREE_RAM_MEGABYTES); // 0CD3=1,%1d% = get_free_ram_megabytes
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS

@@ -114,6 +114,8 @@ Here is how to do this:
 0CBD=5,is_finger %1d% in_area_timed %2d% %3d% radius %4d% time_ms %5d% // IF and SET
 0CD0=1,has_vehicle_radio %1d% // IF and SET
 0CD1=1,has_vehicle_struct_radio %1d% // IF and SET
+0CD2=1,%1d% = get_ram_megabytes
+0CD3=1,%1d% = get_free_ram_megabytes // do not call it very often, its not fast
 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
 3A01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
 3A02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%

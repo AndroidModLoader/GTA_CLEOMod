@@ -5,7 +5,10 @@
 #define CHEAT_STRING_SIZE 30
 
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string>
+#include <string.h>
 #include <vector>
 #include <deque>
 #include <filesystem>

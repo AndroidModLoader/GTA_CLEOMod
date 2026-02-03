@@ -19,6 +19,7 @@ cleo_addon_ifs_t cleo_addon_ifs;
 uint16_t FreeScriptAddonInfoId = 1; // 0 is "not assigned" (used for dumbo scripts without that info)
 ScriptAddonInfo ScriptAddonInfosStorage[ScriptAddonInfo::allocSize];
 char ScriptAddonVarStackStorage[ScriptAddonInfo::allocSize][ScriptAddonInfo::scriptStackSize] { 0 };
+std::map<std::string, uintptr_t> g_listExports;
 
 char g_szSavesPath[256] { 0 };
 char szCLEOVer[64] { 0 };
@@ -243,12 +244,11 @@ DECL_HOOKv(CLEO_StartScripts)
     }
     CLEO_StartScripts();
 }
-int lastStorageItem = 0;
-DECL_HOOKb(CLEO_OnOpcodeCall, int thisStorageItem, uint16_t opcode)
+int g_pLastCustomScriptHandle = 0;
+DECL_HOOKb(CLEO_OnOpcodeCall, int self, uint16_t opcode)
 {
-    lastStorageItem = thisStorageItem;
-    bool ret = CLEO_OnOpcodeCall(thisStorageItem, opcode);
-    int param1 = *ScriptParams;
+    g_pLastCustomScriptHandle = self;
+    bool ret = CLEO_OnOpcodeCall(self, opcode);
     
     if(opcode == 0x0DF0)
     {
@@ -262,7 +262,7 @@ DECL_HOOKb(CLEO_OnOpcodeCall, int thisStorageItem, uint16_t opcode)
         for(int i = 0; i < len; ++i)
         {
             int storageItem = *(int*)(*pScriptsStorage + i * 4);
-            if(storageItem && *(int*)(storageItem + 24) != -1 && *(int*)(storageItem + 24) == param1)
+            if(storageItem && *(int*)(storageItem + 24) != -1 && *(int*)(storageItem + 24) == ScriptParams[0])
             {
                 void* handle = *(void**)(storageItem + 28);
                 if(handle != NULL)
@@ -275,6 +275,7 @@ DECL_HOOKb(CLEO_OnOpcodeCall, int thisStorageItem, uint16_t opcode)
             }
         }
     }*/
+    g_pLastCustomScriptHandle = 0;
     return ret;
 }
 
@@ -310,6 +311,21 @@ DECL_HOOK(int8_t, ProcessOneCommand, void* handle)
         return 1;
     }
     return retCode;
+}
+
+DECL_HOOKv(InitScripts)
+{
+    g_listExports.clear();
+    for(auto mem : gAllocationsMap)
+    {
+        free(mem);
+    } gAllocationsMap.clear();
+    for(auto file : gFilesMap)
+    {
+        fflush(file);
+        fclose(file);
+    } gFilesMap.clear();
+    InitScripts();
 }
 
 void* g_pLastScriptHandleStarted = NULL;
@@ -562,6 +578,7 @@ ON_MOD_PRELOAD()
     // CleoAddon interface == 3
     cleo_addon_ifs.SetPrivateVar =          SetPrivateVar;
     cleo_addon_ifs.GetPrivateVar =          GetPrivateVar;
+    cleo_addon_ifs.GetLabelAddr =           GetLabelAddr;
 
     // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
@@ -746,35 +763,11 @@ CLEO_Fn(AML_WRITE_HEX)
 
     int labelOffset = cleo->ReadParam(handle)->i;
     int size = cleo->ReadParam(handle)->i;
-    uintptr_t hexAddr = 0;
+    uintptr_t hexAddr = GetLabelAddr(handle, labelOffset);
 
-    if(size > 0) // GET_LABEL_POINTER
+    if(size > 0 && hexAddr)
     {
-        int storageItem = lastStorageItem;//GetCustomHandleFromScriptHandle(handle);
-        if(storageItem && *(void**)(storageItem + 28) == handle)
-        {
-            if(labelOffset < 0) labelOffset = -labelOffset;
-            hexAddr = *(uint32_t*)(storageItem + 32) + labelOffset;
-        }
-        else
-        {
-            // sadge
-            int baseOffset = ValueForGame(0, 0, 16, 20, 20);
-            if(baseOffset)
-            {
-                uint8_t* basePtr = GetBasePC(handle);
-                hexAddr = (uint32_t)((labelOffset < 0) ? (basePtr - labelOffset) : (ScriptSpace + labelOffset));
-            }
-            else
-            {
-                hexAddr = (uint32_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x3F9A0, 0) - labelOffset) : labelOffset);
-            }
-        }
-        
-        if(hexAddr)
-        {
-            aml->Write(addr, hexAddr, size);
-        }
+        aml->Write(addr, hexAddr, size);
     }
 }
 CLEO_Fn(AML_READ_HEX)
@@ -787,36 +780,12 @@ CLEO_Fn(AML_READ_HEX)
 
     int labelOffset = cleo->ReadParam(handle)->i;
     int size = cleo->ReadParam(handle)->i;
-    uintptr_t hexAddr = 0;
+    uintptr_t hexAddr = GetLabelAddr(handle, labelOffset);
 
-    if(size > 0) // GET_LABEL_POINTER
+    if(size > 0 && hexAddr)
     {
-        int storageItem = lastStorageItem;//GetCustomHandleFromScriptHandle(handle);
-        if(storageItem && *(void**)(storageItem + 28) == handle)
-        {
-            if(labelOffset < 0) labelOffset = -labelOffset;
-            hexAddr = *(uint32_t*)(storageItem + 32) + labelOffset;
-        }
-        else
-        {
-            // sadge
-            int baseOffset = ValueForGame(0, 0, 16, 20, 20);
-            if(baseOffset)
-            {
-                uint8_t* basePtr = GetBasePC(handle);
-                hexAddr = (uint32_t)((labelOffset < 0) ? (basePtr - labelOffset) : (ScriptSpace + labelOffset));
-            }
-            else
-            {
-                hexAddr = (uint32_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x3F9A0, 0) - labelOffset) : labelOffset);
-            }
-        }
-        
-        if(hexAddr)
-        {
-            aml->Unprot(addr);
-            aml->Read(addr, hexAddr, size);
-        }
+        aml->Unprot(addr);
+        aml->Read(addr, hexAddr, size);
     }
 }
 CLEO_Fn(AML_SET_PRIVATE_VAR)
@@ -969,6 +938,7 @@ ON_ALL_MODS_LOAD()
     Init5Opcodes();
 
     HOOK(ProcessOneCommand, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17ProcessOneCommandEv"));
+    HOOK(InitScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts4InitEv"));
     HOOKPLT(CLEO_StartSingleCustomScript, nCLEOAddr + 0x1933C);
 
     SET_TO(RemoveScriptFromList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript20RemoveScriptFromListEPPS_"));

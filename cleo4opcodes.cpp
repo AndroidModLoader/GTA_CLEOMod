@@ -13,8 +13,6 @@
 // CLEO
 #include "cleo.h"
 
-extern uintptr_t nCLEOAddr, nGameAddr;
-
 // Class Declarations
 class GTAScript;
 union GXTChar;
@@ -665,32 +663,10 @@ CLEO_Fn(CLEO_SET_CAR_ENGINE_ON)
 }
 
 // cleo201_refactor.cpp, GET_LABEL_ADDR
-extern int lastStorageItem;
 CLEO_Fn(GET_LABEL_POINTER)
 {
     int labelOffset = cleo->ReadParam(handle)->i;
-    uint32_t* pLabelAddr = &cleo->GetPointerToScriptVar(handle)->u;
-
-    int storageItem = lastStorageItem;//GetCustomHandleFromScriptHandle(handle);
-    if(storageItem && *(void**)(storageItem + 28) == handle)
-    {
-        if(labelOffset < 0) labelOffset = -labelOffset;
-        *pLabelAddr = *(uint32_t*)(storageItem + 32) + labelOffset;
-    }
-    else
-    {
-        // sadge
-        int baseOffset = ValueForGame(0, 0, 16, 20, 20);
-        if(baseOffset)
-        {
-            uint8_t* basePtr = GetBasePC(handle);
-            *pLabelAddr = (uint32_t)((labelOffset < 0) ? (basePtr - labelOffset) : (ScriptSpace + labelOffset));
-        }
-        else
-        {
-            *pLabelAddr = (uint32_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x3F9A0, 0) - labelOffset) : labelOffset);
-        }
-    }
+    cleo->GetPointerToScriptVar(handle)->u = GetLabelAddr(handle, labelOffset);
 }
 
 CLEO_Fn(GET_VAR_POINTER)

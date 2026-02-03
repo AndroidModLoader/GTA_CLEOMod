@@ -6,6 +6,8 @@
 #include <list>
 #include <map>
 
+#include "cleo.h"
+
 //#define SCRIPTS_UNIQUE_SPRITE_IDS
 
 #define CLEO_RegisterOpcode(x, h) cleo->RegisterOpcode(x, h); cleo->RegisterOpcodeFunction(#h, h)
@@ -219,6 +221,7 @@ struct cleo_addon_ifs_t
     // Interface ver 3
     void            (*SetPrivateVar)(void* handle, int idx, cleo_ifs_t::data_t value);
     cleo_ifs_t::data_t (*GetPrivateVar)(void* handle, int idx);
+    uintptr_t       (*GetLabelAddr)(void* handle, int labelOffset);
 
     // Interface ver 4
     // To Be Added (c)

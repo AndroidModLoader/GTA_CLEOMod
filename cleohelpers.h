@@ -10,6 +10,8 @@
 #include <string>
 #include <string.h>
 #include <vector>
+#include <set>
+#include <map>
 #include <deque>
 #include <filesystem>
 #include "cleo.h"
@@ -20,6 +22,11 @@ extern cleo_addon_ifs_t cleo_addon_ifs;
 extern uint8_t* ScriptSpace;
 extern int* pScriptsStorage, *pScriptsStorageEnd;
 extern void (*UpdateCompareFlag)(void*, uint8_t);
+extern uintptr_t nCLEOAddr, nGameAddr;
+extern int g_pLastCustomScriptHandle;
+extern std::set<void*> gAllocationsMap;
+extern std::set<FILE*> gFilesMap;
+extern std::map<std::string, uintptr_t> g_listExports;
 
 namespace fs = std::filesystem;
 
@@ -63,10 +70,6 @@ enum eScriptParameterType : int8_t
     SCRIPT_PARAM_GLOBAL_LONG_STRING_ARRAY, //< Global array of 16 byte strings
     SCRIPT_PARAM_LOCAL_LONG_STRING_ARRAY, //< Local array of 16 byte strings
 };
-
-#include <set>
-extern std::set<void*> gAllocationsMap;
-extern std::set<FILE*> gFilesMap;
 
 // CLEO Structs
 struct CLEO201Script
@@ -957,6 +960,31 @@ inline int GetCustomHandleFromScriptHandle(void* handle)
         }
     }
     return 0;
+}
+inline uintptr_t GetLabelAddr(void* handle, int _labelOffset)
+{
+    uintptr_t labelAddr = 0;
+    int labelOffset = _labelOffset;
+    int storageItem = g_pLastCustomScriptHandle;
+    if(storageItem && *(void**)(storageItem + 28) == handle) // CLEO script
+    {
+        if(labelOffset < 0) labelOffset = -labelOffset;
+        labelAddr = *(uintptr_t*)(storageItem + 32) + labelOffset;
+    }
+    else // Game script
+    {
+        int baseOffset = ValueForGame(0, 0, 16, 20, 20);
+        if(baseOffset)
+        {
+            uint8_t* basePtr = GetBasePC(handle);
+            labelAddr = (uintptr_t)((labelOffset < 0) ? (basePtr - labelOffset) : (ScriptSpace + labelOffset));
+        }
+        else
+        {
+            labelAddr = (uintptr_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x3F9A0, 0) - labelOffset) : labelOffset);
+        }
+    }
+    return labelAddr;
 }
 inline int GetScriptMenuIndexFromStorage(int i)
 {

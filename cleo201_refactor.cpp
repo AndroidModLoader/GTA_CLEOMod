@@ -27,8 +27,6 @@ double *base_time, *last_current_time;
 
 extern char g_szSavesPath[256];
 
-extern uintptr_t nCLEOAddr, nGameAddr;
-extern int lastStorageItem;
 extern GTASprite2D *ScriptSprites, *ScriptSpritesOrg;
 extern void (*SetSprite2dTexture)(GTASprite2D&, const char*);
 extern int (*GetVehicleFromRef)(int);
@@ -37,27 +35,7 @@ CLEO_Fn(GET_LABEL_ADDR)
 {
     uint32_t* pLabelAddr = &cleo->GetPointerToScriptVar(handle)->u;
     int labelOffset = cleo->ReadParam(handle)->i;
-
-    int storageItem = lastStorageItem;//GetCustomHandleFromScriptHandle(handle);
-    if(storageItem && *(void**)(storageItem + 28) == handle)
-    {
-        if(labelOffset < 0) labelOffset = -labelOffset;
-        *pLabelAddr = *(uint32_t*)(storageItem + 32) + labelOffset;
-    }
-    else
-    {
-        // sadge
-        int baseOffset = ValueForGame(0, 0, 16, 20, 20);
-        if(baseOffset)
-        {
-            uint8_t* basePtr = GetBasePC(handle);
-            *pLabelAddr = (uint32_t)((labelOffset < 0) ? (basePtr - labelOffset) : (ScriptSpace + labelOffset));
-        }
-        else
-        {
-            *pLabelAddr = (uint32_t)((labelOffset < 0) ? (ValueForGame(0x20000, 0x3F9A0, 0) - labelOffset) : labelOffset);
-        }
-    }
+    *pLabelAddr = GetLabelAddr(handle, labelOffset);
 }
 CLEO_Fn(GET_FUNC_ADDR_BY_NAME)
 {
@@ -663,6 +641,37 @@ CLEO_Fn(GET_FREE_RAM_MEGABYTES)
     }
     cleo->GetPointerToScriptVar(handle)->i = totalMem;
 }
+CLEO_Fn(IMPORT_SCM_ADDR)
+{
+    uintptr_t ret = 0;
+    char strImportName[256];
+    CLEO_ReadStringEx(handle, strImportName, sizeof(strImportName));
+
+    auto it = g_listExports.find(strImportName);
+    if(it != g_listExports.end()) ret = it->second;
+
+    cleo->GetPointerToScriptVar(handle)->i = ret;
+    UpdateCompareFlag(handle, ret != 0);
+}
+CLEO_Fn(EXPORT_SCM_LABEL)
+{
+    int labelOffset = cleo->ReadParam(handle)->i;
+    uint32_t label = GetLabelAddr(handle, labelOffset);
+
+    char strExportName[256];
+    CLEO_ReadStringEx(handle, strExportName, sizeof(strExportName));
+
+    g_listExports.insert(std::pair<std::string, uintptr_t>(strExportName, label));
+}
+CLEO_Fn(EXPORT_SCM_VALUE)
+{
+    int labelOffset = cleo->ReadParam(handle)->i;
+
+    char strExportName[256];
+    CLEO_ReadStringEx(handle, strExportName, sizeof(strExportName));
+
+    g_listExports.insert(std::pair<std::string, uintptr_t>(strExportName, (uintptr_t)( cleo->GetPointerToScriptVar(handle) )));
+}
 
 // Default scripting funcs
 
@@ -938,6 +947,9 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0CD1, HAS_VEHICLE_STRUCT_RADIO); // 0CD1=1,has_vehicle_struct_radio %1d% // IF and SET
     CLEO_RegisterOpcode(0x0CD2, GET_RAM_MEGABYTES); // 0CD2=1,%1d% = get_ram_megabytes
     CLEO_RegisterOpcode(0x0CD3, GET_FREE_RAM_MEGABYTES); // 0CD3=1,%1d% = get_free_ram_megabytes
+    CLEO_RegisterOpcode(0x0CD4, IMPORT_SCM_ADDR); // 0CD4=2,%2d% = import_scm_addr %1d%
+    CLEO_RegisterOpcode(0x0CD5, EXPORT_SCM_LABEL); // 0CD5=2,export_scm_label %1d% as %2d%
+    CLEO_RegisterOpcode(0x0CD6, EXPORT_SCM_VALUE); // 0CD6=2,export_scm_value %1d% as %2d%
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS

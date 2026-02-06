@@ -324,6 +324,8 @@ DECL_HOOKv(InitScripts)
         fflush(file);
         fclose(file);
     } gFilesMap.clear();
+    FreeScriptAddonInfoId = 0;
+    
     InitScripts();
 }
 
@@ -348,12 +350,11 @@ DECL_HOOKv(DrawScriptStuff, uint8_t bBeforeFade)
     }
     bDontCallDefaultThisFrame = false;
 
-    void* foundHandle;
-    int size = GetScriptsStorageSize();
+    const int size = GetScriptsStorageSize();
     for(int i = 0; i < size; ++i)
     {
         int storageItem = *(int*)(*pScriptsStorage + i * 4);
-        foundHandle = *(void**)(storageItem + 28);
+        void *foundHandle = *(void**)(storageItem + 28);
         if(foundHandle && GetActiveFlag(foundHandle))
         {
             auto& ai = GetAddonInfo(foundHandle);
@@ -578,6 +579,23 @@ ON_MOD_PRELOAD()
     cleo_addon_ifs.SetPrivateVar =          SetPrivateVar;
     cleo_addon_ifs.GetPrivateVar =          GetPrivateVar;
     cleo_addon_ifs.GetLabelAddr =           GetLabelAddr;
+    cleo_addon_ifs.ExportAddressToSCM =     [](const char* exportName, void* address)
+    {
+        g_listExports.insert(std::pair<std::string, uintptr_t>(exportName, (uintptr_t)address));
+    };
+    cleo_addon_ifs.ImportAddressFromSCM =   [](const char* exportName) -> void*
+    {
+        uintptr_t ret = 0;
+        auto it = g_listExports.find(exportName);
+        if(it != g_listExports.end()) ret = it->second;
+        return (void*)ret;
+    };
+    cleo_addon_ifs.GetCLEOScriptsCount =    GetScriptsStorageSize;
+    cleo_addon_ifs.GetCLEOScript =          GetScriptHandleFromStorage;
+    cleo_addon_ifs.GetScriptID =            [](void* handle) -> uint16_t
+    {
+        return GetAddonInfoId(handle);
+    };
 
     // Finalize
     RegisterInterface("CLEOAddon", &cleo_addon_ifs);
@@ -959,10 +977,8 @@ ON_ALL_MODS_LOAD()
     ScriptSpritesOrg = ScriptSprites;
     if(*nGameIdent == GTASA)
     {
-        SET_TO(m_aDefaultOpcodeFuncs, nGameAddr + 0x665594);
-      #ifdef SCRIPTS_UNIQUE_SPRITE_IDS
         HOOK(DrawScriptStuff, cleo->GetMainLibrarySymbol("_ZN4CHud14DrawScriptTextEh"));
-      #endif
+        SET_TO(m_aDefaultOpcodeFuncs, nGameAddr + 0x665594);
         HOOKPLT(ProcessScript, nGameAddr + 0x670A9C);
     }
     else if(*nGameIdent == GTAVC)
@@ -986,10 +1002,8 @@ ON_ALL_MODS_LOAD()
         SET_TO(customHandler[13], cleo->GetMainLibrarySymbol("_ZN14CRunningScript25ProcessCommands1300To1399Ei"));
         SET_TO(customHandler[14], cleo->GetMainLibrarySymbol("_ZN14CRunningScript25ProcessCommands1400To1499Ei"));
 
-      #ifdef SCRIPTS_UNIQUE_SPRITE_IDS
         HOOKBL(GTAVC_DrawBeforeFade, nGameAddr + 0x1E9112);
         HOOKBL(GTAVC_DrawAfterFade, nGameAddr + 0x1ECA46);
-      #endif
         HOOK(ProcessScript, cleo->GetMainLibrarySymbol("_ZN14CRunningScript7ProcessEv"));
     }
 

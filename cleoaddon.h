@@ -222,6 +222,11 @@ struct cleo_addon_ifs_t
     void            (*SetPrivateVar)(void* handle, int idx, cleo_ifs_t::data_t value);
     cleo_ifs_t::data_t (*GetPrivateVar)(void* handle, int idx);
     uintptr_t       (*GetLabelAddr)(void* handle, int labelOffset);
+    void            (*ExportAddressToSCM)(const char* exportName, void* address);
+    void*           (*ImportAddressFromSCM)(const char* exportName);
+    int             (*GetCLEOScriptsCount)();
+    void*           (*GetCLEOScript)(int num);
+    uint16_t        (*GetScriptID)(void* handle);
 
     // Interface ver 4
     // To Be Added (c)

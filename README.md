@@ -116,6 +116,10 @@ Here is how to do this:
 0CD1=1,has_vehicle_struct_radio %1d% // IF and SET
 0CD2=1,%1d% = get_ram_megabytes
 0CD3=1,%1d% = get_free_ram_megabytes // do not call it very often, its not fast
+0CD4=2,%2d% = import_scm_addr %1d% // IF and SET
+0CD5=2,export_scm_label %1d% as %2d%
+0CD6=2,export_scm_value %1d% as %2d%
+0CD7=2,export_scm_var %1d% as %2d%
 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
 3A01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
 3A02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%

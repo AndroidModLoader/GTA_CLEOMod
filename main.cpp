@@ -324,7 +324,6 @@ DECL_HOOKv(InitScripts)
         fflush(file);
         fclose(file);
     } gFilesMap.clear();
-    FreeScriptAddonInfoId = 0;
     
     InitScripts();
 }

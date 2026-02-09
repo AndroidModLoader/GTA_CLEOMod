@@ -727,9 +727,20 @@ inline int CLEO_FormatString(void* handle, char *str, size_t len, const char *fo
                 }
             }
 
-            //get size
-            if (*iter == 'h' || *iter == 'l')
+            // get size
+            if (*iter == 'h')
             {
+                // handle h (short)
+                *fmta++ = *iter++;
+                if (*iter == 'h')
+                {
+                    // handle hh (signed char)
+                    *fmta++ = *iter++;
+                }
+            }
+            else if(*iter == 'l')
+            {
+                // handle l (long)
                 *fmta++ = *iter++;
             }
             switch (*iter)
@@ -777,20 +788,23 @@ inline int CLEO_FormatString(void* handle, char *str, size_t len, const char *fo
                     }
                     else
                     {
-                        *fmta++ = *iter;
-                        *fmta = '\0';
                         if (*iter == 'a' || *iter == 'A' ||
                             *iter == 'e' || *iter == 'E' ||
                             *iter == 'f' || *iter == 'F' ||
                             *iter == 'g' || *iter == 'G')
                         {
+                            *fmta++ = *iter;
+                            *fmta = 0;
                             sprintf(bufaiter, fmtbufa, cleo->ReadParam(handle)->f);
                         }
                         else
                         {
+                            *fmta++ = tolower(*iter);
+                            *fmta = 0;
                             sprintf(bufaiter, fmtbufa, cleo->ReadParam(handle)->i);
                         }
                     }
+                    
                     while (*bufaiter)
                     {
                         if (written++ >= len) return -1;

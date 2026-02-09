@@ -51,6 +51,7 @@ CLEO_Fn(BREAKPOINT)
     {
         CLEO_ReadStringEx(handle, fmt, sizeof(fmt));
         CLEO_FormatString(handle, buf, sizeof(buf), fmt);
+        SkipUnusedParameters(handle);
     }
 
     pausedScripts.emplace_back(handle, buf);
@@ -74,6 +75,7 @@ CLEO_Fn(TRACE)
     char text[MAX_STR_LEN], fmt[MAX_STR_LEN];
     CLEO_ReadStringEx(handle, fmt, sizeof(fmt));
     CLEO_FormatString(handle, text, sizeof(text), fmt);
+    SkipUnusedParameters(handle);
     cleo->PrintToCleoLog(text);
 }
 CLEO_Fn(LOG_TO_FILE)
@@ -91,6 +93,7 @@ CLEO_Fn(LOG_TO_FILE)
     char fmt[MAX_STR_LEN], buf[MAX_STR_LEN];
     CLEO_ReadStringEx(handle, fmt, sizeof(fmt));
     CLEO_FormatString(handle, buf, sizeof(buf), fmt);
+    SkipUnusedParameters(handle);
     
     // Need additional work
 }
@@ -255,6 +258,9 @@ CLEO_Fn(DISPLAY_TEXT_FORMATTED)
     char fmt[MAX_STR_LEN], buf[MAX_STR_LEN];
     CLEO_ReadStringEx(handle, fmt, sizeof(fmt));
     CLEO_FormatString(handle, buf, sizeof(buf), fmt);
+    SkipUnusedParameters(handle);
+
+    if(*NumberOfIntroTextLinesThisFrame >= 0x60) return;
 
     char* introTxtLine = IntroTextLines + *NumberOfIntroTextLinesThisFrame * ValueForGame(0xF4, 0xF4, 0x44);
     if(*nGameIdent == GTASA)
@@ -292,6 +298,7 @@ CLEO_Fn(ADD_TEXT_LABEL_FORMATTED)
     CLEO_ReadStringEx(handle, gxtLabel, sizeof(gxtLabel));
     CLEO_ReadStringEx(handle, text, sizeof(text));
     CLEO_FormatString(handle, buf, sizeof(buf), text);
+    SkipUnusedParameters(handle);
 
     if(IsCLEORelatedGXTKey(gxtLabel)) return; // NUH-UH
 

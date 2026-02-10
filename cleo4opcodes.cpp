@@ -882,7 +882,7 @@ CLEO_Fn(SCAN_STRING)
             ExParams[i] = NULL;
         }
     }
-    ++GetPC(handle);
+    ++GetPC(handle); // skip VARARGS END
 
     *result = c_sscanf(src, format,
         /* extra parameters (will be aligned automatically, but the limit of 35 elements maximum exists) */
@@ -987,7 +987,7 @@ CLEO_Fn(SCAN_FILE)
             ExParams[i] = NULL;
         }
     }
-    ++GetPC(handle);
+    ++GetPC(handle); // skip VARARGS END
 
     *result = fscanf(file, fmt,
         /* extra parameters (will be aligned automatically, but the limit of 35 elements maximum exists) */

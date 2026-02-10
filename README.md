@@ -120,6 +120,9 @@ Here is how to do this:
 0CD5=2,export_scm_label %1d% as %2d%
 0CD6=2,export_scm_value %1d% as %2d%
 0CD7=2,export_scm_var %1d% as %2d%
+0CD8=1,%1d% = get_last_mission_passed_time
+0CD9=1,%1d% = get_last_mission_passed_name
+0CDA=0,is_mission_failed // IF and SET
 3A00=2,%2d% = aml_has_mod_loaded %1s% // IF and SET
 3A01=3,%3d% = aml_has_mod_loaded %1s% version %2s% // IF and SET
 3A02=4,aml_redirect_code %1d% add_ib %2d% to %3d% add_ib %4d%

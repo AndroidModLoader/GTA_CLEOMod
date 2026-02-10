@@ -24,6 +24,9 @@ int (*OS_ScreenGetWidth)();
 int (*OS_ScreenGetHeight)();
 void (*CorrectAspect)(float*,float*,float*,float*);
 double *base_time, *last_current_time;
+uint32_t *LastMissionPassedTime;
+char *LastMissionPassedName;
+uint8_t *FailCurrentMission;
 
 extern char g_szSavesPath[256];
 
@@ -681,6 +684,18 @@ CLEO_Fn(EXPORT_SCM_VAR)
 
     g_listExports.insert(std::pair<std::string, uintptr_t>(strExportName, variableOffset));
 }
+CLEO_Fn(GET_LAST_MISSION_PASSED_TIME)
+{
+    cleo->GetPointerToScriptVar(handle)->u = *LastMissionPassedTime;
+}
+CLEO_Fn(GET_LAST_MISSION_PASSED_NAME)
+{
+    CLEO_WriteStringEx(handle, LastMissionPassedName);
+}
+CLEO_Fn(IS_MISSION_FAILED)
+{
+    UpdateCompareFlag(handle, (*FailCurrentMission) != 0);
+}
 
 // Default scripting funcs
 
@@ -917,6 +932,9 @@ void Init201Opcodes()
     SET_TO(CorrectAspect, cleo->GetMainLibrarySymbol("_Z13CorrectAspectRfS_S_S_"));
     SET_TO(base_time, cleo->GetMainLibrarySymbol("base_time"));
     SET_TO(last_current_time, nGameAddr + ValueForGame(0, 0x74BD68, 0x6D70D8));
+    SET_TO(LastMissionPassedTime, cleo->GetMainLibrarySymbol("_ZN11CTheScripts21LastMissionPassedTimeE"));
+    SET_TO(LastMissionPassedName, cleo->GetMainLibrarySymbol("_ZN6CStats21LastMissionPassedNameE"));
+    SET_TO(FailCurrentMission, cleo->GetMainLibrarySymbol("_ZN11CTheScripts18FailCurrentMissionE"));
 
     // Disable switch-case labels for default opcodes
     aml->Write16(nCLEOAddr + 0x75CC + 4 * 0x00, 0x0466); // 0DD0
@@ -960,6 +978,9 @@ void Init201Opcodes()
     CLEO_RegisterOpcode(0x0CD5, EXPORT_SCM_LABEL); // 0CD5=2,export_scm_label %1d% as %2d%
     CLEO_RegisterOpcode(0x0CD6, EXPORT_SCM_VALUE); // 0CD6=2,export_scm_value %1d% as %2d%
     CLEO_RegisterOpcode(0x0CD7, EXPORT_SCM_VAR); // 0CD7=2,export_scm_var %1d% as %2d%
+    CLEO_RegisterOpcode(0x0CD8, GET_LAST_MISSION_PASSED_TIME); // 0CD8=1,%1d% = get_last_mission_passed_time
+    CLEO_RegisterOpcode(0x0CD9, GET_LAST_MISSION_PASSED_NAME); // 0CD9=1,%1d% = get_last_mission_passed_name
+    CLEO_RegisterOpcode(0x0CDA, IS_MISSION_FAILED); // 0CDA=0,is_mission_failed // IF and SET
 
     // Regular opcodes rewriting (for GTA:SA only)
 #ifdef SCRIPTS_UNIQUE_SPRITE_IDS

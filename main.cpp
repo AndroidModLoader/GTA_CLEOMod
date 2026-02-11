@@ -236,6 +236,17 @@ DECL_HOOKv(CLEO_StartScripts)
     // Reset a number of addons.
     FreeScriptAddonInfoId = 1;
 
+    g_listExports.clear();
+    for(auto mem : gAllocationsMap)
+    {
+        free(mem);
+    } gAllocationsMap.clear();
+    for(auto file : gFilesMap)
+    {
+        fflush(file);
+        fclose(file);
+    } gFilesMap.clear();
+
     uintptr_t basicScriptHandles = *(uintptr_t*)(nGameAddr + ValueForGame(0, 0x395C48, 0x679658));
     for(int i = 0; i < g_nMaxScriptsCount; ++i)
     {
@@ -310,22 +321,6 @@ DECL_HOOK(int8_t, ProcessOneCommand, void* handle)
         return 1;
     }
     return retCode;
-}
-
-DECL_HOOKv(InitScripts)
-{
-    g_listExports.clear();
-    for(auto mem : gAllocationsMap)
-    {
-        free(mem);
-    } gAllocationsMap.clear();
-    for(auto file : gFilesMap)
-    {
-        fflush(file);
-        fclose(file);
-    } gFilesMap.clear();
-    
-    InitScripts();
 }
 
 void* g_pLastScriptHandleStarted = NULL;
@@ -954,7 +949,6 @@ ON_ALL_MODS_LOAD()
     Init5Opcodes();
 
     HOOK(ProcessOneCommand, cleo->GetMainLibrarySymbol("_ZN14CRunningScript17ProcessOneCommandEv"));
-    HOOK(InitScripts, cleo->GetMainLibrarySymbol("_ZN11CTheScripts4InitEv"));
     HOOKPLT(CLEO_StartSingleCustomScript, nCLEOAddr + 0x1933C);
 
     SET_TO(RemoveScriptFromList, cleo->GetMainLibrarySymbol("_ZN14CRunningScript20RemoveScriptFromListEPPS_"));
